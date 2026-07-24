@@ -36,6 +36,9 @@ export default function DashboardLayout({
 
   // Breadcrumbs title based on current path
   const getPageTitle = () => {
+    if (pathname.startsWith('/dashboard/meeting/')) {
+      return 'Meeting Insights';
+    }
     switch (pathname) {
       case '/dashboard/live':
         return 'Live Meeting';

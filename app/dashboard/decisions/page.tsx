@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { 
   TableProperties, 
   GitFork, 
@@ -13,9 +14,11 @@ import {
   ChevronUp,
   Award
 } from 'lucide-react';
+import { Meeting } from '@/lib/db';
 
 interface DecisionItem {
   id: string;
+  meetingId: string;
   decision: string;
   meetingName: string;
   date: string;
@@ -29,50 +32,100 @@ interface DecisionItem {
 export default function DecisionsPage() {
   const [activeTab, setActiveTab] = useState<'table' | 'timeline'>('table');
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedRow, setExpandedRow] = useState<string | null>('migrate-db');
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [decisions, setDecisions] = useState<DecisionItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const decisions: DecisionItem[] = [
-    {
-      id: 'migrate-db',
-      decision: 'Migrate Core DB to Postgres',
-      meetingName: 'Q3 Architecture Sync',
-      date: 'Oct 24, 2023',
-      owner: 'David K.',
-      avatarText: 'DK',
-      status: 'Approved',
-      quote: 'David K: "Given the scaling issues with Mongo, we need a relational structure for the new module."',
-      contextHtml: 'Sarah C: "Agreed. Let\'s <span class="highlight-text font-semibold">officially decide to migrate the core DB to Postgres</span>. David, you own the rollout."'
-    },
-    {
-      id: 'delay-launch',
-      decision: 'Delay Mobile App Launch',
-      meetingName: 'Product Roadmap Review',
-      date: 'Oct 22, 2023',
-      owner: 'Elena L.',
-      avatarText: 'EL',
-      status: 'Pending',
-      quote: 'Elena L: "We are still waiting on store credential approvals and key testing reports."',
-      contextHtml: 'Sarah C: "Understood. Let\'s hold the mobile launch until we clear QA. Let\'s mark it as <span class="highlight-text font-semibold">pending mobile app launch delay</span> for now."'
-    },
-    {
-      id: 'cancel-vendor',
-      decision: 'Cancel Vendor Contract X',
-      meetingName: 'Budget Planning Q4',
-      date: 'Oct 15, 2023',
-      owner: 'Marcus R.',
-      avatarText: 'MR',
-      status: 'Rejected',
-      quote: 'Marcus R: "Contract X is running at a higher cost than our backup options."',
-      contextHtml: 'Jane D: "Our legal ties prevent us from breaking Contract X without heavy penalties. We should reject this cancelation."'
-    }
-  ];
+  useEffect(() => {
+    const fetchDecisions = async () => {
+      try {
+        const response = await fetch('/api/meetings');
+        if (response.ok) {
+          const meetings: Meeting[] = await response.json();
+          const extracted: DecisionItem[] = [];
+
+          meetings.forEach(meeting => {
+            if (meeting.status === 'completed' && meeting.analysis?.decisions) {
+              const formattedDate = new Date(meeting.date).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              });
+
+              meeting.analysis.decisions.forEach(d => {
+                const owner = d.decider || 'Team';
+                
+                // Get initials
+                const parts = owner.replace(/[^a-zA-Z\s]/g, '').trim().split(/\s+/);
+                let avatarText = 'TM';
+                if (parts.length >= 2) {
+                  avatarText = (parts[0][0] + parts[1][0]).toUpperCase();
+                } else if (parts.length === 1 && parts[0]) {
+                  avatarText = parts[0].substring(0, 2).toUpperCase();
+                }
+
+                // Decide status based on keywords
+                let status: 'Approved' | 'Pending' | 'Rejected' = 'Approved';
+                const lowerDecision = d.decision.toLowerCase();
+                if (
+                  lowerDecision.includes('delay') || 
+                  lowerDecision.includes('postpone') || 
+                  lowerDecision.includes('hold') || 
+                  lowerDecision.includes('pending')
+                ) {
+                  status = 'Pending';
+                } else if (
+                  lowerDecision.includes('cancel') || 
+                  lowerDecision.includes('reject') || 
+                  lowerDecision.includes('remove') || 
+                  lowerDecision.includes('abort')
+                ) {
+                  status = 'Rejected';
+                }
+
+                // Highlight decision keyword inside context
+                let contextHtml = d.context || 'Aligned during meeting sync.';
+                const dText = d.decision.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // escape regex
+                const regex = new RegExp(`(${dText})`, 'gi');
+                if (regex.test(contextHtml)) {
+                  contextHtml = contextHtml.replace(regex, '<span class="highlight-text font-semibold text-[#5de6ff]">$1</span>');
+                } else {
+                  contextHtml = `<span class="highlight-text font-semibold text-[#5de6ff]">${d.decision}</span>. ${contextHtml}`;
+                }
+
+                extracted.push({
+                  id: `${meeting.id}-${d.id}`,
+                  meetingId: meeting.id,
+                  decision: d.decision,
+                  meetingName: meeting.title,
+                  date: formattedDate,
+                  owner: owner,
+                  avatarText: avatarText,
+                  status: status,
+                  quote: `${owner}: "${d.decision}"`,
+                  contextHtml: contextHtml
+                });
+              });
+            }
+          });
+
+          setDecisions(extracted);
+          if (extracted.length > 0) {
+            setExpandedRow(extracted[0].id); // Expand first row by default
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch decisions:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDecisions();
+  }, []);
 
   const handleRowClick = (id: string) => {
-    if (expandedRow === id) {
-      setExpandedRow(null);
-    } else {
-      setExpandedRow(id);
-    }
+    setExpandedRow(prev => prev === id ? null : id);
   };
 
   const filteredDecisions = decisions.filter(item => 
@@ -117,7 +170,12 @@ export default function DecisionsPage() {
         </div>
       </header>
 
-      {activeTab === 'table' ? (
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-zinc-500">
+          <div className="w-8 h-8 rounded-full border-2 border-violet-500/20 border-t-violet-500 animate-spin" />
+          <p className="text-sm font-medium">Loading decisions...</p>
+        </div>
+      ) : activeTab === 'table' ? (
         <>
           {/* Filters Area */}
           <div className="flex gap-4">
@@ -133,11 +191,6 @@ export default function DecisionsPage() {
                 onChange={e => setSearchQuery(e.target.value)}
               />
             </div>
-            
-            <button className="bg-[#12172A] border border-[#232B45] rounded-lg px-4 py-2 flex items-center gap-2 text-[#94A3B8] hover:text-[#F8FAFC] hover:border-[#dfe2ef]/30 text-xs font-semibold transition">
-              <Filter className="w-3.5 h-3.5" />
-              <span>Filter</span>
-            </button>
           </div>
 
           {/* Table Container */}
@@ -178,10 +231,14 @@ export default function DecisionsPage() {
                             )}
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-[#c0c1ff] hover:text-[#5de6ff] underline decoration-[#c0c1ff]/30 underline-offset-4 flex items-center gap-1.5">
+                            <Link 
+                              href={`/dashboard/meeting/${item.meetingId}`}
+                              className="text-[#c0c1ff] hover:text-[#5de6ff] underline decoration-[#c0c1ff]/30 underline-offset-4 flex items-center gap-1.5"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               {item.meetingName}
                               <ExternalLink className="w-3 h-3 shrink-0" />
-                            </span>
+                            </Link>
                           </td>
                           <td className="px-6 py-4 text-[#94A3B8] font-medium">{item.date}</td>
                           <td className="px-6 py-4">
@@ -210,22 +267,14 @@ export default function DecisionsPage() {
                           <tr className="bg-[#0a0e17]/30">
                             <td className="p-0" colSpan={5}>
                               <div className="px-6 py-4 border-l-2 border-l-[#5de6ff]/40 animate-in fade-in slide-in-from-top-1 duration-300">
-                                <div className="bg-[#12172A] rounded-lg border border-[#232B45] p-4 shadow-lg neon-underglow">
+                                <div className="bg-[#12172A] rounded-lg border border-[#232B45] p-4 shadow-lg">
                                   <div className="flex items-center gap-2 mb-2 text-[#5de6ff]">
                                     <Award className="w-4 h-4" />
                                     <span className="font-mono text-[10px] text-[#94A3B8] uppercase tracking-wider">Transcript Context</span>
                                   </div>
                                   <div className="font-medium text-[#c7c4d7] leading-relaxed text-xs space-y-1">
-                                    <p className="opacity-70">{item.quote}</p>
+                                    <p className="opacity-70 italic">{item.quote}</p>
                                     <p dangerouslySetInnerHTML={{ __html: item.contextHtml }} />
-                                  </div>
-                                  <div className="mt-4 flex gap-2">
-                                    <button className="text-[10px] bg-[#1c1f29] px-2.5 py-1.5 rounded border border-[#232B45] hover:border-[#5de6ff] text-[#94A3B8] hover:text-[#F8FAFC] transition flex items-center gap-1">
-                                      <Play className="w-3 h-3 fill-current" /> Play snippet
-                                    </button>
-                                    <button className="text-[10px] bg-[#1c1f29] px-2.5 py-1.5 rounded border border-[#232B45] hover:border-[#5de6ff] text-[#94A3B8] hover:text-[#F8FAFC] transition flex items-center gap-1">
-                                      <MessageSquare className="w-3 h-3" /> View thread
-                                    </button>
                                   </div>
                                 </div>
                               </div>
@@ -243,59 +292,43 @@ export default function DecisionsPage() {
       ) : (
         /* Timeline View */
         <div className="bg-[#12172A] border border-[#232B45] rounded-xl p-8 shadow-xl flex flex-col justify-center min-h-[300px]">
-          <div className="relative w-full py-12">
-            {/* Axis Line */}
-            <div className="absolute left-0 right-0 h-[2px] bg-[#232B45] top-1/2 -translate-y-1/2"></div>
-            
-            {/* Timeline nodes */}
-            <div className="w-full flex justify-between relative z-10">
-              {/* Node 1 */}
-              <div className="flex flex-col items-center gap-3 -mt-6">
-                <div className="w-4 h-4 rounded-full bg-[#12172A] border-2 border-rose-400 shadow-[0_0_10px_rgba(248,113,113,0.5)]"></div>
-                <div className="text-center">
-                  <span className="font-mono text-[10px] text-[#94A3B8] block">Oct 15</span>
-                  <span className="text-[11px] font-bold text-[#F8FAFC] max-w-[120px] block truncate">Cancel Vendor Contract X</span>
-                  <span className="text-[9px] text-rose-400">Rejected</span>
-                </div>
-              </div>
+          {decisions.length === 0 ? (
+            <p className="text-[#94A3B8] text-center italic">No decisions logged yet.</p>
+          ) : (
+            <div className="relative w-full py-12">
+              {/* Axis Line */}
+              <div className="absolute left-0 right-0 h-[2px] bg-[#232B45] top-1/2 -translate-y-1/2"></div>
+              
+              {/* Timeline nodes */}
+              <div className="w-full flex justify-between relative z-10 overflow-x-auto gap-12 px-4 scrollbar-none">
+                {decisions.slice(0, 4).map((dec, i) => {
+                  const colors = {
+                    Approved: 'border-emerald-400 text-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.3)]',
+                    Pending: 'border-amber-400 text-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.3)]',
+                    Rejected: 'border-rose-400 text-rose-400 shadow-[0_0_10px_rgba(248,113,113,0.3)]'
+                  };
 
-              {/* Node 2 */}
-              <div className="flex flex-col items-center gap-3 -mt-6">
-                <div className="w-4 h-4 rounded-full bg-[#12172A] border-2 border-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)]"></div>
-                <div className="text-center">
-                  <span className="font-mono text-[10px] text-[#94A3B8] block">Oct 22</span>
-                  <span className="text-[11px] font-bold text-[#F8FAFC] max-w-[120px] block truncate">Delay Mobile App Launch</span>
-                  <span className="text-[9px] text-amber-400">Pending</span>
-                </div>
-              </div>
-
-              {/* Node 3 - Active */}
-              <div className="flex flex-col items-center gap-3 -mt-8">
-                <div className="w-7 h-7 rounded-full bg-[#5de6ff]/10 border-2 border-[#5de6ff] shadow-[0_0_15px_rgba(93,230,255,0.6)] flex items-center justify-center">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#5de6ff]"></div>
-                </div>
-                <div className="text-center">
-                  <span className="font-mono text-[10px] text-[#5de6ff] font-bold block">Oct 24</span>
-                  <span className="text-[12px] font-bold text-[#dfe2ef] max-w-[150px] block truncate">Migrate Core DB to Postgres</span>
-                  <span className="text-[10px] text-emerald-400 font-bold">Approved</span>
-                </div>
-              </div>
-
-              {/* Node 4 */}
-              <div className="flex flex-col items-center gap-3 -mt-6">
-                <div className="w-4 h-4 rounded-full bg-[#12172A] border-2 border-[#31353f]"></div>
-                <div className="text-center">
-                  <span className="font-mono text-[10px] text-[#94A3B8] block">Future</span>
-                  <span className="text-[11px] text-zinc-500 block">Upcoming Decisions</span>
-                </div>
+                  return (
+                    <div key={dec.id} className="flex flex-col items-center gap-3 -mt-6 min-w-[120px] max-w-[180px] shrink-0">
+                      <div className={`w-4 h-4 rounded-full bg-[#12172A] border-2 ${colors[dec.status]}`}></div>
+                      <div className="text-center">
+                        <span className="font-mono text-[9px] text-[#94A3B8] block">{dec.date}</span>
+                        <span className="text-[11px] font-bold text-[#F8FAFC] block truncate" title={dec.decision}>
+                          {dec.decision}
+                        </span>
+                        <span className="text-[9px] block font-semibold">{dec.status}</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
       {/* Conceptual Timeline Preview (visible at bottom of table only) */}
-      {activeTab === 'table' && (
+      {activeTab === 'table' && decisions.length > 0 && (
         <div className="mt-8 relative pt-6 border-t border-[#232B45]">
           <h3 className="font-bold font-display text-[15px] text-[#dfe2ef] mb-6 flex items-center gap-2 opacity-50">
             <GitFork className="w-4.5 h-4.5" /> Timeline Preview
@@ -306,24 +339,20 @@ export default function DecisionsPage() {
             <div className="absolute left-0 right-0 h-[1px] bg-[#232B45] top-1/2"></div>
             
             <div className="w-full flex justify-between relative z-10">
-              <div className="flex flex-col items-center gap-2 -mt-4 cursor-not-allowed">
-                <div className="w-3.5 h-3.5 rounded-full bg-[#12172A] border-2 border-rose-400 shadow-[0_0_10px_rgba(248,113,113,0.5)]"></div>
-                <span className="font-mono text-[9px] text-[#94A3B8]">Oct 15</span>
-              </div>
-              <div className="flex flex-col items-center gap-2 -mt-4 cursor-not-allowed">
-                <div className="w-3.5 h-3.5 rounded-full bg-[#12172A] border-2 border-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)]"></div>
-                <span className="font-mono text-[9px] text-[#94A3B8]">Oct 22</span>
-              </div>
-              <div className="flex flex-col items-center gap-2 mt-4 cursor-not-allowed">
-                <span className="font-mono text-[9px] text-[#94A3B8]">Oct 24</span>
-                <div className="w-5 h-5 rounded-full bg-[#5de6ff]/20 border-2 border-[#5de6ff] shadow-[0_0_15px_rgba(93,230,255,0.6)] flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#5de6ff]"></div>
-                </div>
-              </div>
-              <div className="flex flex-col items-center gap-2 -mt-4 cursor-not-allowed">
-                <div className="w-3.5 h-3.5 rounded-full bg-[#12172A] border-2 border-[#31353f]"></div>
-                <span className="font-mono text-[9px] text-[#94A3B8]">Future</span>
-              </div>
+              {decisions.slice(0, 4).map((dec) => {
+                const colors = {
+                  Approved: 'border-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.3)]',
+                  Pending: 'border-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.3)]',
+                  Rejected: 'border-rose-400 shadow-[0_0_10px_rgba(248,113,113,0.3)]'
+                };
+
+                return (
+                  <div key={dec.id} className="flex flex-col items-center gap-2 -mt-4">
+                    <div className={`w-3.5 h-3.5 rounded-full bg-[#12172A] border-2 ${colors[dec.status]}`}></div>
+                    <span className="font-mono text-[9px] text-[#94A3B8]">{dec.date}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

@@ -430,7 +430,7 @@ export default function HomePage() {
                 
                 return (
                   <div key={meeting.id} className="relative group">
-                    <Link href={isProcessing ? '#' : `/meeting/${meeting.id}`}>
+                    <Link href={isProcessing ? '#' : `/dashboard/meeting/${meeting.id}`}>
                       <div className="glow-card p-6 h-full flex flex-col justify-between cursor-pointer border border-zinc-900">
                         <div>
                           <div className="flex items-start justify-between gap-3">

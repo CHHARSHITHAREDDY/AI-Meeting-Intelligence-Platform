@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { 
   Network, 
   HelpCircle, 
-  Layers, 
   User, 
   Award, 
   ClipboardList, 
@@ -12,6 +12,7 @@ import {
   Calendar,
   ExternalLink
 } from 'lucide-react';
+import { Meeting } from '@/lib/db';
 
 interface GraphNode {
   id: string;
@@ -23,6 +24,7 @@ interface GraphNode {
   color: string;
   description: string;
   meta: string;
+  meetingId?: string;
 }
 
 interface GraphLink {
@@ -32,98 +34,203 @@ interface GraphLink {
 }
 
 export default function KnowledgeGraphPage() {
-  const [selectedNode, setSelectedNode] = useState<string>('apollo-sync');
+  const [selectedNode, setSelectedNode] = useState<string>('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'meeting' | 'person' | 'decision' | 'task' | 'risk'>('all');
+  const [nodes, setNodes] = useState<GraphNode[]>([]);
+  const [links, setLinks] = useState<GraphLink[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const nodes: GraphNode[] = [
-    {
-      id: 'apollo-sync',
-      label: 'Project Apollo Sync',
-      type: 'meeting',
-      x: 250,
-      y: 200,
-      radius: 32,
-      color: '#c0c1ff', // primary
-      description: 'The core weekly planning meeting mapping marketing budgets, roadmap releases, and timeline updates.',
-      meta: 'Oct 24 • 45 min sync • 4 attendees'
-    },
-    {
-      id: 'sarah-chen',
-      label: 'Sarah Chen',
-      type: 'person',
-      x: 100,
-      y: 100,
-      radius: 20,
-      color: '#a2eeff', // secondary
-      description: 'Lead Architect & project controller managing general budget allocations and timeline alignment.',
-      meta: 'Sarah Chen • Lead Architect'
-    },
-    {
-      id: 'marcus-wright',
-      label: 'Marcus Wright',
-      type: 'person',
-      x: 400,
-      y: 100,
-      radius: 20,
-      color: '#a2eeff',
-      description: 'Technical Developer handling integration APIs and core database structures.',
-      meta: 'Marcus Wright • Developer'
-    },
-    {
-      id: 'cap-spend',
-      label: 'Cap spend at $150k',
-      type: 'decision',
-      x: 120,
-      y: 300,
-      radius: 24,
-      color: '#34D399', // success-glow
-      description: 'Approved decision to cap initial spend at $150k and schedule budget audits every 30 days.',
-      meta: 'Decided by Marcus W. • Q3 Marketing Sync'
-    },
-    {
-      id: 'send-draft',
-      label: 'Send draft to finance',
-      type: 'task',
-      x: 380,
-      y: 300,
-      radius: 22,
-      color: '#8083ff', // primary-container
-      description: 'Action item allocated to Marcus Wright to deliver the final proposal draft to the finance team by EOD.',
-      meta: 'Owner: Marcus W. • Due: Today'
-    },
-    {
-      id: 'api-delay',
-      label: 'API Integration Delayed',
-      type: 'risk',
-      x: 250,
-      y: 60,
-      radius: 24,
-      color: '#F59E0B', // warning
-      description: 'High impact risk involving vendor credentials delay that might set back the general mobile launch date.',
-      meta: 'Reported by Marcus W. • Vendor issue'
-    }
-  ];
+  useEffect(() => {
+    const generateGraph = async () => {
+      try {
+        const response = await fetch('/api/meetings');
+        if (!response.ok) throw new Error('Failed to load meetings');
+        const meetings: Meeting[] = await response.json();
+        
+        const completedMeetings = meetings.filter(m => m.status === 'completed');
+        if (completedMeetings.length === 0) {
+          setLoading(false);
+          return;
+        }
 
-  const links: GraphLink[] = [
-    { source: 'apollo-sync', target: 'sarah-chen', id: 'l1' },
-    { source: 'apollo-sync', target: 'marcus-wright', id: 'l2' },
-    { source: 'apollo-sync', target: 'cap-spend', id: 'l3' },
-    { source: 'apollo-sync', target: 'send-draft', id: 'l4' },
-    { source: 'apollo-sync', target: 'api-delay', id: 'l5' },
-    { source: 'sarah-chen', target: 'cap-spend', id: 'l6' },
-    { source: 'marcus-wright', target: 'send-draft', id: 'l7' },
-    { source: 'marcus-wright', target: 'api-delay', id: 'l8' }
-  ];
+        const center = { x: 250, y: 200 };
+        const tempNodes: GraphNode[] = [];
+        const tempLinks: GraphLink[] = [];
+        let linkCounter = 0;
+
+        // 1. Identify all unique people across all meetings
+        const uniquePeopleSet = new Set<string>();
+        completedMeetings.forEach(m => {
+          if (m.analysis) {
+            m.analysis.actionItems?.forEach(a => {
+              if (a.assignee) uniquePeopleSet.add(a.assignee);
+            });
+            m.analysis.decisions?.forEach(d => {
+              if (d.decider) uniquePeopleSet.add(d.decider);
+            });
+          }
+        });
+        const peopleList = Array.from(uniquePeopleSet);
+
+        // 2. Position People on an outer circle (radius = 175)
+        const rPeople = 175;
+        peopleList.forEach((person, idx) => {
+          const angle = (idx * 2 * Math.PI) / peopleList.length;
+          const x = center.x + rPeople * Math.cos(angle);
+          const y = center.y + rPeople * Math.sin(angle);
+          
+          tempNodes.push({
+            id: `person-${person.toLowerCase().replace(/\s+/g, '-')}`,
+            label: person,
+            type: 'person',
+            x,
+            y,
+            radius: 16,
+            color: '#a2eeff', // cyan-glow
+            description: `Active stakeholder participating in decisions and taking ownership of actions.`,
+            meta: `Stakeholder • Active`
+          });
+        });
+
+        // 3. Position Meetings on an inner circle (radius = 65)
+        const rMeetings = 65;
+        completedMeetings.forEach((meeting, mIdx) => {
+          const mAngle = (mIdx * 2 * Math.PI) / completedMeetings.length;
+          const mx = center.x + rMeetings * Math.cos(mAngle);
+          const my = center.y + rMeetings * Math.sin(mAngle);
+          const mNodeId = `meeting-${meeting.id}`;
+
+          tempNodes.push({
+            id: mNodeId,
+            label: meeting.title,
+            type: 'meeting',
+            x: mx,
+            y: my,
+            radius: 28,
+            color: '#c0c1ff', // violet-glow
+            description: meeting.analysis?.summary || 'No summary available.',
+            meta: `${meeting.duration} sync • ${new Date(meeting.date).toLocaleDateString()}`,
+            meetingId: meeting.id
+          });
+
+          // 4. Position details (decisions, tasks, risks) orbiting this meeting node
+          const orbitItems: { type: 'decision' | 'task' | 'risk'; label: string; id: string; description: string; meta: string; ownerName?: string }[] = [];
+
+          if (meeting.analysis) {
+            meeting.analysis.decisions?.forEach(d => {
+              orbitItems.push({
+                type: 'decision',
+                label: d.decision,
+                id: `decision-${meeting.id}-${d.id}`,
+                description: d.context || 'Decision reached during standup alignment.',
+                meta: `Decided by ${d.decider || 'Team'}`,
+                ownerName: d.decider
+              });
+            });
+
+            meeting.analysis.actionItems?.forEach(a => {
+              orbitItems.push({
+                type: 'task',
+                label: a.task,
+                id: `task-${meeting.id}-${a.id}`,
+                description: `Action item assigned to ${a.assignee || 'Team'}. Status: ${a.status.toUpperCase()}`,
+                meta: `Owner: ${a.assignee || 'Team'} • Due: ${a.dueDate || 'ASAP'}`,
+                ownerName: a.assignee
+              });
+            });
+
+            meeting.analysis.risks?.forEach(r => {
+              orbitItems.push({
+                type: 'risk',
+                label: r.risk,
+                id: `risk-${meeting.id}-${r.id}`,
+                description: `Mitigation: ${r.mitigation || 'No mitigation listed.'}`,
+                meta: `Impact: ${r.impact.toUpperCase()}`
+              });
+            });
+          }
+
+          // Distribute orbiting items around the meeting node (radius = 90)
+          const rOrbit = 80;
+          orbitItems.forEach((item, oIdx) => {
+            const oAngle = mAngle + ((oIdx + 1) * 2 * Math.PI) / (orbitItems.length + 1) - Math.PI / 4;
+            const ox = mx + rOrbit * Math.cos(oAngle);
+            const oy = my + rOrbit * Math.sin(oAngle);
+
+            const colors = {
+              decision: '#34d399', // emerald
+              task: '#8b5cf6', // violet
+              risk: '#f59e0b' // amber
+            };
+
+            const radiuses = {
+              decision: 20,
+              task: 18,
+              risk: 20
+            };
+
+            tempNodes.push({
+              id: item.id,
+              label: item.label,
+              type: item.type,
+              x: ox,
+              y: oy,
+              radius: radiuses[item.type],
+              color: colors[item.type],
+              description: item.description,
+              meta: item.meta,
+              meetingId: meeting.id
+            });
+
+            // Link item to parent meeting
+            tempLinks.push({
+              source: mNodeId,
+              target: item.id,
+              id: `link-${linkCounter++}`
+            });
+
+            // Link item to its owner if present
+            if (item.ownerName) {
+              const personNodeId = `person-${item.ownerName.toLowerCase().replace(/\s+/g, '-')}`;
+              const personNodeExists = tempNodes.some(n => n.id === personNodeId);
+              if (personNodeExists) {
+                tempLinks.push({
+                  source: item.id,
+                  target: personNodeId,
+                  id: `link-${linkCounter++}`
+                });
+              }
+            }
+          });
+        });
+
+        setNodes(tempNodes);
+        setLinks(tempLinks);
+        
+        if (tempNodes.length > 0) {
+          // Select meeting node by default
+          const firstMeeting = tempNodes.find(n => n.type === 'meeting');
+          if (firstMeeting) {
+            setSelectedNode(firstMeeting.id);
+          } else {
+            setSelectedNode(tempNodes[0].id);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to compile knowledge graph network:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    generateGraph();
+  }, []);
 
   const handleNodeClick = (nodeId: string) => {
     setSelectedNode(nodeId);
   };
 
-  const getActiveNodeData = () => {
-    return nodes.find(n => n.id === selectedNode) || nodes[0];
-  };
-
-  const activeNode = getActiveNodeData();
+  const activeNode = nodes.find(n => n.id === selectedNode) || null;
 
   // Highlight connections
   const isNodeConnected = (nodeId: string) => {
@@ -132,6 +239,24 @@ export default function KnowledgeGraphPage() {
       (link.source === selectedNode && link.target === nodeId) ||
       (link.target === selectedNode && link.source === nodeId)
     );
+  };
+
+  // Helper to render type icons in inspector
+  const renderTypeIcon = (type: string) => {
+    switch (type) {
+      case 'meeting':
+        return <Network className="w-5 h-5 text-[#c0c1ff]" />;
+      case 'person':
+        return <User className="w-5 h-5 text-[#a2eeff]" />;
+      case 'decision':
+        return <Award className="w-5 h-5 text-[#34D399]" />;
+      case 'task':
+        return <ClipboardList className="w-5 h-5 text-[#8083ff]" />;
+      case 'risk':
+        return <AlertTriangle className="w-5 h-5 text-[#F59E0B]" />;
+      default:
+        return null;
+    }
   };
 
   return (
@@ -144,256 +269,206 @@ export default function KnowledgeGraphPage() {
         </div>
       </div>
 
-      {/* Filters Bar */}
-      <div className="flex flex-wrap gap-2">
-        <button 
-          onClick={() => setActiveFilter('all')}
-          className={`px-4 py-2 rounded-full font-semibold text-xs transition ${
-            activeFilter === 'all' 
-              ? 'bg-[#c0c1ff] text-[#1000a9]' 
-              : 'bg-[#12172A] border border-[#232B45] text-[#94A3B8] hover:text-[#F8FAFC]'
-          }`}
-        >
-          All Nodes
-        </button>
-        <button 
-          onClick={() => setActiveFilter('meeting')}
-          className={`px-4 py-2 rounded-full font-semibold text-xs transition ${
-            activeFilter === 'meeting' 
-              ? 'bg-[#c0c1ff] text-[#1000a9]' 
-              : 'bg-[#12172A] border border-[#232B45] text-[#94A3B8] hover:text-[#F8FAFC]'
-          }`}
-        >
-          Meetings
-        </button>
-        <button 
-          onClick={() => setActiveFilter('person')}
-          className={`px-4 py-2 rounded-full font-semibold text-xs transition ${
-            activeFilter === 'person' 
-              ? 'bg-[#c0c1ff] text-[#1000a9]' 
-              : 'bg-[#12172A] border border-[#232B45] text-[#94A3B8] hover:text-[#F8FAFC]'
-          }`}
-        >
-          People
-        </button>
-        <button 
-          onClick={() => setActiveFilter('decision')}
-          className={`px-4 py-2 rounded-full font-semibold text-xs transition ${
-            activeFilter === 'decision' 
-              ? 'bg-[#c0c1ff] text-[#1000a9]' 
-              : 'bg-[#12172A] border border-[#232B45] text-[#94A3B8] hover:text-[#F8FAFC]'
-          }`}
-        >
-          Decisions
-        </button>
-        <button 
-          onClick={() => setActiveFilter('task')}
-          className={`px-4 py-2 rounded-full font-semibold text-xs transition ${
-            activeFilter === 'task' 
-              ? 'bg-[#c0c1ff] text-[#1000a9]' 
-              : 'bg-[#12172A] border border-[#232B45] text-[#94A3B8] hover:text-[#F8FAFC]'
-          }`}
-        >
-          Tasks
-        </button>
-        <button 
-          onClick={() => setActiveFilter('risk')}
-          className={`px-4 py-2 rounded-full font-semibold text-xs transition ${
-            activeFilter === 'risk' 
-              ? 'bg-[#c0c1ff] text-[#1000a9]' 
-              : 'bg-[#12172A] border border-[#232B45] text-[#94A3B8] hover:text-[#F8FAFC]'
-          }`}
-        >
-          Risks
-        </button>
-      </div>
-
-      {/* Main Graph Grid */}
-      <div className="grid grid-cols-12 gap-6 h-[calc(100vh-270px)] min-h-[500px]">
-        
-        {/* Left: SVG Canvas Panel (Span 8) */}
-        <div className="col-span-12 lg:col-span-8 bg-[#12172A] border border-[#232B45] rounded-xl relative overflow-hidden flex items-center justify-center p-6 shadow-2xl">
-          {/* Glass Overlay instruction */}
-          <div className="absolute top-4 left-4 bg-[#0a0e17]/80 backdrop-blur-md px-3.5 py-2 rounded-lg border border-[#232B45] text-[10px] text-[#94A3B8] flex items-center gap-1.5 z-10 pointer-events-none uppercase font-semibold">
-            <HelpCircle className="w-3.5 h-3.5 text-[#5de6ff]" /> Click nodes to explore relationships
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-zinc-500">
+          <div className="w-8 h-8 rounded-full border-2 border-violet-500/20 border-t-violet-500 animate-spin" />
+          <p className="text-sm font-medium">Computing knowledge graph geometry...</p>
+        </div>
+      ) : nodes.length === 0 ? (
+        <div className="bg-[#12172A] border border-[#232B45] rounded-xl p-12 text-center text-[#94A3B8]">
+          <Network className="w-12 h-12 mx-auto text-[#232B45] mb-4" />
+          <p className="text-sm font-semibold">No sync documents found. Upload meetings to populate knowledge graph.</p>
+        </div>
+      ) : (
+        <>
+          {/* Filters Bar */}
+          <div className="flex flex-wrap gap-2 animate-in fade-in duration-300">
+            {['all', 'meeting', 'person', 'decision', 'task', 'risk'].map((filter) => (
+              <button 
+                key={filter}
+                onClick={() => setActiveFilter(filter as any)}
+                className={`px-4 py-2 rounded-full font-semibold text-xs transition capitalize ${
+                  activeFilter === filter 
+                    ? 'bg-[#c0c1ff] text-[#1000a9]' 
+                    : 'bg-[#12172A] border border-[#232B45] text-[#94A3B8] hover:text-[#F8FAFC]'
+                }`}
+              >
+                {filter === 'all' ? 'All Nodes' : `${filter}s`}
+              </button>
+            ))}
           </div>
 
-          {/* Interactive SVG Canvas */}
-          <svg viewBox="0 0 500 400" className="w-full h-full max-h-[420px] select-none">
-            {/* Draw Links */}
-            {links.map((link) => {
-              const sourceNode = nodes.find(n => n.id === link.source);
-              const targetNode = nodes.find(n => n.id === link.target);
-              if (!sourceNode || !targetNode) return null;
-
-              const isSourceFiltered = activeFilter !== 'all' && sourceNode.type !== activeFilter;
-              const isTargetFiltered = activeFilter !== 'all' && targetNode.type !== activeFilter;
-              const isLinkFiltered = isSourceFiltered || isTargetFiltered;
-
-              const isHighlighted = isNodeConnected(sourceNode.id) && isNodeConnected(targetNode.id);
-
-              return (
-                <line
-                  key={link.id}
-                  x1={sourceNode.x}
-                  y1={sourceNode.y}
-                  x2={targetNode.x}
-                  y2={targetNode.y}
-                  stroke={isHighlighted ? '#5de6ff' : '#232B45'}
-                  strokeWidth={isHighlighted ? 1.5 : 1}
-                  strokeDasharray={sourceNode.type === 'task' || targetNode.type === 'task' ? '4 4' : undefined}
-                  opacity={isLinkFiltered ? 0.05 : isHighlighted ? 0.8 : 0.3}
-                  className="transition-all duration-300"
-                />
-              );
-            })}
-
-            {/* Draw Nodes */}
-            {nodes.map((node) => {
-              const isFiltered = activeFilter !== 'all' && node.type !== activeFilter;
-              const isSelected = selectedNode === node.id;
-              const isHighlighted = isNodeConnected(node.id);
-
-              return (
-                <g 
-                  key={node.id} 
-                  onClick={() => handleNodeClick(node.id)}
-                  className="cursor-pointer group"
-                  opacity={isFiltered ? 0.15 : 1}
-                >
-                  {/* Outer Pulsing Aura (Selected Node) */}
-                  {isSelected && (
-                    <circle
-                      cx={node.x}
-                      cy={node.y}
-                      r={node.radius + 8}
-                      fill="none"
-                      stroke={node.color}
-                      strokeWidth={1}
-                      strokeDasharray="3 3"
-                      className="animate-spin"
-                      style={{ transformOrigin: `${node.x}px ${node.y}px`, animationDuration: '12s' }}
-                    />
-                  )}
-
-                  {/* Outer highlighting ring on hover */}
-                  <circle
-                    cx={node.x}
-                    cy={node.y}
-                    r={node.radius + 4}
-                    fill="none"
-                    stroke={node.color}
-                    strokeWidth={isSelected ? 2 : 1}
-                    opacity={isSelected ? 1 : 0}
-                    className="group-hover:opacity-60 transition-opacity duration-200"
-                  />
-
-                  {/* Core Circle */}
-                  <circle
-                    cx={node.x}
-                    cy={node.y}
-                    r={node.radius}
-                    fill={node.type === 'meeting' ? 'url(#meeting-grad)' : '#181b25'}
-                    stroke={isSelected ? '#5de6ff' : node.color}
-                    strokeWidth={isSelected ? 3 : isHighlighted ? 2 : 1.2}
-                    className="transition-all duration-200"
-                  />
-
-                  {/* Icons inside nodes */}
-                  <g transform={`translate(${node.x - 7}, ${node.y - 7})`} opacity={0.8} className="pointer-events-none">
-                    {node.type === 'meeting' && <Network className="w-3.5 h-3.5 text-white" />}
-                    {node.type === 'person' && <User className="w-3.5 h-3.5 text-[#5de6ff]" />}
-                    {node.type === 'decision' && <Award className="w-3.5 h-3.5 text-[#34D399]" />}
-                    {node.type === 'task' && <ClipboardList className="w-3.5 h-3.5 text-[#8083ff]" />}
-                    {node.type === 'risk' && <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B]" />}
-                  </g>
-
-                  {/* Node Label Text */}
-                  <text
-                    x={node.x}
-                    y={node.y + node.radius + 14}
-                    textAnchor="middle"
-                    fill={isSelected ? '#5de6ff' : isHighlighted ? '#F8FAFC' : '#94A3B8'}
-                    fontSize={10}
-                    fontWeight={isSelected || isHighlighted ? 'bold' : 'normal'}
-                    className="transition-colors duration-200 pointer-events-none font-sans"
-                  >
-                    {node.label}
-                  </text>
-                </g>
-              );
-            })}
-
-            {/* Gradient Definitions */}
-            <defs>
-              <linearGradient id="meeting-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#8083ff" />
-                <stop offset="100%" stopColor="#494bd6" />
-              </linearGradient>
-            </defs>
-          </svg>
-        </div>
-
-        {/* Right: Selected Node Details Panel (Span 4) */}
-        <div className="col-span-12 lg:col-span-4 bg-[#12172A] border border-[#232B45] rounded-xl p-5 shadow-2xl flex flex-col justify-between">
-          <div className="space-y-6">
-            {/* Header info */}
-            <div className="flex items-center justify-between pb-4 border-b border-[#232B45]/50">
-              <span className="font-mono text-[9px] text-[#94A3B8] uppercase tracking-widest font-bold">Node Details</span>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider font-mono ${
-                activeNode.type === 'meeting' ? 'bg-[#c0c1ff]/15 text-[#c0c1ff]' :
-                activeNode.type === 'person' ? 'bg-[#5de6ff]/15 text-[#5de6ff]' :
-                activeNode.type === 'decision' ? 'bg-[#34D399]/15 text-[#34D399]' :
-                activeNode.type === 'task' ? 'bg-[#8083ff]/15 text-[#8083ff]' : 'bg-[#F59E0B]/15 text-[#F59E0B]'
-              }`}>
-                {activeNode.type}
-              </span>
-            </div>
-
-            {/* Node label */}
-            <div className="space-y-2">
-              <h3 className="text-xl font-extrabold text-white font-display leading-tight">{activeNode.label}</h3>
-              <p className="text-xs text-[#94A3B8] leading-relaxed bg-[#181b25] border border-[#232B45] p-3 rounded-lg">
-                {activeNode.description}
-              </p>
-            </div>
-
-            {/* Relations list */}
-            <div className="space-y-3">
-              <h4 className="text-[10px] font-mono uppercase tracking-wider text-[#94A3B8] font-bold">Network Connections</h4>
-              <div className="space-y-2">
-                {links
-                  .filter(link => link.source === activeNode.id || link.target === activeNode.id)
-                  .map(link => {
-                    const connectedNodeId = link.source === activeNode.id ? link.target : link.source;
-                    const node = nodes.find(n => n.id === connectedNodeId);
-                    if (!node) return null;
-                    return (
-                      <div 
-                        key={node.id} 
-                        onClick={() => handleNodeClick(node.id)}
-                        className="bg-[#181b25] border border-[#232B45] hover:border-[#5de6ff]/30 p-2.5 rounded-lg text-xs font-semibold flex items-center justify-between transition cursor-pointer group"
-                      >
-                        <span className="text-[#dfe2ef] group-hover:text-[#5de6ff] transition-colors">{node.label}</span>
-                        <span className="text-[9px] font-mono text-[#94A3B8] uppercase shrink-0">{node.type}</span>
-                      </div>
-                    );
-                  })}
+          {/* Main Graph Grid */}
+          <div className="grid grid-cols-12 gap-6 h-[calc(100vh-270px)] min-h-[500px] animate-in fade-in duration-300">
+            
+            {/* Left: SVG Canvas Panel (Span 8) */}
+            <div className="col-span-12 lg:col-span-8 bg-[#12172A] border border-[#232B45] rounded-xl relative overflow-hidden flex items-center justify-center p-6 shadow-2xl">
+              {/* Glass Overlay instruction */}
+              <div className="absolute top-4 left-4 bg-[#0a0e17]/80 backdrop-blur-md px-3.5 py-2 rounded-lg border border-[#232B45] text-[10px] text-[#94A3B8] flex items-center gap-1.5 z-10 pointer-events-none uppercase font-semibold">
+                <HelpCircle className="w-3.5 h-3.5 text-[#5de6ff]" /> Click nodes to explore relationships
               </div>
+
+              {/* Interactive SVG Canvas */}
+              <svg viewBox="0 0 500 400" className="w-full h-full max-h-[420px] select-none">
+                <defs>
+                  <radialGradient id="meeting-grad" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stopColor="#1e223b" />
+                    <stop offset="100%" stopColor="#0a0e17" />
+                  </radialGradient>
+                </defs>
+
+                {/* Draw Links */}
+                {links.map((link) => {
+                  const sourceNode = nodes.find(n => n.id === link.source);
+                  const targetNode = nodes.find(n => n.id === link.target);
+                  if (!sourceNode || !targetNode) return null;
+
+                  const isSourceFiltered = activeFilter !== 'all' && sourceNode.type !== activeFilter;
+                  const isTargetFiltered = activeFilter !== 'all' && targetNode.type !== activeFilter;
+                  const isLinkFiltered = isSourceFiltered || isTargetFiltered;
+
+                  const isHighlighted = isNodeConnected(sourceNode.id) && isNodeConnected(targetNode.id);
+
+                  return (
+                    <line
+                      key={link.id}
+                      x1={sourceNode.x}
+                      y1={sourceNode.y}
+                      x2={targetNode.x}
+                      y2={targetNode.y}
+                      stroke={isHighlighted ? '#5de6ff' : '#232B45'}
+                      strokeWidth={isHighlighted ? 1.5 : 1}
+                      strokeDasharray={sourceNode.type === 'task' || targetNode.type === 'task' ? '3 3' : undefined}
+                      opacity={isLinkFiltered ? 0.05 : isHighlighted ? 0.8 : 0.3}
+                      className="transition-all duration-300"
+                    />
+                  );
+                })}
+
+                {/* Draw Nodes */}
+                {nodes.map((node) => {
+                  const isFiltered = activeFilter !== 'all' && node.type !== activeFilter;
+                  const isSelected = selectedNode === node.id;
+                  const isHighlighted = isNodeConnected(node.id);
+
+                  return (
+                    <g 
+                      key={node.id} 
+                      onClick={() => handleNodeClick(node.id)}
+                      className="cursor-pointer group"
+                      opacity={isFiltered ? 0.15 : 1}
+                    >
+                      {/* Outer Pulsing Aura (Selected Node) */}
+                      {isSelected && (
+                        <circle
+                          cx={node.x}
+                          cy={node.y}
+                          r={node.radius + 8}
+                          fill="none"
+                          stroke={node.color}
+                          strokeWidth={1}
+                          strokeDasharray="3 3"
+                          className="animate-spin"
+                          style={{ transformOrigin: `${node.x}px ${node.y}px`, animationDuration: '16s' }}
+                        />
+                      )}
+
+                      {/* Outer highlighting ring on hover */}
+                      <circle
+                        cx={node.x}
+                        cy={node.y}
+                        r={node.radius + 4}
+                        fill="none"
+                        stroke={node.color}
+                        strokeWidth={isSelected ? 2 : 1}
+                        opacity={isSelected ? 1 : 0}
+                        className="group-hover:opacity-60 transition-opacity duration-200"
+                      />
+
+                      {/* Core Circle */}
+                      <circle
+                        cx={node.x}
+                        cy={node.y}
+                        r={node.radius}
+                        fill={node.type === 'meeting' ? 'url(#meeting-grad)' : '#181b25'}
+                        stroke={isSelected ? '#5de6ff' : node.color}
+                        strokeWidth={isSelected ? 3 : isHighlighted ? 2 : 1.2}
+                        className="transition-all duration-200"
+                      />
+
+                      {/* Node Label Text */}
+                      <text
+                        x={node.x}
+                        y={node.y + 4}
+                        textAnchor="middle"
+                        fill="#F8FAFC"
+                        fontSize={node.type === 'meeting' ? '7px' : '6px'}
+                        fontWeight="bold"
+                        className="pointer-events-none select-none"
+                      >
+                        {node.type === 'meeting' 
+                          ? (node.label.length > 10 ? node.label.substring(0, 10) + '...' : node.label)
+                          : node.type === 'person' 
+                            ? node.label.split(' ')[0] 
+                            : (node.label.length > 8 ? node.label.substring(0, 8) + '...' : node.label)
+                        }
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
+
+            {/* Right: Selected Node Details Inspector (Span 4) */}
+            <div className="col-span-12 lg:col-span-4 bg-[#12172A] border border-[#232B45] rounded-xl p-6 shadow-2xl flex flex-col justify-between">
+              {activeNode ? (
+                <div className="space-y-6 flex-1 flex flex-col justify-between">
+                  <div className="space-y-4">
+                    {/* Node Type Badge */}
+                    <div className="flex items-center space-x-2">
+                      {renderTypeIcon(activeNode.type)}
+                      <span className="text-[10px] font-mono text-[#94A3B8] uppercase tracking-wider font-bold">
+                        {activeNode.type} Node
+                      </span>
+                    </div>
+
+                    {/* Node Title */}
+                    <div>
+                      <h3 className="text-xl font-bold text-white tracking-tight">{activeNode.label}</h3>
+                      <p className="text-[10px] font-mono text-[#5de6ff] mt-1">{activeNode.meta}</p>
+                    </div>
+
+                    {/* Node Description */}
+                    <div className="pt-4 border-t border-[#232B45]">
+                      <p className="text-xs text-[#c7c4d7] leading-relaxed font-medium">
+                        {activeNode.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Actions based on node type */}
+                  {activeNode.meetingId && (
+                    <div className="pt-6 border-t border-[#232B45] shrink-0">
+                      <Link 
+                        href={`/dashboard/meeting/${activeNode.meetingId}`}
+                        className="w-full bg-[#1c1f29] border border-[#232B45] hover:border-[#5de6ff] hover:bg-[#262a34] text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-2 text-xs transition duration-200"
+                      >
+                        <span>Open Dashboard</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center text-[#94A3B8]">
+                  <Network className="w-8 h-8 opacity-25 mb-2" />
+                  <p className="text-xs italic">Select a node in the network to inspect its relationships and metadata.</p>
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Action button */}
-          <div className="pt-4 border-t border-[#232B45]/50 flex items-center justify-between text-[11px] text-[#94A3B8] font-semibold">
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-[#ffb0cd]" /> {activeNode.meta.split('•')[0]}
-            </span>
-            <button className="text-[#5de6ff] hover:text-[#c0c1ff] transition flex items-center gap-1">
-              Explore Subgraph <ExternalLink className="w-3 h-3" />
-            </button>
-          </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }
