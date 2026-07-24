@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Cue Intelligence - AI Meeting Assistant",
+  "version": "1.0.0",
+  "description": "Capture live meeting audio, transcribe, and extract decisions, action items, and risks in real-time.",
+  "permissions": [
+    "tabCapture",
+    "activeTab",
+    "storage",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "http://localhost:3000/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Open Cue Intelligence"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  }
+}

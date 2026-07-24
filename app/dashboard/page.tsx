@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 import { 
   UploadCloud, 
   Search, 
@@ -28,6 +30,36 @@ export default function HomePage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const statsContainerRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    const mm = gsap.matchMedia();
+
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      const counters = statsContainerRef.current?.querySelectorAll('.stat-counter');
+      counters?.forEach((counter) => {
+        const targetVal = parseFloat(counter.getAttribute('data-target') || '0');
+        const suffix = counter.getAttribute('data-suffix') || '';
+        const obj = { val: 0 };
+
+        gsap.to(obj, {
+          val: targetVal,
+          duration: 1.5,
+          ease: 'power1.out',
+          scrollTrigger: {
+            trigger: counter,
+            start: 'top 80%',
+            once: true,
+          },
+          onUpdate: () => {
+            counter.textContent = `${Math.round(obj.val)}${suffix}`;
+          },
+        });
+      });
+    });
+
+    return () => mm.revert();
+  }, { scope: statsContainerRef, dependencies: [meetings] });
 
   const fetchMeetings = async () => {
     try {
@@ -182,16 +214,20 @@ export default function HomePage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 stagger-children">
+      <div ref={statsContainerRef} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 stagger-children">
         {[
-          { label: 'Processed', value: totalMeetings, sub: 'Total sync documents', icon: <Volume2 className="w-5 h-5" />, color: '#c0c1ff', bg: 'rgba(192,193,255,0.08)' },
-          { label: 'Action Completion', value: `${totalActionItems > 0 ? Math.round((completedActionItems / totalActionItems) * 100) : 0}%`, sub: `${completedActionItems} / ${totalActionItems} tasks done`, icon: <CheckSquare className="w-5 h-5" />, color: '#34D399', bg: 'rgba(52,211,153,0.08)' },
-          { label: 'Critical Risks', value: highRisksCount, sub: 'Requiring direct mitigation', icon: <AlertTriangle className="w-5 h-5" />, color: '#ffb4ab', bg: 'rgba(255,180,171,0.08)' },
+          { label: 'Processed', target: totalMeetings, suffix: '', sub: 'Total sync documents', icon: <Volume2 className="w-5 h-5" />, color: '#c0c1ff', bg: 'rgba(192,193,255,0.08)' },
+          { label: 'Action Completion', target: totalActionItems > 0 ? Math.round((completedActionItems / totalActionItems) * 100) : 0, suffix: '%', sub: `${completedActionItems} / ${totalActionItems} tasks done`, icon: <CheckSquare className="w-5 h-5" />, color: '#34D399', bg: 'rgba(52,211,153,0.08)' },
+          { label: 'Critical Risks', target: highRisksCount, suffix: '', sub: 'Requiring direct mitigation', icon: <AlertTriangle className="w-5 h-5" />, color: '#ffb4ab', bg: 'rgba(255,180,171,0.08)' },
         ].map((stat) => (
           <div key={stat.label} className="glass-card p-5 flex items-center justify-between">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.15em] font-mono" style={{ color: '#94A3B8' }}>{stat.label}</p>
-              <h3 className="text-2xl font-bold font-display mt-1" style={{ color: stat.color }}>{stat.value}</h3>
+              <h3 className="text-2xl font-bold font-display mt-1" style={{ color: stat.color }}>
+                <span className="stat-counter" data-target={stat.target} data-suffix={stat.suffix}>
+                  0{stat.suffix}
+                </span>
+              </h3>
               <p className="text-[11px] mt-1" style={{ color: '#94A3B8' }}>{stat.sub}</p>
             </div>
             <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: stat.bg, color: stat.color }}>

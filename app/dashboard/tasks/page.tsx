@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 import { 
   Square, 
   CheckSquare2, 
@@ -34,6 +36,35 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
+  const statsRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    const mm = gsap.matchMedia();
+
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      const counters = statsRef.current?.querySelectorAll('.task-stat-counter');
+      counters?.forEach((counter) => {
+        const targetVal = parseFloat(counter.getAttribute('data-target') || '0');
+        const obj = { val: 0 };
+
+        gsap.to(obj, {
+          val: targetVal,
+          duration: 1.5,
+          ease: 'power1.out',
+          scrollTrigger: {
+            trigger: counter,
+            start: 'top 80%',
+            once: true,
+          },
+          onUpdate: () => {
+            counter.textContent = `${Math.round(obj.val)}`;
+          },
+        });
+      });
+    });
+
+    return () => mm.revert();
+  }, { scope: statsRef, dependencies: [tasks] });
 
   const fetchTasksAndMeetings = async () => {
     try {
@@ -194,11 +225,13 @@ export default function TasksPage() {
       ) : (
         <>
           {/* Stats Summary cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 animate-in fade-in duration-300">
+          <div ref={statsRef} className="grid grid-cols-1 sm:grid-cols-3 gap-6 animate-in fade-in duration-300">
             <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-5 shadow-lg flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Total Tasks</p>
-                <h3 className="text-2xl font-bold text-zinc-100 mt-1">{totalTasks}</h3>
+                <h3 className="text-2xl font-bold text-zinc-100 mt-1">
+                  <span className="task-stat-counter" data-target={totalTasks}>0</span>
+                </h3>
               </div>
               <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-400">
                 <Link2 className="w-5 h-5" />
@@ -208,7 +241,9 @@ export default function TasksPage() {
             <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-5 shadow-lg flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Pending Tasks</p>
-                <h3 className="text-2xl font-bold text-fuchsia-400 mt-1">{pendingTasks}</h3>
+                <h3 className="text-2xl font-bold text-fuchsia-400 mt-1">
+                  <span className="task-stat-counter" data-target={pendingTasks}>0</span>
+                </h3>
               </div>
               <div className="w-10 h-10 rounded-lg bg-fuchsia-500/10 flex items-center justify-center text-fuchsia-400">
                 <Clock className="w-5 h-5" />
@@ -218,7 +253,9 @@ export default function TasksPage() {
             <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-5 shadow-lg flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Completed Tasks</p>
-                <h3 className="text-2xl font-bold text-emerald-400 mt-1">{completedTasks}</h3>
+                <h3 className="text-2xl font-bold text-emerald-400 mt-1">
+                  <span className="task-stat-counter" data-target={completedTasks}>0</span>
+                </h3>
               </div>
               <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
                 <CheckCircle className="w-5 h-5" />

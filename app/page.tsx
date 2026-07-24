@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 import { 
   ArrowRight, 
   Play, 
@@ -16,6 +18,10 @@ export default function LandingPage() {
   const [samText, setSamText] = useState('');
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
   
+  const auroraRef = useRef<HTMLDivElement>(null);
+  const tickerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const fullAlexText = "We need to finalize the Q3 roadmap by Friday.";
   const fullSamText = "I can commit to the API refactor, but the dashboard will spill over.";
 
@@ -25,6 +31,59 @@ export default function LandingPage() {
       .then(data => { if (data?.user) setUser(data.user); })
       .catch(() => setUser(null));
   }, []);
+
+  // GSAP Animations with prefers-reduced-motion support
+  useGSAP(() => {
+    const mm = gsap.matchMedia();
+
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      // 1. Hero Aurora Background Loop
+      if (auroraRef.current) {
+        gsap.to(auroraRef.current, {
+          x: 40,
+          y: -30,
+          scale: 1.15,
+          rotation: 5,
+          duration: 18,
+          repeat: -1,
+          yoyo: true,
+          ease: 'sine.inOut',
+        });
+      }
+
+      // 6. Marquee Ticker Loop
+      if (tickerRef.current) {
+        gsap.to(tickerRef.current, {
+          xPercent: -50,
+          repeat: -1,
+          ease: 'none',
+          duration: 30,
+        });
+      }
+    });
+
+    return () => mm.revert();
+  }, { scope: containerRef });
+
+  const handleCtaMouseEnter = (e: React.MouseEvent<HTMLElement>) => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    gsap.to(e.currentTarget, {
+      scale: 1.03,
+      boxShadow: '0 0 30px rgba(192, 193, 255, 0.7)',
+      duration: 0.2,
+      ease: 'power2.out',
+    });
+  };
+
+  const handleCtaMouseLeave = (e: React.MouseEvent<HTMLElement>) => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    gsap.to(e.currentTarget, {
+      scale: 1,
+      boxShadow: '0 0 20px rgba(192, 193, 255, 0.4)',
+      duration: 0.2,
+      ease: 'power2.out',
+    });
+  };
 
   // WebGL Shader Animation Effect (STITCH Shader ANIMATION_3)
   useEffect(() => {
@@ -179,7 +238,14 @@ void main() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0f131c] text-[#dfe2ef] relative overflow-hidden flex flex-col font-sans bg-grid-pattern selection:bg-[#8083ff]/30 selection:text-[#c0c1ff]">
+    <div ref={containerRef} className="min-h-screen bg-[#0f131c] text-[#dfe2ef] relative overflow-hidden flex flex-col font-sans bg-grid-pattern selection:bg-[#8083ff]/30 selection:text-[#c0c1ff]">
+      {/* Background Aurora Mesh for GSAP item 1 */}
+      <div 
+        ref={auroraRef} 
+        className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-gradient-to-br from-[#6366F1]/20 via-[#22D3EE]/15 to-[#EC4899]/20 rounded-full blur-[140px] pointer-events-none -z-10" 
+      />
+      <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-gradient-to-tl from-[#EC4899]/15 via-[#6366F1]/20 to-transparent rounded-full blur-[140px] pointer-events-none -z-10" />
+
       {/* Navbar */}
       <header className="sticky top-0 z-50 backdrop-blur-xl border-b border-[#232B45] bg-[#0f131c]/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -208,6 +274,8 @@ void main() {
                 </span>
                 <Link
                   href="/dashboard/live"
+                  onMouseEnter={handleCtaMouseEnter}
+                  onMouseLeave={handleCtaMouseLeave}
                   className="px-5 py-2.5 rounded-lg text-[12px] btn-primary-cta uppercase tracking-wider flex items-center gap-2"
                 >
                   Go to Dashboard
@@ -221,6 +289,8 @@ void main() {
                 </Link>
                 <Link
                   href="/login"
+                  onMouseEnter={handleCtaMouseEnter}
+                  onMouseLeave={handleCtaMouseLeave}
                   className="px-5 py-2.5 rounded-lg text-[12px] btn-primary-cta uppercase tracking-wider"
                 >
                   Request Demo
@@ -261,6 +331,8 @@ void main() {
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
                 <Link
                   href={user ? "/dashboard/live" : "/login"}
+                  onMouseEnter={handleCtaMouseEnter}
+                  onMouseLeave={handleCtaMouseLeave}
                   className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide btn-primary-cta text-center flex items-center justify-center gap-2 group cursor-pointer"
                 >
                   {user ? 'Go to Dashboard' : 'Start Free'}
@@ -358,13 +430,14 @@ void main() {
           <ChevronDown className="w-6 h-6 text-[#94A3B8]" />
         </div>
 
-        {/* Infinite Ticker */}
+        {/* Infinite Ticker with GSAP Marquee (Item 6) */}
         <section className="border-y border-[#232B45] bg-[#0a0e17]/60 py-6 overflow-hidden relative">
           <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-[#0f131c] to-transparent pointer-events-none z-10" />
           <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-[#0f131c] to-transparent pointer-events-none z-10" />
-          <div className="animate-ticker gap-6">
-            {tickerItems.map((item, i) => (
-              <div key={i} className="px-5 py-2.5 rounded-full bg-[#181b25] border border-[#232B45] text-[#c7c4d7] text-xs font-semibold tracking-wide flex items-center gap-2.5 whitespace-nowrap shadow-sm">
+          <div className="flex w-max" ref={tickerRef}>
+            {/* Original content + Duplicated content for seamless 0 to -50% loop */}
+            {[...tickerItems, ...tickerItems].map((item, i) => (
+              <div key={i} className="px-5 py-2.5 mx-3 rounded-full bg-[#181b25] border border-[#232B45] text-[#c7c4d7] text-xs font-semibold tracking-wide flex items-center gap-2.5 whitespace-nowrap shadow-sm">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#ffb0cd]" />
                 {item}
               </div>
@@ -384,8 +457,10 @@ void main() {
           </p>
           <div className="pt-2">
             <Link
-              href="/dashboard"
-              className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide bg-[#c0c1ff] hover:bg-[#e1e0ff] text-[#1000a9] shadow-[0_0_20px_rgba(192,193,255,0.4)] transition-all inline-flex items-center gap-2"
+              href={user ? "/dashboard/live" : "/login"}
+              onMouseEnter={handleCtaMouseEnter}
+              onMouseLeave={handleCtaMouseLeave}
+              className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide btn-primary-cta inline-flex items-center gap-2"
             >
               Get Started Now
               <ArrowRight className="w-4 h-4" />
