@@ -54,7 +54,15 @@ export default function LiveMeetingPage() {
   const transcriptEnd  = useRef<HTMLDivElement>(null);
 
   /* ─── Init ─────────────────────────────────────────────────────────────── */
-  useEffect(() => { setOrigin(window.location.origin); }, []);
+  useEffect(() => { 
+    setOrigin(window.location.origin); 
+    if (typeof window !== 'undefined') {
+      const storedGuest = sessionStorage.getItem('guest_display_name');
+      if (storedGuest) {
+        setHostName(storedGuest);
+      }
+    }
+  }, []);
 
   /* auto-join if ?meetingId= in URL */
   useEffect(() => {
@@ -79,6 +87,14 @@ export default function LiveMeetingPage() {
 
   const silentJoin = async (id: string) => {
     try {
+      const storedGuest = typeof window !== 'undefined' ? sessionStorage.getItem('guest_display_name') : null;
+      if (storedGuest) {
+        await fetch(`/api/live-meetings/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'addParticipant', participantName: storedGuest }),
+        });
+      }
       const r = await fetch(`/api/live-meetings/${id}`);
       const d = await r.json();
       applyMeetingData(d);
@@ -106,11 +122,27 @@ export default function LiveMeetingPage() {
   const joinMeeting = async () => {
     const raw = joinInput.trim();
     if (!raw) return;
-    const id = raw.includes('meetingId=')
-      ? raw.split('meetingId=')[1].split('&')[0]
-      : raw.split('/').pop()?.split('?')[0] || raw;
+
+    let id = raw;
+    if (raw.includes('/join/')) {
+      id = raw.split('/join/')[1].split('?')[0].split('/')[0];
+    } else if (raw.includes('meetingId=')) {
+      id = raw.split('meetingId=')[1].split('&')[0];
+    } else {
+      const parts = raw.split('/');
+      const last = parts[parts.length - 1] || raw;
+      id = last.split('?')[0];
+    }
+
     setIsJoining(true);
     try {
+      if (hostName && hostName !== 'You') {
+        await fetch(`/api/live-meetings/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'addParticipant', participantName: hostName }),
+        });
+      }
       const r = await fetch(`/api/live-meetings/${id}`);
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
@@ -226,7 +258,7 @@ export default function LiveMeetingPage() {
   useEffect(() => () => { listeningRef.current = false; try { recognitionRef.current?.abort(); } catch { /* ignore */ } }, []);
 
   /* ─── Derived ────────────────────────────────────────────────────────────── */
-  const shareLink = meetingId ? `${origin}/dashboard/live?meetingId=${meetingId}` : '';
+  const shareLink = meetingId ? `${origin}/join/${meetingId}` : '';
   const inMeeting  = meetingId !== null;
   const isLive     = meetingStatus === 'live';
 

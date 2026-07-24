@@ -7,6 +7,7 @@ export interface LiveMeetingRecord {
   title: string;
   hostName: string;
   joinLink: string;
+  zoomLink: string;
   status: LiveMeetingStatus;
   createdAt: string;
   startedAt?: string;
@@ -29,6 +30,10 @@ function makeJoinLink(meetingId: string) {
   return `/dashboard/live?meetingId=${meetingId}`;
 }
 
+function makeZoomLink(meetingId: string) {
+  return `/join/${meetingId}`;
+}
+
 export function createLiveMeeting(title: string, hostName: string): LiveMeetingRecord {
   const id = makeMeetingId();
   const now = new Date().toISOString();
@@ -37,6 +42,7 @@ export function createLiveMeeting(title: string, hostName: string): LiveMeetingR
     title: title.trim() || 'Live AI Meeting',
     hostName: hostName.trim() || 'Host',
     joinLink: makeJoinLink(id),
+    zoomLink: makeZoomLink(id),
     status: 'scheduled',
     createdAt: now,
     participants: [hostName.trim() || 'Host'],
@@ -58,6 +64,20 @@ export function createLiveMeeting(title: string, hostName: string): LiveMeetingR
 
 export function getLiveMeeting(meetingId: string): LiveMeetingRecord | undefined {
   return liveMeetingStore.get(meetingId);
+}
+
+export function getLiveMeetingPublicInfo(meetingId: string) {
+  const meeting = liveMeetingStore.get(meetingId);
+  if (!meeting) return null;
+  return {
+    id: meeting.id,
+    title: meeting.title,
+    hostName: meeting.hostName,
+    status: meeting.status,
+    participantCount: meeting.participants.length,
+    participants: meeting.participants,
+    createdAt: meeting.createdAt,
+  };
 }
 
 export function listLiveMeetings(): LiveMeetingRecord[] {
