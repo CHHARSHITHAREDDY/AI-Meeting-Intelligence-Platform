@@ -1,7 +1,11 @@
-document.getElementById('openSidePanel')?.addEventListener('click', async () => {
+document.getElementById('toggleOverlay')?.addEventListener('click', async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab?.id) {
-    chrome.sidePanel.open({ tabId: tab.id });
+    chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ['content.js']
+    });
+    window.close();
   }
 });
 
