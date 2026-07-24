@@ -118,7 +118,7 @@ export async function getUserById(id: string): Promise<any | null> {
 export async function getMeetings(userId: string): Promise<Meeting[]> {
   await initDb();
   const { rows } = await pool.query('SELECT * FROM meetings WHERE user_id = $1 ORDER BY date DESC', [userId]);
-  return rows.map(row => ({
+  return rows.map((row: any) => ({
     id: row.id,
     title: row.title,
     date: row.date,
