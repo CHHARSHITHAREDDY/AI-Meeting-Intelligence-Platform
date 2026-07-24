@@ -373,23 +373,130 @@
 
   resizeObserver.observe(wrapper);
 
-  // 7. Recorder & Live Simulation Engine
+  // 7. Real Speech Recognition & Video Audio Capture Engine
   let timerInterval = null;
   let seconds = 0;
   let isPaused = false;
-  let mockIdx = 0;
-
-  const mockLines = [
-    { speaker: 'Sarah (PM)', text: 'Welcome. Let\'s finalize the Q3 product roadmap today.' },
-    { speaker: 'Marcus (Eng)', text: 'Decision made: We will cap initial ad spend at $150k.' },
-    { speaker: 'Alex (Dev)', text: 'Action item: I will update the Redis caching layer by Friday.' },
-    { speaker: 'Elena (Sec)', text: 'Risk flagged: API rate limits might increase latency.' }
-  ];
+  let recognitionInstance = null;
+  let captionObserver = null;
+  let seenCaptions = new Set();
 
   function formatTime(s) {
     const m = Math.floor(s / 60).toString().padStart(2, '0');
     const sec = (s % 60).toString().padStart(2, '0');
     return `${m}:${sec}`;
+  }
+
+  function appendTranscriptLine(speaker, text, isInterim = false) {
+    if (!text.trim()) return;
+    
+    // Remove placeholder message if present
+    if (transcriptFeed.querySelector('div')?.textContent.includes('Click ▶ Start')) {
+      transcriptFeed.innerHTML = '';
+    }
+
+    let interimEl = transcriptFeed.querySelector('.interim-line');
+    if (isInterim) {
+      if (!interimEl) {
+        interimEl = document.createElement('div');
+        interimEl.className = 'transcript-line interim-line';
+        interimEl.style.opacity = '0.7';
+        interimEl.style.fontStyle = 'italic';
+        interimEl.style.borderLeftColor = '#a5b4fc';
+        transcriptFeed.appendChild(interimEl);
+      }
+      interimEl.innerHTML = `<span class="speaker">${speaker} (speaking...):</span> ${text}`;
+      transcriptFeed.scrollTop = transcriptFeed.scrollHeight;
+      return;
+    }
+
+    if (interimEl) interimEl.remove();
+
+    const div = document.createElement('div');
+    div.className = 'transcript-line';
+    div.innerHTML = `<span class="speaker">${speaker}:</span> ${text}`;
+    transcriptFeed.appendChild(div);
+    transcriptFeed.scrollTop = transcriptFeed.scrollHeight;
+
+    // Real-time keyword intelligence detector
+    const lower = text.toLowerCase();
+    if (lower.includes('decid') || lower.includes('agree') || lower.includes('will cap') || lower.includes('approved')) {
+      addInsight('insight-decision', 'DECISION', text);
+    } else if (lower.includes('action') || lower.includes('todo') || lower.includes('will update') || lower.includes('assigned')) {
+      addInsight('insight-task', 'TASK', text);
+    } else if (lower.includes('risk') || lower.includes('worry') || lower.includes('latency') || lower.includes('issue')) {
+      addInsight('insight-risk', 'RISK', text);
+    }
+  }
+
+  function startRealSpeechRecognition() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return null;
+
+    try {
+      const instance = new SR();
+      instance.continuous = true;
+      instance.interimResults = true;
+      instance.lang = 'en-US';
+
+      instance.onresult = (event) => {
+        if (isPaused) return;
+        let interimText = '';
+        let finalText = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const t = event.results[i][0]?.transcript || '';
+          if (event.results[i].isFinal) finalText += t + ' ';
+          else interimText += t;
+        }
+
+        if (interimText.trim()) {
+          appendTranscriptLine('Video/Audio', interimText.trim(), true);
+        }
+        if (finalText.trim()) {
+          appendTranscriptLine('Video/Audio', finalText.trim(), false);
+        }
+      };
+
+      instance.onerror = (e) => {
+        console.warn('[Cue Extension] Speech recognition notice:', e.error);
+      };
+
+      instance.onend = () => {
+        if (recognitionInstance && !isPaused) {
+          try { recognitionInstance.start(); } catch (_) {}
+        }
+      };
+
+      instance.start();
+      return instance;
+    } catch (err) {
+      console.warn('[Cue Extension] Could not initialize Web Speech API:', err);
+      return null;
+    }
+  }
+
+  function startVideoCaptionScraper() {
+    seenCaptions.clear();
+    // Observe YouTube / HTML5 video caption overlays
+    const captionContainer = document.querySelector('.ytp-caption-window-container') || document.querySelector('.captions-text') || document.body;
+    
+    if (!captionContainer) return null;
+
+    const observer = new MutationObserver(() => {
+      if (isPaused) return;
+      const segments = document.querySelectorAll('.ytp-caption-segment, .caption-visual-line');
+      segments.forEach((seg) => {
+        const text = seg.textContent.trim();
+        if (text && !seenCaptions.has(text)) {
+          seenCaptions.add(text);
+          appendTranscriptLine('Video Spoken', text, false);
+        }
+      });
+    });
+
+    observer.observe(captionContainer, { childList: true, subtree: true, characterData: true });
+    return observer;
   }
 
   startBtn.addEventListener('click', () => {
@@ -400,30 +507,20 @@
     stopBtn.style.display = 'inline-block';
     livePulse.style.display = 'inline';
     transcriptFeed.innerHTML = '';
+    insightList.innerHTML = '<div style="font-size: 10px; color: #94A3B8; text-align: center; margin: auto;">Listening for key decisions & tasks...</div>';
 
     seconds = 0;
+    isPaused = false;
     timerDisplay.textContent = formatTime(seconds);
+
+    // Start Real Web Speech Recognition & Caption Scraper
+    recognitionInstance = startRealSpeechRecognition();
+    captionObserver = startVideoCaptionScraper();
+
     timerInterval = setInterval(() => {
       if (!isPaused) {
         seconds++;
         timerDisplay.textContent = formatTime(seconds);
-
-        if (seconds % 4 === 0 && mockIdx < mockLines.length) {
-          const item = mockLines[mockIdx++];
-          const div = document.createElement('div');
-          div.className = 'transcript-line';
-          div.innerHTML = `<span class="speaker">${item.speaker}:</span> ${item.text}`;
-          transcriptFeed.appendChild(div);
-          transcriptFeed.scrollTop = transcriptFeed.scrollHeight;
-
-          if (item.text.includes('Decision')) {
-            addInsight('insight-decision', 'DECISION', item.text);
-          } else if (item.text.includes('Action')) {
-            addInsight('insight-task', 'TASK', item.text);
-          } else if (item.text.includes('Risk')) {
-            addInsight('insight-risk', 'RISK', item.text);
-          }
-        }
       }
     }, 1000);
   });
@@ -441,6 +538,15 @@
 
   stopBtn.addEventListener('click', () => {
     clearInterval(timerInterval);
+    if (recognitionInstance) {
+      try { recognitionInstance.stop(); } catch (_) {}
+      recognitionInstance = null;
+    }
+    if (captionObserver) {
+      try { captionObserver.disconnect(); } catch (_) {}
+      captionObserver = null;
+    }
+
     statusBadge.className = 'status-badge';
     statusText.textContent = 'DONE';
     startBtn.style.display = 'inline-block';
