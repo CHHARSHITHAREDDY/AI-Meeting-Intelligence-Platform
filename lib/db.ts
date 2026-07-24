@@ -76,10 +76,14 @@ export interface Risk {
 
 export interface MeetingAnalysis {
   summary: string;
+  keyDiscussionPoints?: string[];
   decisions: Decision[];
   actionItems: ActionItem[];
   risks: Risk[];
+  nextSteps?: string[];
   notes?: string[];
+  chunks?: any[];
+  suggestedPrompts?: string[];
 }
 
 export interface Meeting {

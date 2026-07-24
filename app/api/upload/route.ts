@@ -5,6 +5,9 @@ import { saveMeeting, Meeting } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 // @ts-ignore
 import { YoutubeTranscript } from 'youtube-transcript';
+
+export const maxDuration = 120;
+export const dynamic = 'force-dynamic';
  
 function getYoutubeVideoId(url: string): string | null {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
@@ -118,7 +121,7 @@ export async function POST(request: NextRequest) {
       console.log('Extracting insights with LlamaCloud...');
       const insights = await extractMeetingInsights(transcript);
       
-      // Calculate a dummy duration based on word count (e.g. average 130 words per minute)
+      // Calculate duration based on word count
       const wordCount = transcript.split(/\s+/).length;
       const minutes = Math.floor(wordCount / 130) || 1;
       const seconds = Math.floor((wordCount % 130) * 0.46) % 60;
@@ -128,9 +131,15 @@ export async function POST(request: NextRequest) {
       newMeeting.analysis = insights;
       newMeeting.duration = durationStr;
       newMeeting.status = 'completed';
+
+      // Index meeting context for RAG Vector Pipeline
+      const { indexMeetingContext } = require('@/lib/rag');
+      const indexedContext = indexMeetingContext(newMeeting);
+      newMeeting.analysis.chunks = indexedContext.chunks;
+      newMeeting.analysis.suggestedPrompts = indexedContext.suggestedPrompts;
       
       await saveMeeting(newMeeting, user.userId);
-      console.log(`Meeting analysis completed: ${newMeeting.id}`);
+      console.log(`Meeting analysis & RAG indexing completed: ${newMeeting.id}`);
       
       return NextResponse.json(newMeeting);
     } catch (innerError: any) {

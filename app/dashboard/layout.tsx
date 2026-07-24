@@ -50,11 +50,13 @@ export default function DashboardLayout({
   };
 
   const navItems = [
-    { name: 'Live Meeting', href: '/dashboard/live', icon: 'videocam' },
+    { name: 'Dashboard', href: '/dashboard', icon: 'dashboard' },
+    { name: 'Meetings', href: '/dashboard', icon: 'videocam' },
+    { name: 'Upload Meeting', href: '/dashboard', icon: 'cloud_upload' },
+    { name: 'Company Memory', href: '/dashboard', icon: 'database' },
+    { name: 'Analytics', href: '/dashboard/graph', icon: 'analytics' },
     { name: 'Decisions', href: '/dashboard/decisions', icon: 'fact_check' },
     { name: 'Tasks', href: '/dashboard/tasks', icon: 'assignment' },
-    { name: 'Knowledge Graph', href: '/dashboard/graph', icon: 'hub' },
-    { name: 'Company Memory', href: '/dashboard', icon: 'database' },
   ];
 
   const getPageTitle = () => {

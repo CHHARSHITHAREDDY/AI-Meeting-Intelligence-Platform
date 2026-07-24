@@ -10,6 +10,10 @@ Analyze the provided meeting transcript and extract structured intelligence in J
 You must respond with ONLY a valid, parseable JSON object matching this schema:
 {
   "summary": "An executive summary of the meeting, high-level overview of key topics and outcomes (2-3 sentences).",
+  "keyDiscussionPoints": [
+    "First main discussion topic or key point explored during the meeting.",
+    "Second main discussion topic or key point explored during the meeting."
+  ],
   "decisions": [
     {
       "id": "dec-1",
@@ -35,9 +39,9 @@ You must respond with ONLY a valid, parseable JSON object matching this schema:
       "mitigation": "How the risk will be mitigated or resolved."
     }
   ],
-  "notes": [
-    "Important takeaway or callout from the meeting.",
-    "Specific deadline mentioned during the meeting."
+  "nextSteps": [
+    "Clear next step or follow-up action planned.",
+    "Target milestone or upcoming check-in."
   ]
 }
 
@@ -305,76 +309,6 @@ Ensure all JSON keys and values are properly formatted. Do not include any text 
 }
 
 function localHeuristicParser(transcript: string): MeetingAnalysis {
-  // If it is the default scaling standup transcript, return the structured standup mock
-  if (transcript.includes('CPU usage') || transcript.includes('read-replica')) {
-    return {
-      summary: "The team aligned on the Q4 infrastructure scaling roadmap. Key database performance issues were discussed, resulting in a decision to implement a read-replica for reporting queries to alleviate CPU peaks. In addition, a security audit is underway to review IAM roles and transition to short-lived session tokens. Read-replica sync lag was identified as a key risk.",
-      decisions: [
-        {
-          id: "dec-mock-1",
-          decision: "Set up a read-replica for reporting database queries by October 15th.",
-          decider: "Sarah (Product Manager) & Alex (Engineering Lead)",
-          context: "Database CPU peaks at 90% during peak hours due to heavy read queries on the analytics table."
-        },
-        {
-          id: "dec-mock-2",
-          decision: "Implement short-lived session tokens as the new standard security policy.",
-          decider: "Sarah (Product Manager) & Michael (Security Specialist)",
-          context: "Mitigates credential leakage risks and enhances session security."
-        }
-      ],
-      actionItems: [
-        {
-          id: "act-mock-1",
-          task: "Implement database replication and offload reporting queries to read-replica.",
-          assignee: "Alex (Engineering Lead)",
-          dueDate: "2026-10-15",
-          status: "pending"
-        },
-        {
-          id: "act-mock-2",
-          task: "Finish auditing IAM roles and clean up unused access tokens.",
-          assignee: "Michael (Security Specialist)",
-          dueDate: "2026-10-02",
-          status: "pending"
-        },
-        {
-          id: "act-mock-3",
-          task: "Document the migration plan for short-lived session tokens.",
-          assignee: "Michael (Security Specialist)",
-          dueDate: "2026-10-10",
-          status: "pending"
-        },
-        {
-          id: "act-mock-4",
-          task: "Alert frontend team and ensure UI handles eventual consistency of read-replica.",
-          assignee: "Sarah (Product Manager)",
-          dueDate: "2026-10-05",
-          status: "pending"
-        }
-      ],
-      risks: [
-        {
-          id: "risk-mock-1",
-          risk: "Read-replica sync lag of 2-3 seconds causing data consistency issues in the UI.",
-          impact: "medium",
-          mitigation: "Ensure frontend components implement loading cues or optimistic updates to handle eventual consistency."
-        },
-        {
-          id: "risk-mock-2",
-          risk: "Potential database downtime during replication setup.",
-          impact: "high",
-          mitigation: "Schedule the migration window during low-traffic periods (Sunday 2 AM) with automated rollbacks."
-        }
-      ],
-      notes: [
-        "Infrastructure scaling roadmap aligned for Q4.",
-        "Security audit is actively reviewing IAM roles.",
-        "Migration to short-lived session tokens scheduled for October 10th.",
-        "Alex to setup replica by October 15th."
-      ]
-    };
-  }
 
   // -------------------------------------------------------------
   // DYNAMIC HEURISTIC PARSING FOR TRANSCRIPT CONTENT
@@ -418,7 +352,18 @@ function localHeuristicParser(transcript: string): MeetingAnalysis {
 
   // Executive Summary (first 3 sentences)
   const firstThree = sentences.slice(0, 3).join(' ');
-  const summary = `Local offline transcription analysis. Discussion summary: "${firstThree}"`;
+  const summary = firstThree.length > 20 ? firstThree : "Discussion overview and alignment on project deliverables based on the meeting transcript.";
+
+  // Key Discussion Points (extending top themes)
+  const keyDiscussionPoints: string[] = [];
+  sentences.forEach((s, idx) => {
+    if (idx % 2 === 0 && keyDiscussionPoints.length < 5 && s.length > 15) {
+      keyDiscussionPoints.push(s);
+    }
+  });
+  if (keyDiscussionPoints.length === 0) {
+    keyDiscussionPoints.push("Key themes and topics explored during the meeting sync.");
+  }
 
   // Decisions
   const decisions: { id: string; decision: string; decider: string; context: string }[] = [];
@@ -449,7 +394,7 @@ function localHeuristicParser(transcript: string): MeetingAnalysis {
 
   // Action Items
   const actionItems: { id: string; task: string; assignee: string; dueDate: string; status: 'pending' | 'completed' }[] = [];
-  const actionKeywords = ['will', 'need to', 'should', 'must', 'action', 'task', 'todo', 'assign', 'schedule', 'own', 'work on', 'restores', 'bring'];
+  const actionKeywords = ['will', 'need to', 'should', 'must', 'action', 'task', 'todo', 'assign', 'schedule', 'own', 'work on', 'follow up', 'implement'];
   
   lines.forEach((line, idx) => {
     const textClean = cleanLine(line);
@@ -478,7 +423,7 @@ function localHeuristicParser(transcript: string): MeetingAnalysis {
 
   // Risks
   const risks: { id: string; risk: string; impact: 'low' | 'medium' | 'high'; mitigation: string }[] = [];
-  const riskKeywords = ['risk', 'issue', 'problem', 'stale', 'smell', 'fail', 'delay', 'danger', 'concern', 'worry', 'threat', 'lag', 'old'];
+  const riskKeywords = ['risk', 'issue', 'problem', 'fail', 'delay', 'danger', 'concern', 'worry', 'threat', 'lag', 'vulnerability', 'bottleneck'];
   
   lines.forEach((line, idx) => {
     const textClean = cleanLine(line);
@@ -503,26 +448,21 @@ function localHeuristicParser(transcript: string): MeetingAnalysis {
     });
   }
 
-  const notes: string[] = [];
-  const noteKeywords = ['deadline', 'important', 'note', 'remind', 'remember', 'by ', 'before ', 'critical', 'milestone', 'launch', 'schedule'];
-  
-  lines.forEach((line) => {
-    const textClean = cleanLine(line);
-    const hasKeyword = noteKeywords.some(kw => textClean.toLowerCase().includes(kw));
-    if (hasKeyword && notes.length < 5) {
-      notes.push(textClean);
-    }
+  // Next Steps
+  const nextSteps: string[] = [];
+  actionItems.forEach(item => {
+    nextSteps.push(`${item.assignee} to complete "${item.task}" by ${item.dueDate}.`);
   });
-
-  if (notes.length === 0) {
-    notes.push("Aligned on team deliverables and milestones.");
+  if (nextSteps.length === 0) {
+    nextSteps.push("Follow up on identified meeting milestones in the next team sync.");
   }
 
   return {
     summary,
+    keyDiscussionPoints,
     decisions,
     actionItems,
     risks,
-    notes
+    nextSteps
   };
 }
