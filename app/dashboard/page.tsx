@@ -268,11 +268,7 @@ export default function HomePage() {
               {uploadStatus === 'idle' ? (
                 <button type="submit" disabled={!file && !link}
                   className={`w-full py-3 px-4 rounded-lg text-sm font-bold tracking-wide transition flex items-center justify-center gap-2 ${
-<<<<<<< HEAD
-                    file ? 'btn-primary-cta cursor-pointer' : 'bg-[#1c1f29] text-[#464554] cursor-not-allowed border border-[#232B45]'
-=======
-                    file || link ? 'bg-[#8083ff] hover:bg-[#c0c1ff] hover:text-[#0a0e17] text-white cursor-pointer shadow-lg shadow-[#8083ff]/20' : 'bg-[#1c1f29] text-[#464554] cursor-not-allowed border border-[#232B45]'
->>>>>>> ee128ce109d986d694949c6c220c47efc5e3dfae
+                    file || link ? 'btn-primary-cta cursor-pointer' : 'bg-[#1c1f29] text-[#464554] cursor-not-allowed border border-[#232B45]'
                   }`}
                 >
                   Generate Intelligence

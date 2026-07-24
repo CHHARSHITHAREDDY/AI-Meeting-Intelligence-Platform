@@ -3,8 +3,9 @@ import { transcribeAudio } from '@/lib/whisper';
 import { extractMeetingInsights } from '@/lib/extract';
 import { saveMeeting, Meeting } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
+// @ts-ignore
 import { YoutubeTranscript } from 'youtube-transcript';
-
+ 
 function getYoutubeVideoId(url: string): string | null {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
   const match = url.match(regExp);
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
             title = await fetchYoutubeTitle(videoId);
           }
           const segments = await YoutubeTranscript.fetchTranscript(videoId);
-          transcript = segments.map(s => s.text).join(' ');
+          transcript = segments.map((s: any) => s.text).join(' ');
           isLinkTranscribed = true;
           fileName = 'youtube';
         } else {
