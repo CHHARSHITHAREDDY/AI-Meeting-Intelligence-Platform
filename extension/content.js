@@ -1,5 +1,9 @@
 (function () {
-  if (document.getElementById('cue-widget-host')) return;
+  const existingHost = document.getElementById('cue-widget-host');
+  if (existingHost) {
+    existingHost.style.display = existingHost.style.display === 'none' ? 'block' : 'none';
+    return;
+  }
 
   // 1. Create Host Element & Shadow DOM
   const host = document.createElement('div');
