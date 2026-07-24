@@ -89,7 +89,7 @@ export interface Meeting {
   duration: string;
   transcript: string;
   analysis?: MeetingAnalysis;
-  status: 'processing' | 'completed' | 'failed';
+  status: 'processing' | 'completed' | 'failed' | 'live';
   error?: string;
 }
 
