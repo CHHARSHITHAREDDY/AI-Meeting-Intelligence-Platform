@@ -50,7 +50,6 @@ export default function DashboardLayout({
   };
 
   const navItems = [
-    { name: 'Home Page', href: '/', icon: 'home' },
     { name: 'Live Meeting', href: '/dashboard/live', icon: 'videocam' },
     { name: 'Decisions', href: '/dashboard/decisions', icon: 'fact_check' },
     { name: 'Tasks', href: '/dashboard/tasks', icon: 'assignment' },
@@ -65,6 +64,7 @@ export default function DashboardLayout({
       case '/dashboard/decisions': return 'Decisions Register';
       case '/dashboard/tasks': return 'Tasks Register';
       case '/dashboard/graph': return 'Knowledge Graph';
+      case '/dashboard/settings': return 'System Settings';
       case '/dashboard':
       default: return 'Company Memory';
     }
@@ -78,13 +78,13 @@ export default function DashboardLayout({
 
       {/* Sidebar */}
       <nav className="h-screen w-64 fixed left-0 top-0 bg-[#0a0e17] border-r border-[#232B45] shadow-xl flex flex-col py-6 z-50">
-        {/* Brand / Header - Links to Home Page */}
-        <Link href="/" title="Cue Intelligence - Return to Home Page" className="px-6 mb-6 flex items-center space-x-3 group">
-          <div className="w-8 h-8 rounded bg-[#c0c1ff] flex items-center justify-center text-[#1000a9] shadow-[0_0_12px_rgba(192,193,255,0.4)] group-hover:scale-105 transition-transform">
+        {/* Brand / Header */}
+        <Link href="/dashboard" className="px-6 mb-6 flex items-center space-x-3 group">
+          <div className="w-8 h-8 rounded-lg bg-[#6366F1] flex items-center justify-center text-white shadow-[0_0_15px_rgba(99,102,241,0.4)] group-hover:scale-105 transition-transform">
             <span className="material-symbols-outlined font-bold text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>hub</span>
           </div>
           <div>
-            <h1 className="font-display text-[18px] font-bold text-[#c0c1ff] tracking-tighter leading-tight group-hover:text-white transition-colors">Cue Intelligence</h1>
+            <h1 className="font-display text-[18px] font-bold text-[#F8FAFC] tracking-tighter leading-tight group-hover:text-[#6366F1] transition-colors">Cue Intelligence</h1>
             <p className="text-[10px] text-[#94A3B8] uppercase tracking-widest font-mono mt-0.5">Enterprise Suite</p>
           </div>
         </Link>
@@ -100,23 +100,21 @@ export default function DashboardLayout({
         {/* Navigation Links */}
         <ul className="flex-1 space-y-1.5 px-3">
           {navItems.map((item) => {
-            const isActive = item.href === '/'
-              ? pathname === '/'
-              : item.href === '/dashboard'
-                ? pathname === '/dashboard'
-                : pathname?.startsWith(item.href);
+            const isActive = item.href === '/dashboard'
+              ? pathname === '/dashboard'
+              : pathname?.startsWith(item.href);
             return (
               <li key={item.name}>
                 <Link
                   href={item.href}
                   className={`flex items-center px-4 py-3 rounded-lg text-[14px] font-medium transition-all duration-200 ${
                     isActive
-                      ? 'text-[#5de6ff] font-bold border-r-2 border-[#5de6ff] bg-[#00cbe6]/10 shadow-[0_0_15px_rgba(0,203,230,0.1)]'
-                      : 'text-[#c7c4d7] hover:text-[#c0c1ff] hover:bg-[#262a34]/50 active:scale-95'
+                      ? 'text-[#6366F1] font-bold border-l-4 border-[#6366F1] bg-[#6366F1]/10 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
+                      : 'text-[#c7c4d7] hover:text-[#F8FAFC] hover:bg-[#181b25] active:scale-95'
                   }`}
                 >
                   <span
-                    className={`material-symbols-outlined text-[20px] mr-3 ${isActive ? 'text-[#5de6ff]' : 'text-[#94A3B8] group-hover:text-[#c0c1ff]'}`}
+                    className={`material-symbols-outlined text-[20px] mr-3 ${isActive ? 'text-[#6366F1]' : 'text-[#94A3B8] group-hover:text-[#F8FAFC]'}`}
                     style={isActive ? { fontVariationSettings: "'FILL' 1" } : undefined}
                   >
                     {item.icon}
@@ -131,15 +129,12 @@ export default function DashboardLayout({
         {/* Bottom Actions */}
         <div className="px-4 mt-auto space-y-3">
           <Link
-            href="/"
-            className="flex items-center px-4 py-2.5 rounded-lg text-[#c7c4d7] hover:text-[#c0c1ff] hover:bg-[#262a34]/50 transition-colors text-[14px] font-medium"
-          >
-            <span className="material-symbols-outlined text-[20px] mr-3">home</span>
-            Landing Page
-          </Link>
-          <Link
-            href="/dashboard"
-            className="flex items-center px-4 py-2.5 rounded-lg text-[#c7c4d7] hover:text-[#c0c1ff] hover:bg-[#262a34]/50 transition-colors text-[14px] font-medium"
+            href="/dashboard/settings"
+            className={`flex items-center px-4 py-2.5 rounded-lg text-[14px] font-medium transition-colors ${
+              pathname === '/dashboard/settings'
+                ? 'text-[#6366F1] bg-[#6366F1]/10 font-bold border-l-4 border-[#6366F1]'
+                : 'text-[#c7c4d7] hover:text-[#F8FAFC] hover:bg-[#181b25]'
+            }`}
           >
             <span className="material-symbols-outlined text-[20px] mr-3">settings</span>
             Settings
@@ -147,7 +142,7 @@ export default function DashboardLayout({
 
           <Link
             href="/dashboard/live"
-            className="w-full bg-[#c0c1ff] text-[#1000a9] font-bold py-3 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(192,193,255,0.4)] hover:bg-[#e1e0ff] transition-all text-[14px]"
+            className="w-full btn-primary-cta py-3 rounded-lg flex items-center justify-center text-[14px] cursor-pointer"
           >
             <span className="material-symbols-outlined mr-2 text-[20px]">add</span>
             New Meeting
@@ -171,17 +166,22 @@ export default function DashboardLayout({
         {/* Top Navbar */}
         <header className="bg-[#0f131c]/80 backdrop-blur-md fixed top-0 right-0 left-64 h-16 border-b border-[#232B45] flex items-center justify-between px-6 z-40">
           {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-[13px] font-medium">
-            <Link href="/" title="Go to Home Page" className="flex items-center gap-1.5 text-[#94A3B8] hover:text-[#c0c1ff] transition-colors bg-[#181b25] px-2.5 py-1 rounded border border-[#232B45] text-[11px] font-mono">
-              <span className="material-symbols-outlined text-[14px]">home</span>
-              <span>Home</span>
+          <div className="flex items-center gap-2.5 text-[13px] font-medium">
+            {/* Single Home Icon Button (without Home text) */}
+            <Link 
+              href="/" 
+              title="Return to Home Page" 
+              className="p-1.5 rounded-lg bg-[#181b25] border border-[#232B45] hover:bg-[#262a34] text-[#94A3B8] hover:text-[#5de6ff] transition flex items-center justify-center"
+            >
+              <span className="material-symbols-outlined text-[18px]">home</span>
             </Link>
+
             <span className="text-[#232B45] mx-0.5">/</span>
             <span className="uppercase tracking-wider text-[11px] bg-[#262a34] px-2.5 py-1 rounded border border-[#232B45] text-[#c0c1ff] font-mono font-semibold">
               Project: Project Apollo
             </span>
-            <span className="text-[#232B45] mx-1">/</span>
-            <span className="text-[#94A3B8]">{getPageTitle()}</span>
+            <span className="text-[#232B45] mx-0.5">/</span>
+            <span className="text-[#94A3B8] font-mono text-[12px]">{getPageTitle()}</span>
           </div>
 
           {/* Search + Controls */}
@@ -222,16 +222,6 @@ export default function DashboardLayout({
               {/* Dropdown Menu */}
               {isDropdownOpen && (
                 <div className="absolute right-0 top-11 w-56 rounded-xl bg-[#0a0e17] border border-[#232B45] shadow-2xl backdrop-blur-md p-2.5 z-50">
-                  <div className="mb-2 pb-2 border-b border-[#232B45]">
-                    <Link 
-                      href="/"
-                      onClick={() => setIsDropdownOpen(false)}
-                      className="w-full flex items-center px-3 py-2 text-xs font-semibold text-[#c0c1ff] hover:bg-[#181b25] rounded-lg transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-[16px] mr-2">home</span>
-                      Home Page (Landing)
-                    </Link>
-                  </div>
                   {user ? (
                     <>
                       <div className="px-3 py-2 border-b border-[#232B45] mb-2">
@@ -240,8 +230,9 @@ export default function DashboardLayout({
                       </div>
                       <button 
                         onClick={handleLogout}
-                        className="w-full text-left px-3 py-2 text-xs font-semibold text-[#ffb4ab] hover:bg-[#93000a]/20 rounded-lg transition-colors cursor-pointer"
+                        className="w-full text-left px-3 py-2 text-xs font-semibold text-[#ffb4ab] hover:bg-[#93000a]/20 rounded-lg transition-colors cursor-pointer flex items-center gap-2"
                       >
+                        <span className="material-symbols-outlined text-[16px]">logout</span>
                         Sign Out
                       </button>
                     </>

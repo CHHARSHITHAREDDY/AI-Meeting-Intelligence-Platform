@@ -176,29 +176,29 @@ void main() {
       <header className="sticky top-0 z-50 backdrop-blur-xl border-b border-[#232B45] bg-[#0f131c]/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-8 h-8 rounded bg-[#c0c1ff] flex items-center justify-center text-[#1000a9] shadow-[0_0_15px_rgba(192,193,255,0.4)] group-hover:scale-105 transition-transform">
+            <div className="w-8 h-8 rounded-lg bg-[#6366F1] flex items-center justify-center text-white shadow-[0_0_15px_rgba(99,102,241,0.4)] group-hover:scale-105 transition-transform">
               <span className="material-symbols-outlined font-bold text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>hub</span>
             </div>
             <div>
-              <span className="text-lg font-bold font-display tracking-tight text-[#c0c1ff]">Cue Intelligence</span>
+              <span className="text-lg font-bold font-display tracking-tight text-[#F8FAFC]">Cue Intelligence</span>
               <p className="text-[9px] text-[#94A3B8] uppercase tracking-widest font-mono -mt-1">Enterprise Suite</p>
             </div>
           </Link>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-[#94A3B8]">
-            <a href="#platform" className="hover:text-[#c0c1ff] transition-colors">Platform</a>
-            <a href="#features" className="hover:text-[#c0c1ff] transition-colors">Features</a>
-            <a href="#enterprise" className="hover:text-[#c0c1ff] transition-colors">Enterprise</a>
-            <a href="#pricing" className="hover:text-[#c0c1ff] transition-colors">Pricing</a>
+            <a href="#platform" className="hover:text-[#6366F1] transition-colors">Platform</a>
+            <a href="#features" className="hover:text-[#6366F1] transition-colors">Features</a>
+            <a href="#enterprise" className="hover:text-[#6366F1] transition-colors">Enterprise</a>
+            <a href="#pricing" className="hover:text-[#6366F1] transition-colors">Pricing</a>
           </nav>
 
           <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-sm font-semibold text-[#c7c4d7] hover:text-[#c0c1ff] transition hidden sm:inline-block">
+            <Link href="/dashboard" className="text-sm font-semibold text-[#c7c4d7] hover:text-[#6366F1] transition hidden sm:inline-block">
               Sign In
             </Link>
             <Link
               href="/dashboard"
-              className="px-5 py-2.5 rounded-lg text-[12px] font-bold uppercase tracking-wider text-[#1000a9] bg-[#c0c1ff] hover:bg-[#e1e0ff] transition-all shadow-[0_0_15px_rgba(192,193,255,0.4)]"
+              className="px-5 py-2.5 rounded-lg text-[12px] btn-primary-cta uppercase tracking-wider"
             >
               Request Demo
             </Link>
@@ -236,7 +236,7 @@ void main() {
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
                 <Link
                   href="/dashboard"
-                  className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide bg-[#c0c1ff] hover:bg-[#e1e0ff] text-[#1000a9] shadow-[0_0_20px_rgba(192,193,255,0.4)] transition-all text-center flex items-center justify-center gap-2 group"
+                  className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide btn-primary-cta text-center flex items-center justify-center gap-2 group cursor-pointer"
                 >
                   Start Free
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
@@ -253,7 +253,7 @@ void main() {
 
             {/* Right Column: Live Recording Card */}
             <div className="lg:col-span-5 flex justify-center">
-              <div className="w-full max-w-md bg-[#0a0e17]/80 border border-[#232B45] rounded-2xl p-6 shadow-2xl backdrop-blur-xl relative">
+              <div className="w-full max-w-md bg-[#12172A] border border-[#232B45] rounded-2xl p-6 shadow-2xl backdrop-blur-xl relative">
                 <div className="absolute -inset-0.5 bg-gradient-to-tr from-[#c0c1ff]/20 to-[#5de6ff]/20 rounded-2xl blur-xl -z-10" />
 
                 {/* Card Header */}

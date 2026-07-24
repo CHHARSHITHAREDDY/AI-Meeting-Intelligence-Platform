@@ -52,20 +52,18 @@ export default function LoginPage() {
       {/* Floating UI Elements for premium aesthetic */}
       <div className="w-full max-w-md z-10">
         <div className="flex justify-center mb-8">
-          <div className="flex items-center gap-2.5">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
-              <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" />
-              </svg>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#6366F1] flex items-center justify-center text-white shadow-[0_0_20px_rgba(99,102,241,0.4)]">
+              <span className="material-symbols-outlined font-bold text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>hub</span>
             </div>
-            <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-zinc-100 to-zinc-400 bg-clip-text text-transparent">
+            <span className="text-xl font-bold tracking-tight text-white font-display">
               Cue Intelligence
             </span>
           </div>
         </div>
 
         {/* Card Panel */}
-        <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-8 backdrop-blur-xl shadow-2xl">
+        <div className="bg-[#12172A] border border-[#232B45] rounded-2xl p-8 backdrop-blur-xl shadow-2xl">
           <div className="mb-6">
             <h2 className="text-2xl font-semibold text-zinc-100">
               {isSignUp ? 'Create your account' : 'Welcome back'}
@@ -97,7 +95,7 @@ export default function LoginPage() {
                   placeholder="Alex Rivers"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-colors"
+                  className="w-full px-4 py-2.5 bg-[#0a0e17] border border-[#232B45] rounded-xl text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-[#6366F1] transition-colors"
                 />
               </div>
             )}
@@ -113,7 +111,7 @@ export default function LoginPage() {
                 placeholder="alex@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-colors"
+                className="w-full px-4 py-2.5 bg-[#0a0e17] border border-[#232B45] rounded-xl text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-[#6366F1] transition-colors"
               />
             </div>
 
@@ -128,14 +126,14 @@ export default function LoginPage() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-colors"
+                className="w-full px-4 py-2.5 bg-[#0a0e17] border border-[#232B45] rounded-xl text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-[#6366F1] transition-colors"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3 px-4 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 disabled:opacity-50 text-white font-medium text-sm rounded-xl transition-all shadow-lg shadow-violet-600/10 flex items-center justify-center gap-2"
+              className="w-full mt-2 py-3 px-4 btn-primary-cta disabled:opacity-50 text-white font-bold text-sm rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>

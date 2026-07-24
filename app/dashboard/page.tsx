@@ -237,7 +237,7 @@ export default function HomePage() {
               {uploadStatus === 'idle' ? (
                 <button type="submit" disabled={!file}
                   className={`w-full py-3 px-4 rounded-lg text-sm font-bold tracking-wide transition flex items-center justify-center gap-2 ${
-                    file ? 'bg-[#8083ff] hover:bg-[#c0c1ff] hover:text-[#0a0e17] text-white cursor-pointer shadow-lg shadow-[#8083ff]/20' : 'bg-[#1c1f29] text-[#464554] cursor-not-allowed border border-[#232B45]'
+                    file ? 'btn-primary-cta cursor-pointer' : 'bg-[#1c1f29] text-[#464554] cursor-not-allowed border border-[#232B45]'
                   }`}
                 >
                   Generate Intelligence
