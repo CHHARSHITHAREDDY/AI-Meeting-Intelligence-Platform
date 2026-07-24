@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getMeetings } from '@/lib/db';
+import { getSessionUser } from '@/lib/auth';
 
 export async function GET() {
   try {
-    const meetings = await getMeetings();
+    const user = await getSessionUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const meetings = await getMeetings(user.userId);
     // Sort meetings by date (newest first)
     const sorted = [...meetings].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -14,3 +20,4 @@ export async function GET() {
     return NextResponse.json({ error: 'Failed to retrieve meetings' }, { status: 500 });
   }
 }
+

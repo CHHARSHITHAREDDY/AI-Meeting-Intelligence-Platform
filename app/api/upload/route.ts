@@ -2,9 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { transcribeAudio } from '@/lib/whisper';
 import { extractMeetingInsights } from '@/lib/extract';
 import { saveMeeting, Meeting } from '@/lib/db';
+import { getSessionUser } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getSessionUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const contentType = request.headers.get('content-type') || '';
     let title = '';
     let audioInput: Buffer | Float32Array;
@@ -43,7 +49,7 @@ export async function POST(request: NextRequest) {
       status: 'processing',
     };
     
-    await saveMeeting(newMeeting);
+    await saveMeeting(newMeeting, user.userId);
 
     try {
       console.log(`Transcribing audio file: ${fileName}...`);
@@ -63,7 +69,7 @@ export async function POST(request: NextRequest) {
       newMeeting.duration = durationStr;
       newMeeting.status = 'completed';
       
-      await saveMeeting(newMeeting);
+      await saveMeeting(newMeeting, user.userId);
       console.log(`Meeting analysis completed: ${newMeeting.id}`);
       
       return NextResponse.json(newMeeting);
@@ -71,7 +77,7 @@ export async function POST(request: NextRequest) {
       console.error('Processing failed for meeting:', innerError);
       newMeeting.status = 'failed';
       newMeeting.error = innerError.message || 'Error occurred during transcription or extraction.';
-      await saveMeeting(newMeeting);
+      await saveMeeting(newMeeting, user.userId);
       return NextResponse.json(newMeeting, { status: 500 });
     }
   } catch (error) {
@@ -79,3 +85,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to upload and process meeting' }, { status: 500 });
   }
 }
+
