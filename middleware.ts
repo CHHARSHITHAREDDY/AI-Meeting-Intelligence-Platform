@@ -14,7 +14,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Redirect authenticated users trying to access login back to dashboard
-  if (pathname === '/login' || pathname === '/') {
+  if (pathname === '/login') {
     if (session) {
       const dashboardUrl = new URL('/dashboard', request.url);
       return NextResponse.redirect(dashboardUrl);
@@ -25,5 +25,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login', '/']
+  matcher: ['/dashboard/:path*', '/login']
 };
