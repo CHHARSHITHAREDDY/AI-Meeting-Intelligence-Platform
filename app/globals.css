@@ -110,15 +110,17 @@ body {
 
 /* ===== PRIMARY CTA BUTTON ===== */
 .btn-primary-cta {
-  background: linear-gradient(135deg, #6366F1 0%, #EC4899 100%);
-  color: #ffffff;
+  background: #c0c1ff;
+  color: #0d0096;
   font-weight: 700;
-  box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 0 20px rgba(192, 193, 255, 0.4);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .btn-primary-cta:hover {
+  background: #e1e0ff;
+  color: #1000a9;
   transform: scale(1.03);
-  box-shadow: 0 0 25px rgba(236, 72, 153, 0.5);
+  box-shadow: 0 0 25px rgba(192, 193, 255, 0.6);
 }
 
 .glow-card::before {

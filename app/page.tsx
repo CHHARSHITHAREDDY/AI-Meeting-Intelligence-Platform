@@ -207,7 +207,7 @@ void main() {
                   Logged in as <strong className="text-[#F8FAFC]">{user.name}</strong>
                 </span>
                 <Link
-                  href="/dashboard"
+                  href="/dashboard/live"
                   className="px-5 py-2.5 rounded-lg text-[12px] btn-primary-cta uppercase tracking-wider flex items-center gap-2"
                 >
                   Go to Dashboard
@@ -260,15 +260,15 @@ void main() {
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
                 <Link
-                  href="/dashboard"
+                  href={user ? "/dashboard/live" : "/login"}
                   className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide btn-primary-cta text-center flex items-center justify-center gap-2 group cursor-pointer"
                 >
                   {user ? 'Go to Dashboard' : 'Start Free'}
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </Link>
                 <Link
-                  href="/dashboard"
-                  className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide text-[#c7c4d7] bg-[#0a0e17]/70 border border-[#232B45] hover:bg-[#181b25] hover:text-[#F8FAFC] transition-all text-center flex items-center justify-center gap-2 backdrop-blur-md"
+                  href={user ? "/dashboard/live" : "/login"}
+                  className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide text-[#F8FAFC] bg-[#181b25] border border-[#232B45] hover:bg-[#262a34] transition-all text-center flex items-center justify-center gap-2 backdrop-blur-md"
                 >
                   <Play className="w-4 h-4 text-[#5de6ff] fill-[#5de6ff]" />
                   Watch Demo
