@@ -33,8 +33,8 @@ export default function LoginPage() {
         throw new Error(data.error || 'Something went wrong');
       }
 
-      // Force page refresh and redirect to dashboard
-      router.push('/dashboard');
+      // Force page refresh and redirect to landing page
+      router.push('/');
       router.refresh();
     } catch (err: any) {
       setError(err.message);

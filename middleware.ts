@@ -13,11 +13,11 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Redirect authenticated users trying to access login back to dashboard
+  // Redirect authenticated users trying to access login back to landing page
   if (pathname === '/login') {
     if (session) {
-      const dashboardUrl = new URL('/dashboard', request.url);
-      return NextResponse.redirect(dashboardUrl);
+      const landingUrl = new URL('/', request.url);
+      return NextResponse.redirect(landingUrl);
     }
   }
 

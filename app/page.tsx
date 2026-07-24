@@ -14,9 +14,17 @@ export default function LandingPage() {
   const [stage, setStage] = useState(0);
   const [alexText, setAlexText] = useState('');
   const [samText, setSamText] = useState('');
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
   
   const fullAlexText = "We need to finalize the Q3 roadmap by Friday.";
   const fullSamText = "I can commit to the API refactor, but the dashboard will spill over.";
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data?.user) setUser(data.user); })
+      .catch(() => setUser(null));
+  }, []);
 
   // WebGL Shader Animation Effect (STITCH Shader ANIMATION_3)
   useEffect(() => {
@@ -193,15 +201,32 @@ void main() {
           </nav>
 
           <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-sm font-semibold text-[#c7c4d7] hover:text-[#6366F1] transition hidden sm:inline-block">
-              Sign In
-            </Link>
-            <Link
-              href="/dashboard"
-              className="px-5 py-2.5 rounded-lg text-[12px] btn-primary-cta uppercase tracking-wider"
-            >
-              Request Demo
-            </Link>
+            {user ? (
+              <>
+                <span className="text-xs font-medium text-[#c0c1ff] font-mono hidden sm:inline-block">
+                  Logged in as <strong className="text-[#F8FAFC]">{user.name}</strong>
+                </span>
+                <Link
+                  href="/dashboard"
+                  className="px-5 py-2.5 rounded-lg text-[12px] btn-primary-cta uppercase tracking-wider flex items-center gap-2"
+                >
+                  Go to Dashboard
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="text-sm font-semibold text-[#c7c4d7] hover:text-[#6366F1] transition hidden sm:inline-block">
+                  Sign In
+                </Link>
+                <Link
+                  href="/login"
+                  className="px-5 py-2.5 rounded-lg text-[12px] btn-primary-cta uppercase tracking-wider"
+                >
+                  Request Demo
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -238,7 +263,7 @@ void main() {
                   href="/dashboard"
                   className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide btn-primary-cta text-center flex items-center justify-center gap-2 group cursor-pointer"
                 >
-                  Start Free
+                  {user ? 'Go to Dashboard' : 'Start Free'}
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </Link>
                 <Link
