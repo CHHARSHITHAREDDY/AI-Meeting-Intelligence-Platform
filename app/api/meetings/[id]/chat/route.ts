@@ -89,6 +89,7 @@ Base your answer strictly on the transcript provided above. If the transcript do
     if (!reply) {
       console.log('[Chat Route] No API keys available or all failed. Using offline mockup answer.');
       const q = message.toLowerCase();
+      
       if (q.includes('decision') || q.includes('decide')) {
         const decs = meeting.analysis?.decisions.map(d => `• ${d.decision} (by ${d.decider})`).join('\n') || 'No decisions found.';
         reply = `Based on the transcript, here are the decisions:\n${decs}`;
@@ -101,7 +102,39 @@ Base your answer strictly on the transcript provided above. If the transcript do
       } else if (q.includes('summary')) {
         reply = meeting.analysis?.summary || 'No summary available.';
       } else {
-        reply = `I am running in offline fallback mode because no active LLM API keys (Llama or Claude) were able to respond. The transcript text is:\n\n"${transcript.slice(0, 300)}..."`;
+        // Extract key terms from the query, filtering common words
+        const stopWords = new Set(['what', 'when', 'where', 'who', 'how', 'why', 'that', 'this', 'there', 'their', 'them', 'with', 'from', 'about', 'some', 'they', 'have', 'your', 'from', 'does', 'tell', 'from', 'video', 'transcript', 'meeting', 'show']);
+        const keywords = q
+          .replace(/[?.,!:-]/g, '')
+          .split(/\s+/)
+          .filter((w: string) => w.length > 2 && !stopWords.has(w));
+
+        if (keywords.length > 0) {
+          // Rank lines based on keyword overlap
+          const transcriptLines = transcript.split('\n');
+          const matches = transcriptLines
+            .map((line: string) => {
+              let score = 0;
+              const lowerLine = line.toLowerCase();
+              keywords.forEach((kw: string) => {
+                if (lowerLine.includes(kw)) {
+                  score += 1;
+                }
+              });
+              return { line, score };
+            })
+            .filter((item: { line: string; score: number }) => item.score > 0)
+            .sort((a: { score: number }, b: { score: number }) => b.score - a.score)
+            .slice(0, 4);
+
+          if (matches.length > 0) {
+            reply = `Based on the meeting transcript context, here are the most relevant discussion snippets found:\n\n${matches.map((m: { line: string; score: number }) => `• ${m.line}`).join('\n')}`;
+          } else {
+            reply = `I couldn't find specific discussion details about those terms in the transcript. However, here is the summary of this session:\n\n${meeting.analysis?.summary || 'No summary available.'}`;
+          }
+        } else {
+          reply = `I am running in offline mode. Please ask a specific question about the meeting context, such as decisions, action items, or key topics discussed.`;
+        }
       }
     }
 

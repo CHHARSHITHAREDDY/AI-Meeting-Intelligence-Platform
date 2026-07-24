@@ -87,52 +87,26 @@
       ],
       "actionItems": [
         {
-<<<<<<< Updated upstream
           "id": "act-gen-1",
           "task": "Complete API endpoint documentation and share with frontend partners.",
           "assignee": "Lead Developer",
           "dueDate": "2026-07-30",
-=======
-          "id": "act-mock-1",
-          "task": "Implement database replication and offload reporting queries to read-replica.",
-          "assignee": "Alex (Engineering Lead)",
-          "dueDate": "2026-10-15",
-          "status": "completed"
-        },
-        {
-          "id": "act-mock-2",
-          "task": "Finish auditing IAM roles and clean up unused access tokens.",
-          "assignee": "Michael (Security Specialist)",
-          "dueDate": "2026-10-02",
-          "status": "completed"
-        },
-        {
-          "id": "act-mock-3",
-          "task": "Document the migration plan for short-lived session tokens.",
-          "assignee": "Michael (Security Specialist)",
-          "dueDate": "2026-10-10",
           "status": "pending"
         },
         {
-          "id": "act-mock-4",
-          "task": "Alert frontend team and ensure UI handles eventual consistency of read-replica.",
-          "assignee": "Sarah (Product Manager)",
-          "dueDate": "2026-10-05",
+          "id": "act-gen-2",
+          "task": "Schedule user acceptance testing session for key stakeholders.",
+          "assignee": "Product Manager",
+          "dueDate": "2026-08-04",
           "status": "pending"
         }
       ],
       "risks": [
         {
-          "id": "risk-mock-1",
-          "risk": "Read-replica sync lag of 2-3 seconds causing data consistency issues in the UI.",
+          "id": "risk-gen-1",
+          "risk": "API integration delays due to third-party sandbox stability.",
           "impact": "medium",
-          "mitigation": "Ensure frontend components implement loading cues or optimistic updates to handle eventual consistency."
-        },
-        {
-          "id": "risk-mock-2",
-          "risk": "Potential database downtime during replication setup.",
-          "impact": "high",
-          "mitigation": "Schedule the migration window during low-traffic periods (Sunday 2 AM) with automated rollbacks."
+          "mitigation": "Create offline mock services to unblock front-end developer workflow."
         }
       ]
     }
@@ -166,23 +140,42 @@
           "task": "Implement database replication and offload reporting queries to read-replica.",
           "assignee": "Alex (Engineering Lead)",
           "dueDate": "2026-10-15",
->>>>>>> Stashed changes
           "status": "pending"
         },
         {
-          "id": "act-gen-2",
-          "task": "Schedule user acceptance testing session for key stakeholders.",
-          "assignee": "Product Manager",
-          "dueDate": "2026-08-04",
+          "id": "act-mock-2",
+          "task": "Finish auditing IAM roles and clean up unused access tokens.",
+          "assignee": "Michael (Security Specialist)",
+          "dueDate": "2026-10-02",
+          "status": "pending"
+        },
+        {
+          "id": "act-mock-3",
+          "task": "Document the migration plan for short-lived session tokens.",
+          "assignee": "Michael (Security Specialist)",
+          "dueDate": "2026-10-10",
+          "status": "pending"
+        },
+        {
+          "id": "act-mock-4",
+          "task": "Alert frontend team and ensure UI handles eventual consistency of read-replica.",
+          "assignee": "Sarah (Product Manager)",
+          "dueDate": "2026-10-05",
           "status": "pending"
         }
       ],
       "risks": [
         {
-          "id": "risk-gen-1",
-          "risk": "API integration delays due to third-party sandbox stability.",
+          "id": "risk-mock-1",
+          "risk": "Read-replica sync lag of 2-3 seconds causing data consistency issues in the UI.",
           "impact": "medium",
-          "mitigation": "Create offline mock services to unblock front-end developer workflow."
+          "mitigation": "Ensure frontend components implement loading cues or optimistic updates to handle eventual consistency."
+        },
+        {
+          "id": "risk-mock-2",
+          "risk": "Potential database downtime during replication setup.",
+          "impact": "high",
+          "mitigation": "Schedule the migration window during low-traffic periods (Sunday 2 AM) with automated rollbacks."
         }
       ]
     }
