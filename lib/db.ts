@@ -79,6 +79,7 @@ export interface MeetingAnalysis {
   decisions: Decision[];
   actionItems: ActionItem[];
   risks: Risk[];
+  notes?: string[];
 }
 
 export interface Meeting {
