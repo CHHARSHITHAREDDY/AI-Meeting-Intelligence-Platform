@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+<!-- STITCH_THREEJS_START:ANIMATION_7 class="fixed inset-0 w-full h-full bg-transparent" -->
+<div class="fixed inset-0 w-full h-full bg-transparent" style="display:block;">
+<script src="https://ajax.googleapis.com/ajax/libs/threejs/r125/three.min.js"></script>
+<div id="threejs-container-ANIMATION_7" style="width:100%;height:100%"></div>
+<script>
+(function() {
+  const container = document.getElementById('threejs-container-ANIMATION_7');
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  // Three.js Knowledge Graph for Cue Intelligence
+// Nodes: Meetings (indigo), People (cyan), Projects (magenta), Documents (green)
+// Flowing gradient lines between connected entities
+
+let scene, camera, renderer, container;
+let nodes = [];
+let links = [];
+let mouse = new THREE.Vector2();
+let raycaster = new THREE.Raycaster();
+let hoveredNode = null;
+
+const COLORS = {
+    meeting: 0x6366F1, // Indigo
+    people: 0x22D3EE,  // Cyan
+    project: 0xEC4899, // Magenta
+    document: 0x34D399, // Green
+    lineBase: 0x232B45,
+    highlight: 0xF8FAFC
+};
+
+function init() {
+    container = document.querySelector('#graph-container') || document.body;
+    
+    scene = new THREE.Scene();
+    
+    const width = container.clientWidth || window.innerWidth;
+    const height = container.clientHeight || window.innerHeight;
+    
+    camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 2000);
+    camera.position.z = 800;
+
+    renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
+
+    // Create Grid Background
+    const grid = new THREE.GridHelper(2000, 50, 0x232B45, 0x12172A);
+    grid.rotation.x = Math.PI / 2;
+    grid.position.z = -100;
+    scene.add(grid);
+
+    // Generate Nodes
+    const nodeTypes = ['meeting', 'people', 'project', 'document'];
+    for (let i = 0; i < 40; i++) {
+        const type = nodeTypes[Math.floor(Math.random() * nodeTypes.length)];
+        const node = createNode(type);
+        node.position.set(
+            (Math.random() - 0.5) * 1200,
+            (Math.random() - 0.5) * 800,
+            (Math.random() - 0.5) * 200
+        );
+        nodes.push(node);
+        scene.add(node);
+    }
+
+    // Create Links
+    for (let i = 0; i < nodes.length; i++) {
+        const numLinks = 1 + Math.floor(Math.random() * 2);
+        for (let j = 0; j < numLinks; j++) {
+            const targetIndex = Math.floor(Math.random() * nodes.length);
+            if (targetIndex !== i) {
+                const link = createLink(nodes[i], nodes[targetIndex]);
+                links.push(link);
+                scene.add(link.mesh);
+            }
+        }
+    }
+
+    window.addEventListener('resize', onWindowResize);
+    window.addEventListener('mousemove', onMouseMove);
+    
+    animate();
+}
+
+function createNode(type) {
+    const group = new THREE.Group();
+    const geometry = new THREE.SphereGeometry(12, 32, 32);
+    const material = new THREE.MeshBasicMaterial({ 
+        color: COLORS[type],
+        transparent: true,
+        opacity: 0.9
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    
+    // Glow effect
+    const spriteMaterial = new THREE.SpriteMaterial({
+        map: generateGlowTexture(COLORS[type]),
+        color: COLORS[type],
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        opacity: 0.5
+    });
+    const sprite = new THREE.Sprite(spriteMaterial);
+    sprite.scale.set(60, 60, 1.0);
+    
+    group.add(mesh);
+    group.add(sprite);
+    group.userData = { type, id: Math.random(), originalColor: COLORS[type], sprite };
+    
+    return group;
+}
+
+function generateGlowTexture(color) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gradient.addColorStop(0, 'rgba(255,255,255,1)');
+    gradient.addColorStop(0.2, 'rgba(255,255,255,0.8)');
+    gradient.addColorStop(0.5, 'rgba(255,255,255,0.2)');
+    gradient.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 64, 64);
+    const texture = new THREE.CanvasTexture(canvas);
+    return texture;
+}
+
+function createLink(source, target) {
+    const material = new THREE.LineBasicMaterial({ 
+        color: COLORS.lineBase,
+        transparent: true,
+        opacity: 0.3
+    });
+    const geometry = new THREE.BufferGeometry().setFromPoints([source.position, target.position]);
+    const line = new THREE.Line(geometry, material);
+    
+    return { 
+        mesh: line, 
+        source, 
+        target,
+        offset: Math.random() * 100 
+    };
+}
+
+function onMouseMove(event) {
+    const rect = container.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+}
+
+function onWindowResize() {
+    const width = container.clientWidth || window.innerWidth;
+    const height = container.clientHeight || window.innerHeight;
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+    renderer.setSize(width, height);
+}
+
+function animate(t) {
+    requestAnimationFrame(animate);
+    
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(nodes.map(n => n.children[0]));
+
+    if (intersects.length > 0) {
+        const node = intersects[0].object.parent;
+        if (hoveredNode !== node) {
+            hoveredNode = node;
+            document.body.style.cursor = 'pointer';
+        }
+    } else {
+        hoveredNode = null;
+        document.body.style.cursor = 'default';
+    }
+
+    // Update nodes and links based on hover
+    nodes.forEach(node => {
+        const isHovered = hoveredNode === node;
+        const scale = isHovered ? 1.5 : 1.0;
+        node.scale.lerp(new THREE.Vector3(scale, scale, scale), 0.1);
+        
+        // Dim non-connected if something is hovered
+        if (hoveredNode) {
+            const isConnected = links.some(l => 
+                (l.source === node && l.target === hoveredNode) || 
+                (l.target === node && l.source === hoveredNode)
+            );
+            node.children[0].material.opacity = (isHovered || isConnected) ? 1.0 : 0.2;
+            node.userData.sprite.material.opacity = (isHovered || isConnected) ? 0.6 : 0.1;
+        } else {
+            node.children[0].material.opacity = 0.9;
+            node.userData.sprite.material.opacity = 0.5;
+        }
+
+        // Gentle idle float
+        node.position.y += Math.sin(t * 0.001 + node.userData.id) * 0.2;
+    });
+
+    links.forEach(link => {
+        const isConnected = hoveredNode && (link.source === hoveredNode || link.target === hoveredNode);
+        link.mesh.material.opacity = isConnected ? 0.8 : (hoveredNode ? 0.05 : 0.2);
+        link.mesh.material.color.set(isConnected ? COLORS.highlight : COLORS.lineBase);
+        
+        // Update line positions for floating nodes
+        link.mesh.geometry.setFromPoints([link.source.position, link.target.position]);
+    });
+
+    renderer.render(scene, camera);
+}
+
+init();
+})();
+</script>
+</div>
+<!-- STITCH_THREEJS_END:ANIMATION_7 -->
+</body>
+</html>

@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Company Memory - Cue Intelligence</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&amp;family=JetBrains+Mono:wght@600&amp;family=Sora:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "inverse-primary": "#494bd6",
+                    "surface-container-highest": "#31353f",
+                    "on-primary-container": "#0d0096",
+                    "secondary-container": "#00cbe6",
+                    "on-secondary-fixed": "#001f25",
+                    "on-tertiary-container": "#570032",
+                    "surface-container-low": "#181b25",
+                    "on-primary-fixed": "#07006c",
+                    "on-secondary-container": "#00515d",
+                    "on-tertiary-fixed": "#3e0022",
+                    "secondary-fixed-dim": "#2fd9f4",
+                    "outline-variant": "#464554",
+                    "surface-dim": "#0f131c",
+                    "surface-container-high": "#262a34",
+                    "inverse-surface": "#dfe2ef",
+                    "tertiary-container": "#f751a1",
+                    "success-glow": "#34D399",
+                    "on-surface": "#dfe2ef",
+                    "surface-tint": "#c0c1ff",
+                    "on-error": "#690005",
+                    "error": "#ffb4ab",
+                    "primary-container": "#8083ff",
+                    "on-tertiary": "#640039",
+                    "primary-fixed-dim": "#c0c1ff",
+                    "outline": "#908fa0",
+                    "on-error-container": "#ffdad6",
+                    "surface-border": "#232B45",
+                    "on-primary": "#1000a9",
+                    "tertiary": "#ffb0cd",
+                    "on-background": "#dfe2ef",
+                    "surface-bright": "#353943",
+                    "on-tertiary-fixed-variant": "#8c0053",
+                    "on-secondary-fixed-variant": "#004e5a",
+                    "background": "#0f131c",
+                    "secondary-fixed": "#a2eeff",
+                    "surface-variant": "#31353f",
+                    "on-surface-variant": "#c7c4d7",
+                    "secondary": "#5de6ff",
+                    "surface-card": "#12172A",
+                    "on-secondary": "#00363e",
+                    "surface-container-lowest": "#0a0e17",
+                    "primary": "#c0c1ff",
+                    "text-primary": "#F8FAFC",
+                    "surface": "#0f131c",
+                    "error-container": "#93000a",
+                    "primary-fixed": "#e1e0ff",
+                    "surface-container": "#1c1f29",
+                    "tertiary-fixed": "#ffd9e4",
+                    "on-primary-fixed-variant": "#2f2ebe",
+                    "tertiary-fixed-dim": "#ffb0cd",
+                    "text-muted": "#94A3B8",
+                    "inverse-on-surface": "#2c303a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "24px",
+                    "margin-mobile": "16px",
+                    "base": "8px",
+                    "container-padding": "32px",
+                    "bento-gap": "16px"
+            },
+            "fontFamily": {
+                    "headline-xl": ["Sora"],
+                    "headline-md": ["Sora"],
+                    "body-lg": ["Inter"],
+                    "headline-lg-mobile": ["Sora"],
+                    "label-md": ["Inter"],
+                    "headline-lg": ["Sora"],
+                    "body-md": ["Inter"],
+                    "label-caps": ["JetBrains Mono"]
+            },
+            "fontSize": {
+                    "headline-xl": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "800" }],
+                    "headline-md": ["24px", { "lineHeight": "1.3", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                    "body-lg": ["18px", { "lineHeight": "1.6", "letterSpacing": "0em", "fontWeight": "400" }],
+                    "headline-lg-mobile": ["28px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                    "label-md": ["14px", { "lineHeight": "1.4", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                    "headline-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.03em", "fontWeight": "700" }],
+                    "body-md": ["16px", { "lineHeight": "1.5", "letterSpacing": "0em", "fontWeight": "400" }],
+                    "label-caps": ["12px", { "lineHeight": "1.0", "letterSpacing": "0.1em", "fontWeight": "600" }]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .noise-bg {
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+        }
+        
+        .glass-panel {
+            background: rgba(10, 14, 23, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .animated-gradient-border {
+            position: relative;
+        }
+        
+        .animated-gradient-border::before {
+            content: "";
+            position: absolute;
+            inset: -1px;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(45deg, #c0c1ff, #5de6ff, #f751a1, #c0c1ff);
+            background-size: 300% 300%;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: rotate-gradient 4s linear infinite;
+            z-index: -1;
+        }
+
+        @keyframes rotate-gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .shimmer-button {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .shimmer-button::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.2), transparent);
+            transform: skewX(-20deg);
+            transition: left 0.5s ease-in-out;
+        }
+        
+        .shimmer-button:hover::after {
+            left: 150%;
+        }
+
+        .ai-pulse {
+            animation: pulse-magenta 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse-magenta {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .5; transform: scale(1.1); box-shadow: 0 0 15px rgba(247, 81, 161, 0.6); }
+        }
+
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+            .pb-safe {
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-surface-container-lowest text-text-primary min-h-screen font-body-md antialiased selection:bg-secondary selection:text-on-secondary">
+<div class="noise-bg"></div>
+<!-- SideNavBar (Standardized) -->
+<nav class="fixed left-0 top-0 h-screen w-[260px] bg-surface-container-lowest border-r border-[#232B45] flex flex-col py-base z-50 hidden md:flex">
+<div class="px-6 py-4 flex items-center gap-3 mb-6">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high border border-surface-border flex items-center justify-center overflow-hidden">
+<img alt="User Workspace Avatar" class="w-full h-full object-cover" data-alt="A stylized sleek logo image representing an abstract 'C' or 'Q' using glowing neon blue and purple intersecting lines." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCNnz2UP2MMUFHtrg1Sp0zCIDrMi2vW31ANPr0GSdJGi4cezDrlHN1SOsJKpxzPROOubKFmS0NBcV7bdKLEa5x3R50ec_jYUrkJbAlDWiowlD1RnwKmzdydmGlqN5TYXa501uopXygf1KbQiuPd4Y1S0xHG4dV_XAPxXHwZPmmGYOEiHIoI19PV_dj6YJ_zpgKM27-vLv23ZBtg2eB0lt7L11iRUH9udSdWtyeahQK1MfqLNsKI4pIPOd00ZXcYhCE2BBggqoktJPM"/>
+</div>
+<div class="overflow-hidden">
+<h1 class="font-headline-md text-headline-md font-bold text-text-primary tracking-tighter leading-tight truncate">Cue Intelligence</h1>
+<p class="font-label-md text-label-md text-text-muted truncate">System Status: Live</p>
+</div>
+</div>
+<div class="px-4 mb-6">
+<button class="w-full bg-primary text-on-primary font-label-md text-label-md font-semibold py-2.5 rounded-lg shimmer-button flex items-center justify-center gap-2 hover:bg-primary-fixed-dim transition-colors">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">add</span>
+            New Initiative
+        </button>
+</div>
+<div class="flex-1 flex flex-col gap-0">
+<a class="flex items-center gap-3 h-[48px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">videocam</span>
+<span class="font-label-md text-label-md">Live Meeting</span>
+</a>
+<a class="flex items-center gap-3 h-[48px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">fact_check</span>
+<span class="font-label-md text-label-md">Decisions</span>
+</a>
+<a class="flex items-center gap-3 h-[48px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">task_alt</span>
+<span class="font-label-md text-label-md">Tasks</span>
+</a>
+<a class="flex items-center gap-3 h-[48px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">account_tree</span>
+<span class="font-label-md text-label-md">Knowledge Graph</span>
+</a>
+<a class="flex items-center gap-3 h-[48px] px-4 bg-surface-container-high text-text-primary border-l-[3px] border-primary-container opacity-100 scale-[0.99] transition-all" href="#">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">memory</span>
+<span class="font-label-md text-label-md font-semibold">Company Memory</span>
+</a>
+<a class="flex items-center gap-3 h-[48px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+</div>
+<div class="mt-auto border-t border-surface-border py-2">
+<a class="flex items-center gap-3 h-[48px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">help</span>
+<span class="font-label-md text-label-md">Help</span>
+</a>
+<a class="flex items-center gap-3 h-[48px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">logout</span>
+<span class="font-label-md text-label-md">Sign Out</span>
+</a>
+</div>
+</nav>
+<!-- TopAppBar (Standardized) -->
+<header class="fixed top-0 right-0 left-0 md:left-[260px] h-16 bg-surface-dim/70 backdrop-blur-md border-b border-surface-border shadow-sm flex items-center px-container-padding z-40 w-full justify-between">
+<div class="flex items-center gap-4">
+<div class="md:hidden flex items-center gap-2">
+<span class="font-headline-md text-headline-md font-extrabold text-primary tracking-tighter">Cue</span>
+</div>
+<div class="hidden md:flex items-center gap-2">
+<span class="font-label-caps text-label-caps text-text-muted tracking-widest">INTELLECTIVE</span>
+<span class="text-text-muted">/</span>
+<span class="font-label-md text-label-md text-text-primary font-semibold">Search</span>
+</div>
+</div>
+<div class="flex-1 max-w-md mx-8 hidden lg:flex">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+<input class="w-full bg-surface-container-high border border-surface-border rounded-full pl-10 pr-4 py-1.5 text-label-md focus:ring-1 focus:ring-secondary focus:border-secondary outline-none transition-all" placeholder="Global search..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-2 md:gap-4">
+<div class="flex items-center gap-1">
+<button class="text-on-surface-variant p-2 hover:bg-surface-container-high/50 rounded-lg transition-all active:scale-95">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant p-2 hover:bg-surface-container-high/50 rounded-lg transition-all active:scale-95 lg:hidden">
+<span class="material-symbols-outlined">search</span>
+</button>
+</div>
+<div class="h-6 w-px bg-surface-border hidden sm:block"></div>
+<button class="flex items-center gap-2 p-1 hover:bg-surface-container-high/50 rounded-lg transition-all active:scale-95 group">
+<img alt="User Avatar" class="w-8 h-8 rounded-full border border-surface-border object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCG0qd0N4Ijwavqlv6PAnfY9sfcoAI9VbQDedbNpfZcRBEXRgoEF-WaClL-koYevsGp8liRNX-0AAYVy1JU2C0qH3jnIMX2YBqXJ1xTZJzWZJferd9QPxieW5wA-bgmoZCXp729f-Wgx_cTWTYa-9cxSeMrpBFXx4kX6VaIHsS6xKWirW-ieO34YFFYgmIeMYuRG2C2JIIw40iOSwxvW1scNrhjSdSc-2RlQ8n5OXjoUPHZg-xhY5aK8eeC7T5oQYRBWFfTr21Tic8"/>
+<span class="hidden xl:block font-label-md text-label-md text-text-primary">Sarah Jenkins</span>
+</button>
+</div>
+</header>
+<!-- Main Content -->
+<main class="pt-24 pb-20 md:pb-8 md:pl-[260px] min-h-screen flex flex-col items-center px-container-padding w-full">
+<!-- Search Hero Section -->
+<div class="w-full max-w-4xl mt-12 mb-16 flex flex-col items-center text-center">
+<h2 class="font-headline-xl text-headline-xl hidden md:block text-text-primary mb-4 tracking-tighter">
+            Access <span class="text-transparent bg-clip-text bg-gradient-to-r from-secondary to-primary">Corporate Memory</span>
+</h2>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile md:hidden text-text-primary mb-4 tracking-tighter">
+            Access Memory
+        </h2>
+<p class="font-body-lg text-body-lg text-text-muted max-w-2xl mb-8">
+            Query thousands of hours of indexed meetings, decisions, and context. Powered by Cue AI.
+        </p>
+<div class="w-full relative group">
+<div class="absolute -inset-1 bg-gradient-to-r from-secondary via-primary to-tertiary-container rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+<div class="relative w-full glass-panel rounded-xl flex items-center p-2 border border-surface-border bg-surface-card/80">
+<span class="material-symbols-outlined text-secondary ml-4 mr-3 text-[28px]">psychology_alt</span>
+<input class="w-full bg-transparent border-none text-text-primary font-body-lg text-body-lg placeholder:text-text-muted/60 focus:ring-0 outline-none py-4 px-2" placeholder="Ask anything about past meetings... e.g. why was GraphQL rejected?" type="text" value="Why was GraphQL rejected?"/>
+<button class="bg-surface-container-high hover:bg-surface-variant text-text-primary border border-surface-border rounded-lg px-4 py-2 font-label-md text-label-md flex items-center gap-2 transition-colors mr-1">
+<div class="w-2 h-2 rounded-full bg-tertiary-container ai-pulse"></div>
+                    Query
+                </button>
+</div>
+</div>
+<!-- Example Chips -->
+<div class="flex flex-wrap justify-center gap-3 mt-6">
+<button class="px-4 py-1.5 rounded-full border border-surface-border bg-surface-container/50 text-text-muted font-label-md text-label-md hover:border-secondary hover:text-secondary hover:bg-secondary/10 transition-all">
+                Project Apollo Roadmap
+            </button>
+<button class="px-4 py-1.5 rounded-full border border-surface-border bg-surface-container/50 text-text-muted font-label-md text-label-md hover:border-secondary hover:text-secondary hover:bg-secondary/10 transition-all">
+                Q3 Budget Constraints
+            </button>
+<button class="px-4 py-1.5 rounded-full border border-surface-border bg-surface-container/50 text-text-muted font-label-md text-label-md hover:border-secondary hover:text-secondary hover:bg-secondary/10 transition-all">
+                Database Migration Logic
+            </button>
+</div>
+</div>
+<!-- Results Section -->
+<div class="w-full max-w-4xl flex flex-col gap-bento-gap animate-[fadeIn_0.5s_ease-out]">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-caps text-label-caps text-secondary tracking-widest uppercase">Synthesized Insight</span>
+<span class="font-label-md text-label-md text-text-muted">3 Sources found in 1.2s</span>
+</div>
+<!-- Primary Result Card -->
+<div class="animated-gradient-border rounded-xl glass-panel bg-surface-card p-6 flex flex-col gap-6 overflow-hidden">
+<div class="flex items-start gap-4">
+<div class="mt-1">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<div class="flex-1">
+<p class="font-body-lg text-body-lg text-text-primary leading-relaxed">
+                        GraphQL was rejected because the team prioritized REST for existing infrastructure compatibility and reduced learning curve. Specifically, the Ops team noted that our current API gateway lacks native caching for GraphQL, which would increase load on the read-replicas.
+                    </p>
+</div>
+</div>
+<div class="h-px w-full bg-surface-border"></div>
+<div class="flex flex-col gap-4">
+<div class="flex items-center gap-2 text-text-muted font-label-md text-label-md">
+<span class="material-symbols-outlined text-[16px]">source</span>
+<span>Sourced from:</span>
+<span class="px-2 py-0.5 bg-surface-container-high rounded border border-surface-border text-primary font-label-caps text-label-caps">Architecture Review - Q2</span>
+</div>
+<div class="bg-surface-container-lowest rounded-lg p-4 border border-surface-border/50 relative overflow-hidden group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-secondary/50"></div>
+<div class="flex items-center gap-3 mb-3">
+<div class="w-7 h-7 rounded-full bg-surface-variant flex items-center justify-center font-label-caps text-[10px] text-text-primary border border-surface-border">
+                            SJ
+                        </div>
+<span class="font-label-md text-label-md text-text-primary font-semibold">Sarah Jenkins (Tech Lead)</span>
+<span class="font-label-caps text-[10px] text-text-muted">14:22</span>
+</div>
+<p class="font-body-md text-body-md text-text-muted pl-10">
+                        "If we switch to GraphQL now, we're going to break the caching layer we just spent three months tuning. Our existing REST endpoints are perfectly fine for the mobile client's needs right now. Let's not introduce the learning curve."
+                    </p>
+</div>
+</div>
+</div>
+<!-- Secondary Result Card -->
+<div class="rounded-xl glass-panel bg-surface-card p-6 flex flex-col gap-6 border border-surface-border hover:border-surface-border/80 transition-colors overflow-hidden">
+<div class="flex items-start gap-4">
+<div class="mt-1">
+<span class="material-symbols-outlined text-primary/70">history_edu</span>
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md text-text-primary/90 leading-relaxed">
+                        Prior discussion indicating initial interest in GraphQL for frontend flexibility, ultimately overridden by backend constraints.
+                    </p>
+</div>
+</div>
+<div class="flex flex-col gap-4">
+<div class="flex items-center gap-2 text-text-muted font-label-md text-label-md">
+<span class="material-symbols-outlined text-[16px]">source</span>
+<span>Sourced from:</span>
+<span class="px-2 py-0.5 bg-surface-container-high rounded border border-surface-border text-primary/80 font-label-caps text-label-caps">Frontend Sync</span>
+</div>
+<div class="bg-surface-container-lowest rounded-lg p-4 border border-surface-border/50 relative">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary/30"></div>
+<div class="flex items-center gap-3 mb-3">
+<div class="w-7 h-7 rounded-full bg-surface-variant flex items-center justify-center font-label-caps text-[10px] text-text-primary border border-surface-border">
+                            MK
+                        </div>
+<span class="font-label-md text-label-md text-text-primary font-semibold">Markus Kim (Frontend)</span>
+<span class="font-label-caps text-[10px] text-text-muted">08:15</span>
+</div>
+<p class="font-body-md text-body-md text-text-muted pl-10 italic opacity-80">
+                        Transcript hidden. Click to expand full context.
+                    </p>
+<button aria-label="Expand transcript" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"></button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Mobile Bottom NavBar -->
+<nav class="md:hidden fixed bottom-0 w-full h-16 bg-surface/90 backdrop-blur-md border-t border-surface-border flex items-center justify-around z-50 px-2 pb-safe">
+<a class="flex flex-col items-center gap-1 p-2 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">videocam</span>
+</a>
+<a class="flex flex-col items-center gap-1 p-2 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">fact_check</span>
+</a>
+<a class="flex flex-col items-center gap-1 p-2 text-secondary bg-secondary/10 rounded-full transition-colors relative" href="#">
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">memory</span>
+<div class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-secondary rounded-full border-2 border-surface"></div>
+</a>
+<a class="flex flex-col items-center gap-1 p-2 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">account_tree</span>
+</a>
+<a class="flex flex-col items-center gap-1 p-2 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">settings</span>
+</a>
+</nav>
+</body></html>

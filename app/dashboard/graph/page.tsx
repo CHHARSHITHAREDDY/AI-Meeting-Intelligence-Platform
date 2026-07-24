@@ -86,7 +86,7 @@ export default function KnowledgeGraphPage() {
             x,
             y,
             radius: 16,
-            color: '#d946ef', // fuchsia-glow
+            color: '#5de6ff', // cyan accent
             description: `Active stakeholder participating in decisions and taking ownership of actions.`,
             meta: `Stakeholder • Active`
           });
@@ -107,7 +107,7 @@ export default function KnowledgeGraphPage() {
             x: mx,
             y: my,
             radius: 28,
-            color: '#a78bfa', // violet-glow
+            color: '#8083ff', // primary violet
             description: meeting.analysis?.summary || 'No summary available.',
             meta: `${meeting.duration} sync • ${new Date(meeting.date).toLocaleDateString()}`,
             meetingId: meeting.id
@@ -150,7 +150,7 @@ export default function KnowledgeGraphPage() {
             });
           }
 
-          // Distribute orbiting items around the meeting node (radius = 90)
+          // Distribute orbiting items around the meeting node (radius = 80)
           const rOrbit = 80;
           orbitItems.forEach((item, oIdx) => {
             const oAngle = mAngle + ((oIdx + 1) * 2 * Math.PI) / (orbitItems.length + 1) - Math.PI / 4;
@@ -159,14 +159,14 @@ export default function KnowledgeGraphPage() {
 
             const colors = {
               decision: '#34d399', // emerald
-              task: '#c084fc', // light-violet
-              risk: '#f59e0b' // amber
+              task: '#ffb0cd', // pink tertiary
+              risk: '#ffb4ab' // coral warning
             };
 
             const radiuses = {
               decision: 20,
               task: 18,
-              risk: 20
+              risk: 18
             };
 
             tempNodes.push({
@@ -182,22 +182,21 @@ export default function KnowledgeGraphPage() {
               meetingId: meeting.id
             });
 
-            // Link item to parent meeting
+            // Link orbiting item to meeting
             tempLinks.push({
               source: mNodeId,
               target: item.id,
-              id: `link-${linkCounter++}`
+              id: `link-${mNodeId}-${item.id}`
             });
 
-            // Link item to its owner if present
+            // Link orbiting item to person if owner matches
             if (item.ownerName) {
               const personNodeId = `person-${item.ownerName.toLowerCase().replace(/\s+/g, '-')}`;
-              const personNodeExists = tempNodes.some(n => n.id === personNodeId);
-              if (personNodeExists) {
+              if (tempNodes.some(n => n.id === personNodeId)) {
                 tempLinks.push({
-                  source: item.id,
-                  target: personNodeId,
-                  id: `link-${linkCounter++}`
+                  source: personNodeId,
+                  target: item.id,
+                  id: `link-${personNodeId}-${item.id}`
                 });
               }
             }
@@ -207,17 +206,12 @@ export default function KnowledgeGraphPage() {
         setNodes(tempNodes);
         setLinks(tempLinks);
         
-        if (tempNodes.length > 0) {
-          // Select meeting node by default
-          const firstMeeting = tempNodes.find(n => n.type === 'meeting');
-          if (firstMeeting) {
-            setSelectedNode(firstMeeting.id);
-          } else {
-            setSelectedNode(tempNodes[0].id);
-          }
+        // Select first meeting node by default
+        if (completedMeetings.length > 0) {
+          setSelectedNode(`meeting-${completedMeetings[0].id}`);
         }
-      } catch (err) {
-        console.error('Failed to compile knowledge graph network:', err);
+      } catch (error) {
+        console.error(error);
       } finally {
         setLoading(false);
       }
@@ -232,8 +226,9 @@ export default function KnowledgeGraphPage() {
 
   const activeNode = nodes.find(n => n.id === selectedNode) || null;
 
-  // Highlight connections
+  // Helper to determine if node is connected to selected node
   const isNodeConnected = (nodeId: string) => {
+    if (!selectedNode) return true;
     if (selectedNode === nodeId) return true;
     return links.some(link => 
       (link.source === selectedNode && link.target === nodeId) ||
@@ -245,15 +240,15 @@ export default function KnowledgeGraphPage() {
   const renderTypeIcon = (type: string) => {
     switch (type) {
       case 'meeting':
-        return <Network className="w-5 h-5 text-violet-400" />;
+        return <Network className="w-5 h-5 text-[#8083ff]" />;
       case 'person':
-        return <User className="w-5 h-5 text-fuchsia-400" />;
+        return <User className="w-5 h-5 text-[#5de6ff]" />;
       case 'decision':
-        return <Award className="w-5 h-5 text-emerald-400" />;
+        return <Award className="w-5 h-5 text-[#34d399]" />;
       case 'task':
-        return <ClipboardList className="w-5 h-5 text-violet-450" />;
+        return <ClipboardList className="w-5 h-5 text-[#ffb0cd]" />;
       case 'risk':
-        return <AlertTriangle className="w-5 h-5 text-amber-500" />;
+        return <AlertTriangle className="w-5 h-5 text-[#ffb4ab]" />;
       default:
         return null;
     }
@@ -270,9 +265,9 @@ export default function KnowledgeGraphPage() {
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 text-zinc-500">
-          <div className="w-8 h-8 rounded-full border-2 border-violet-500/20 border-t-violet-500 animate-spin" />
-          <p className="text-sm font-medium">Computing knowledge graph geometry...</p>
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-[#94A3B8]">
+          <div className="w-8 h-8 rounded-full border-2 border-[#232B45] border-t-[#8083ff] animate-spin" />
+          <p className="text-sm font-medium font-mono">Computing knowledge graph geometry...</p>
         </div>
       ) : nodes.length === 0 ? (
         <div className="bg-zinc-900/40 border border-zinc-805 rounded-xl p-12 text-center text-zinc-500">
@@ -289,8 +284,8 @@ export default function KnowledgeGraphPage() {
                 onClick={() => setActiveFilter(filter as any)}
                 className={`px-4 py-2 rounded-full font-semibold text-xs transition capitalize ${
                   activeFilter === filter 
-                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/25' 
-                    : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-100'
+                    ? 'bg-[#8083ff] text-white shadow-md shadow-[#8083ff]/20' 
+                    : 'bg-[#0a0e17] border border-[#232B45] text-[#94A3B8] hover:text-[#F8FAFC]'
                 }`}
               >
                 {filter === 'all' ? 'All Nodes' : `${filter}s`}

@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Vocalize | AI Meeting Intelligence Platform',
-  description: 'Instantly transcribe and extract summaries, key decisions, action items, and risks from your team meetings using advanced AI.',
+  title: 'Cue Intelligence | AI Meeting Intelligence Platform',
+  description: 'Beyond transcripts. Cue captures decisions, predicts risks, and builds your organization\'s memory in real-time.',
 };
 
 export default function RootLayout({
@@ -12,15 +12,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full scroll-smooth">
+    <html lang="en" className="h-full scroll-smooth dark">
       <head>
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎙️</text></svg>" />
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" />
       </head>
-      <body className="min-h-screen bg-zinc-950 text-zinc-50 font-sans antialiased selection:bg-violet-500/30 selection:text-violet-200">
-        {/* Ambient background glow elements */}
-        <div className="absolute top-0 left-1/4 -translate-x-1/2 w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-        <div className="absolute top-20 right-1/4 translate-x-1/2 w-[600px] h-[600px] bg-fuchsia-600/5 rounded-full blur-[150px] pointer-events-none -z-10" />
-        
+      <body className="min-h-screen bg-[#0f131c] text-[#dfe2ef] font-sans antialiased selection:bg-[#8083ff]/30 selection:text-[#c0c1ff]">
         <main className="flex-1 flex flex-col">
           {children}
         </main>
@@ -28,3 +28,4 @@ export default function RootLayout({
     </html>
   );
 }
+

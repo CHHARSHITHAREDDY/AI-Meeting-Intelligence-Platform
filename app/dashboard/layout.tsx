@@ -18,7 +18,6 @@ import {
   Info
 } from 'lucide-react';
 
-
 export default function DashboardLayout({
   children,
 }: {
@@ -72,23 +71,15 @@ export default function DashboardLayout({
     { name: 'Company Memory', href: '/dashboard', icon: Database },
   ];
 
-  // Breadcrumbs title based on current path
   const getPageTitle = () => {
-    if (pathname.startsWith('/dashboard/meeting/')) {
-      return 'Meeting Insights';
-    }
+    if (pathname?.startsWith('/dashboard/meeting/')) return 'Meeting Insights';
     switch (pathname) {
-      case '/dashboard/live':
-        return 'Live Meeting';
-      case '/dashboard/decisions':
-        return 'Decisions Register';
-      case '/dashboard/tasks':
-        return 'Tasks Register';
-      case '/dashboard/graph':
-        return 'Knowledge Graph';
+      case '/dashboard/live': return 'Live Meeting';
+      case '/dashboard/decisions': return 'Decisions Register';
+      case '/dashboard/tasks': return 'Tasks Register';
+      case '/dashboard/graph': return 'Knowledge Graph';
       case '/dashboard':
-      default:
-        return 'Company Memory';
+      default: return 'Company Memory';
     }
   };
 

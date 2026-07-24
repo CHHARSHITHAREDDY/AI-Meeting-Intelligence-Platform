@@ -184,9 +184,9 @@ export default function TasksPage() {
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 text-zinc-500">
-          <div className="w-8 h-8 rounded-full border-2 border-violet-500/20 border-t-violet-500 animate-spin" />
-          <p className="text-sm font-medium">Loading tasks register...</p>
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-[#94A3B8]">
+          <div className="w-8 h-8 rounded-full border-2 border-[#8083ff]/20 border-t-[#8083ff] animate-spin" />
+          <p className="text-sm font-medium font-mono">Loading tasks register...</p>
         </div>
       ) : (
         <>

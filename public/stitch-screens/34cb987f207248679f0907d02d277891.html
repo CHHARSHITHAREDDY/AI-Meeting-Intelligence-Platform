@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+
+<html class="dark scroll-smooth" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cue Intelligence</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@600&amp;family=Sora:wght@600;700;800&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "text-primary": "#F8FAFC",
+                      "on-primary-fixed-variant": "#2f2ebe",
+                      "on-surface": "#dfe2ef",
+                      "error": "#ffb4ab",
+                      "secondary": "#5de6ff",
+                      "surface-variant": "#31353f",
+                      "inverse-primary": "#494bd6",
+                      "inverse-on-surface": "#2c303a",
+                      "outline": "#908fa0",
+                      "surface-bright": "#353943",
+                      "background": "#0f131c",
+                      "on-secondary": "#00363e",
+                      "on-error": "#690005",
+                      "surface-container-lowest": "#0a0e17",
+                      "on-tertiary-container": "#570032",
+                      "on-secondary-fixed": "#001f25",
+                      "surface-container-low": "#181b25",
+                      "surface-card": "#12172A",
+                      "on-tertiary-fixed": "#3e0022",
+                      "on-primary": "#1000a9",
+                      "on-tertiary": "#640039",
+                      "on-primary-container": "#0d0096",
+                      "secondary-fixed-dim": "#2fd9f4",
+                      "surface-container-high": "#262a34",
+                      "surface-tint": "#c0c1ff",
+                      "on-background": "#dfe2ef",
+                      "text-muted": "#94A3B8",
+                      "tertiary-container": "#f751a1",
+                      "surface": "#0f131c",
+                      "surface-dim": "#0f131c",
+                      "on-primary-fixed": "#07006c",
+                      "tertiary-fixed": "#ffd9e4",
+                      "primary-fixed-dim": "#c0c1ff",
+                      "primary": "#c0c1ff",
+                      "on-surface-variant": "#c7c4d7",
+                      "inverse-surface": "#dfe2ef",
+                      "tertiary-fixed-dim": "#ffb0cd",
+                      "outline-variant": "#464554",
+                      "tertiary": "#ffb0cd",
+                      "primary-fixed": "#e1e0ff",
+                      "surface-border": "#232B45",
+                      "primary-container": "#8083ff",
+                      "surface-container-highest": "#31353f",
+                      "secondary-fixed": "#a2eeff",
+                      "error-container": "#93000a",
+                      "surface-container": "#1c1f29",
+                      "on-tertiary-fixed-variant": "#8c0053",
+                      "on-error-container": "#ffdad6",
+                      "on-secondary-container": "#00515d",
+                      "secondary-container": "#00cbe6",
+                      "success-glow": "#34D399",
+                      "on-secondary-fixed-variant": "#004e5a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "bento-gap": "16px",
+                      "base": "8px",
+                      "container-padding": "32px",
+                      "margin-mobile": "16px",
+                      "gutter": "24px"
+              },
+              "fontFamily": {
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "label-caps": [
+                              "JetBrains Mono"
+                      ],
+                      "headline-md": [
+                              "Sora"
+                      ],
+                      "headline-xl": [
+                              "Sora"
+                      ],
+                      "headline-lg": [
+                              "Sora"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ],
+                      "headline-lg-mobile": [
+                              "Sora"
+                      ]
+              },
+              "fontSize": {
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "letterSpacing": "0em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "letterSpacing": "0em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "1.0",
+                                      "letterSpacing": "0.1em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-xl": [
+                              "48px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.04em",
+                                      "fontWeight": "800"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "-0.03em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "letterSpacing": "0.01em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              },
+              "animation": {
+                "marquee": "marquee 20s linear infinite",
+                "pulse-glow": "pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+                "float": "float 6s ease-in-out infinite",
+                "bounce-soft": "bounce-soft 2s infinite"
+              },
+              "keyframes": {
+                "marquee": {
+                  "0%": { transform: "translateX(0%)" },
+                  "100%": { transform: "translateX(-100%)" }
+                },
+                "pulse-glow": {
+                  "0%, 100%": { opacity: 1, boxShadow: "0 0 15px 0px rgba(192, 193, 255, 0.4)" },
+                  "50%": { opacity: 0.8, boxShadow: "0 0 25px 5px rgba(192, 193, 255, 0.6)" }
+                },
+                "float": {
+                  "0%, 100%": { transform: "translateY(0)" },
+                  "50%": { transform: "translateY(-20px)" }
+                },
+                "bounce-soft": {
+                    "0%, 100%": { transform: "translateY(0)" },
+                    "50%": { transform: "translateY(10px)" }
+                }
+              }
+            }
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        .gradient-border-btn {
+            position: relative;
+            background: rgba(10, 14, 23, 0.8);
+            border-radius: 0.25rem;
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+        .gradient-border-btn::before {
+            content: "";
+            position: absolute;
+            inset: -2px;
+            border-radius: 0.35rem;
+            background: linear-gradient(45deg, #c0c1ff, #5de6ff, #f751a1);
+            z-index: -1;
+            transition: opacity 0.3s ease;
+            opacity: 0.7;
+        }
+        .gradient-border-btn:hover::before {
+            opacity: 1;
+            filter: blur(4px);
+        }
+        .gradient-border-btn:hover {
+            transform: scale(1.03);
+            background: rgba(10, 14, 23, 0.9);
+        }
+
+        .primary-btn {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .primary-btn::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+            transform: rotate(45deg) translate(-100%, 100%);
+            transition: all 0.5s ease;
+        }
+        .primary-btn:hover::after {
+            transform: rotate(45deg) translate(100%, -100%);
+        }
+        .primary-btn:hover {
+            transform: scale(1.03);
+            box-shadow: 0 0 20px rgba(192, 193, 255, 0.4);
+        }
+
+        .bento-card {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+        }
+        .bento-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(45deg, rgba(192, 193, 255, 0.1), rgba(93, 230, 255, 0.1));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            transition: all 0.4s ease;
+        }
+        .bento-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px -10px rgba(192, 193, 255, 0.2);
+        }
+        .bento-card:hover::before {
+             background: linear-gradient(90deg, #c0c1ff, #5de6ff);
+        }
+
+        .waveform-bar {
+            width: 6px;
+            background: #5de6ff;
+            border-radius: 3px;
+            animation: equalize 1s infinite alternate ease-in-out;
+        }
+        .waveform-bar:nth-child(1) { animation-delay: 0.1s; }
+        .waveform-bar:nth-child(2) { animation-delay: 0.3s; }
+        .waveform-bar:nth-child(3) { animation-delay: 0.5s; }
+        .waveform-bar:nth-child(4) { animation-delay: 0.2s; }
+        .waveform-bar:nth-child(5) { animation-delay: 0.4s; }
+
+        @keyframes equalize {
+            0% { height: 10px; }
+            100% { height: 40px; }
+        }
+
+        .typing-cursor::after {
+            content: '|';
+            animation: blink 1s step-end infinite;
+            color: #c0c1ff;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        .grid-pattern {
+            background-image: 
+                linear-gradient(to right, rgba(35, 43, 69, 0.5) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(35, 43, 69, 0.5) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md antialiased min-h-screen flex flex-col selection:bg-primary/30 selection:text-text-primary overflow-x-hidden">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-surface-container-lowest/70 backdrop-blur-xl border-b border-white/10 shadow-sm flex justify-between items-center px-container-padding py-4 max-w-full">
+<a class="font-headline-md text-headline-md font-bold text-text-primary tracking-tighter hover:text-primary transition-colors" href="#">
+            Cue Intelligence
+        </a>
+<div class="hidden md:flex space-x-8">
+<a class="text-on-surface-variant hover:text-text-primary transition-colors font-label-caps text-label-caps hover:bg-primary/10 px-3 py-1 rounded transition-all duration-300" href="#">Platform</a>
+<a class="text-on-surface-variant hover:text-text-primary transition-colors font-label-caps text-label-caps hover:bg-primary/10 px-3 py-1 rounded transition-all duration-300" href="#">Features</a>
+<a class="text-on-surface-variant hover:text-text-primary transition-colors font-label-caps text-label-caps hover:bg-primary/10 px-3 py-1 rounded transition-all duration-300" href="#">Enterprise</a>
+<a class="text-on-surface-variant hover:text-text-primary transition-colors font-label-caps text-label-caps hover:bg-primary/10 px-3 py-1 rounded transition-all duration-300" href="#">Pricing</a>
+</div>
+<button class="hidden md:inline-flex gradient-border-btn px-6 py-2 font-label-caps text-label-caps text-text-primary tracking-wider uppercase">
+            Request Demo
+        </button>
+<button class="md:hidden text-text-primary">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+</nav>
+<!-- Hero Section -->
+<section class="relative min-h-screen flex items-center justify-center pt-24 pb-12 overflow-hidden">
+<div class="absolute inset-0 z-0 opacity-60">
+<!-- STITCH_SHADER_START:ANIMATION_3 class="absolute inset-0 w-full h-full" -->
+<div class="absolute inset-0 w-full h-full" style="display:block;">
+<canvas id="shader-canvas-ANIMATION_3" style="display:block;width:100%;height:100%"></canvas>
+<script>
+(function() {
+  const canvas = document.getElementById('shader-canvas-ANIMATION_3');
+
+  // Sync the WebGL drawing-buffer size with the CSS-driven layout size.
+  // This fires on initial layout and whenever the element is resized.
+  function syncSize() {
+    const w = canvas.clientWidth  || 1280;
+    const h = canvas.clientHeight || 720;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width  = w;
+      canvas.height = h;
+    }
+  }
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(syncSize).observe(canvas);
+  }
+  syncSize();
+
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  if (!gl) return;
+  const vs = `attribute vec2 a_position;
+varying vec2 v_texCoord;
+void main() {
+  v_texCoord = a_position * 0.5 + 0.5;
+  gl_Position = vec4(a_position, 0.0, 1.0);
+}`;
+  const fs = `precision highp float;
+uniform float u_time;
+uniform vec2 u_resolution;
+
+// Simplex noise helper
+vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
+float snoise(vec2 v){
+  const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+           -0.577350269189626, 0.024390243902439);
+  vec2 i  = floor(v + dot(v, C.yy) );
+  vec2 x0 = v -   i + dot(i, C.xx);
+  vec2 i1;
+  i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+  vec4 x12 = x0.xyxy + C.xxzz;
+  x12.xy -= i1;
+  i = mod(i, 289.0);
+  vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))
+  + i.x + vec3(0.0, i1.x, 1.0 ));
+  vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy),
+    dot(x12.zw,x12.zw)), 0.0);
+  m = m*m ;
+  m = m*m ;
+  vec3 x = 2.0 * fract(p * C.www) - 1.0;
+  vec3 h = abs(x) - 0.5;
+  vec3 ox = floor(x + 0.5);
+  vec3 a0 = x - ox;
+  m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+  vec3 g;
+  g.x  = a0.x  * x0.x  + h.x  * x0.y;
+  g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+  return 130.0 * dot(m, g);
+}
+
+void main() {
+    vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+    float time = u_time * 0.2;
+    
+    // Indigo: #6366F1 -> vec3(0.388, 0.4, 0.945)
+    // Cyan: #22D3EE -> vec3(0.133, 0.827, 0.933)
+    // Magenta: #EC4899 -> vec3(0.925, 0.282, 0.6)
+    
+    vec3 color1 = vec3(0.388, 0.4, 0.945); 
+    vec3 color2 = vec3(0.133, 0.827, 0.933);
+    vec3 color3 = vec3(0.925, 0.282, 0.6);
+    
+    float n1 = snoise(uv * 1.5 + time) * 0.5 + 0.5;
+    float n2 = snoise(uv * 1.2 - time * 0.7) * 0.5 + 0.5;
+    float n3 = snoise(uv * 2.0 + time * 0.3) * 0.5 + 0.5;
+    
+    vec3 mixed = mix(color1, color2, n1);
+    mixed = mix(mixed, color3, n2 * 0.5);
+    
+    // Add grain
+    float grain = fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453) * 0.05;
+    
+    gl_FragColor = vec4(mixed * 0.4 + grain, 1.0);
+}`;
+  function cs(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    return s;
+  }
+  const prog = gl.createProgram();
+  gl.attachShader(prog, cs(gl.VERTEX_SHADER, vs));
+  gl.attachShader(prog, cs(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(prog);
+  gl.useProgram(prog);
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  const pos = gl.getAttribLocation(prog, 'a_position');
+  gl.enableVertexAttribArray(pos);
+  gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+  const uTime = gl.getUniformLocation(prog, 'u_time');
+  const uRes = gl.getUniformLocation(prog, 'u_resolution');
+  const uMouse = gl.getUniformLocation(prog, 'u_mouse');
+
+  // u_mouse is in pixel coordinates matching u_resolution (ShaderToy convention).
+  // Shaders that need normalized coords should use: u_mouse / u_resolution.
+  let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+  window.addEventListener('mousemove', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width && rect.height) {
+      const nx = (event.clientX - rect.left) / rect.width;
+      const ny = 1.0 - (event.clientY - rect.top) / rect.height;
+      mouse.x = nx * canvas.width;
+      mouse.y = ny * canvas.height;
+    }
+  });
+
+  function render(t) {
+    if (typeof ResizeObserver === 'undefined') syncSize();
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    if (uTime) gl.uniform1f(uTime, t * 0.001);
+    if (uRes) gl.uniform2f(uRes, canvas.width, canvas.height);
+    if (uMouse) gl.uniform2f(uMouse, mouse.x, mouse.y);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(render);
+  }
+  render(0);
+})();
+</script>
+</div>
+<!-- STITCH_SHADER_END:ANIMATION_3 -->
+</div>
+<div class="relative z-10 w-full max-w-7xl mx-auto px-container-padding grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+<div class="space-y-8 max-w-2xl">
+<h1 class="font-headline-xl text-headline-lg-mobile md:text-[56px] text-text-primary tracking-tight leading-tight">
+                    Meetings end. <br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-primary via-secondary to-tertiary-container">The intelligence doesn't.</span>
+</h1>
+<p class="font-body-lg text-body-lg text-text-muted">
+                    Beyond transcripts. Cue captures decisions, predicts risks, and builds your organization's memory in real-time.
+                </p>
+<div class="flex flex-wrap gap-4">
+<button class="primary-btn bg-inverse-primary text-text-primary px-8 py-3 rounded-DEFAULT font-label-caps text-label-caps tracking-wider uppercase font-bold">
+                        Start Free
+                    </button>
+<button class="gradient-border-btn px-8 py-3 rounded-DEFAULT font-label-caps text-label-caps text-text-primary tracking-wider uppercase">
+                        Watch Demo
+                    </button>
+</div>
+</div>
+<div class="relative w-full aspect-video bg-surface-card/80 backdrop-blur-md border border-surface-border rounded-xl p-6 shadow-2xl overflow-hidden flex flex-col justify-end animate-float">
+<div class="absolute top-4 right-4 flex space-x-1 items-end h-10">
+<div class="waveform-bar h-4"></div>
+<div class="waveform-bar h-8"></div>
+<div class="waveform-bar h-6"></div>
+<div class="waveform-bar h-10"></div>
+<div class="waveform-bar h-5"></div>
+</div>
+<div class="space-y-3 font-jetbrains text-sm">
+<div class="flex gap-3 text-text-muted opacity-70">
+<span class="text-secondary font-bold shrink-0">[Alex - PM]</span>
+<p>We need to finalize the Q3 roadmap by Friday.</p>
+</div>
+<div class="flex gap-3 text-text-muted opacity-80">
+<span class="text-tertiary-container font-bold shrink-0">[Sam - Eng]</span>
+<p>I can commit to the API refactor, but the dashboard will spill over.</p>
+</div>
+<div class="flex gap-3 text-text-primary bg-surface-variant/50 p-2 rounded-lg border-l-2 border-primary">
+<span class="text-primary font-bold shrink-0">[Cue AI]</span>
+<p class="typing-cursor font-medium" id="typewriter">Extracting Commitment: API Refactor (Sam) by Q3.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce-soft text-text-muted opacity-50">
+<span class="material-symbols-outlined text-3xl" data-icon="keyboard_arrow_down">keyboard_arrow_down</span>
+</div>
+</section>
+<!-- Problem Strip (Marquee) -->
+<section class="py-4 border-y border-surface-border bg-surface-container-lowest/50 overflow-hidden relative">
+<div class="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none"></div>
+<div class="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none"></div>
+<div class="flex whitespace-nowrap animate-marquee">
+<div class="flex space-x-8 px-4 items-center">
+<div class="px-4 py-2 rounded-full bg-surface-container border border-surface-border text-on-surface-variant font-label-caps text-label-caps flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error"></span> Decisions lost in slack
+                </div>
+<div class="px-4 py-2 rounded-full bg-surface-container border border-surface-border text-on-surface-variant font-label-caps text-label-caps flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error"></span> No searchable memory
+                </div>
+<div class="px-4 py-2 rounded-full bg-surface-container border border-surface-border text-on-surface-variant font-label-caps text-label-caps flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error"></span> Who committed to what?
+                </div>
+<div class="px-4 py-2 rounded-full bg-surface-container border border-surface-border text-on-surface-variant font-label-caps text-label-caps flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error"></span> Endless status meetings
+                </div>
+<!-- Duplicate for seamless loop -->
+<div class="px-4 py-2 rounded-full bg-surface-container border border-surface-border text-on-surface-variant font-label-caps text-label-caps flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error"></span> Decisions lost in slack
+                </div>
+<div class="px-4 py-2 rounded-full bg-surface-container border border-surface-border text-on-surface-variant font-label-caps text-label-caps flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error"></span> No searchable memory
+                </div>
+</div>
+<div class="flex space-x-8 px-4 items-center">
+<div class="px-4 py-2 rounded-full bg-surface-container border border-surface-border text-on-surface-variant font-label-caps text-label-caps flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error"></span> Who committed to what?
+                </div>
+<div class="px-4 py-2 rounded-full bg-surface-container border border-surface-border text-on-surface-variant font-label-caps text-label-caps flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error"></span> Endless status meetings
+                </div>
+<div class="px-4 py-2 rounded-full bg-surface-container border border-surface-border text-on-surface-variant font-label-caps text-label-caps flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error"></span> Decisions lost in slack
+                </div>
+<div class="px-4 py-2 rounded-full bg-surface-container border border-surface-border text-on-surface-variant font-label-caps text-label-caps flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error"></span> No searchable memory
+                </div>
+</div>
+</div>
+</section>
+<!-- Final CTA -->
+<section class="relative py-32 overflow-hidden border-t border-surface-border">
+<div class="absolute inset-0 z-0 opacity-40">
+<!-- STITCH_SHADER_START:ANIMATION_3 class="absolute inset-0 w-full h-full" -->
+<div class="absolute inset-0 w-full h-full" style="display:block;">
+<canvas id="shader-canvas-ANIMATION_3" style="display:block;width:100%;height:100%"></canvas>
+<script>
+(function() {
+  const canvas = document.getElementById('shader-canvas-ANIMATION_3');
+
+  // Sync the WebGL drawing-buffer size with the CSS-driven layout size.
+  // This fires on initial layout and whenever the element is resized.
+  function syncSize() {
+    const w = canvas.clientWidth  || 1280;
+    const h = canvas.clientHeight || 720;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width  = w;
+      canvas.height = h;
+    }
+  }
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(syncSize).observe(canvas);
+  }
+  syncSize();
+
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  if (!gl) return;
+  const vs = `attribute vec2 a_position;
+varying vec2 v_texCoord;
+void main() {
+  v_texCoord = a_position * 0.5 + 0.5;
+  gl_Position = vec4(a_position, 0.0, 1.0);
+}`;
+  const fs = `precision highp float;
+uniform float u_time;
+uniform vec2 u_resolution;
+
+// Simplex noise helper
+vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
+float snoise(vec2 v){
+  const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+           -0.577350269189626, 0.024390243902439);
+  vec2 i  = floor(v + dot(v, C.yy) );
+  vec2 x0 = v -   i + dot(i, C.xx);
+  vec2 i1;
+  i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+  vec4 x12 = x0.xyxy + C.xxzz;
+  x12.xy -= i1;
+  i = mod(i, 289.0);
+  vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))
+  + i.x + vec3(0.0, i1.x, 1.0 ));
+  vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy),
+    dot(x12.zw,x12.zw)), 0.0);
+  m = m*m ;
+  m = m*m ;
+  vec3 x = 2.0 * fract(p * C.www) - 1.0;
+  vec3 h = abs(x) - 0.5;
+  vec3 ox = floor(x + 0.5);
+  vec3 a0 = x - ox;
+  m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+  vec3 g;
+  g.x  = a0.x  * x0.x  + h.x  * x0.y;
+  g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+  return 130.0 * dot(m, g);
+}
+
+void main() {
+    vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+    float time = u_time * 0.2;
+    
+    // Indigo: #6366F1 -> vec3(0.388, 0.4, 0.945)
+    // Cyan: #22D3EE -> vec3(0.133, 0.827, 0.933)
+    // Magenta: #EC4899 -> vec3(0.925, 0.282, 0.6)
+    
+    vec3 color1 = vec3(0.388, 0.4, 0.945); 
+    vec3 color2 = vec3(0.133, 0.827, 0.933);
+    vec3 color3 = vec3(0.925, 0.282, 0.6);
+    
+    float n1 = snoise(uv * 1.5 + time) * 0.5 + 0.5;
+    float n2 = snoise(uv * 1.2 - time * 0.7) * 0.5 + 0.5;
+    float n3 = snoise(uv * 2.0 + time * 0.3) * 0.5 + 0.5;
+    
+    vec3 mixed = mix(color1, color2, n1);
+    mixed = mix(mixed, color3, n2 * 0.5);
+    
+    // Add grain
+    float grain = fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453) * 0.05;
+    
+    gl_FragColor = vec4(mixed * 0.4 + grain, 1.0);
+}`;
+  function cs(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    return s;
+  }
+  const prog = gl.createProgram();
+  gl.attachShader(prog, cs(gl.VERTEX_SHADER, vs));
+  gl.attachShader(prog, cs(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(prog);
+  gl.useProgram(prog);
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  const pos = gl.getAttribLocation(prog, 'a_position');
+  gl.enableVertexAttribArray(pos);
+  gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+  const uTime = gl.getUniformLocation(prog, 'u_time');
+  const uRes = gl.getUniformLocation(prog, 'u_resolution');
+  const uMouse = gl.getUniformLocation(prog, 'u_mouse');
+
+  // u_mouse is in pixel coordinates matching u_resolution (ShaderToy convention).
+  // Shaders that need normalized coords should use: u_mouse / u_resolution.
+  let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+  window.addEventListener('mousemove', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width && rect.height) {
+      const nx = (event.clientX - rect.left) / rect.width;
+      const ny = 1.0 - (event.clientY - rect.top) / rect.height;
+      mouse.x = nx * canvas.width;
+      mouse.y = ny * canvas.height;
+    }
+  });
+
+  function render(t) {
+    if (typeof ResizeObserver === 'undefined') syncSize();
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    if (uTime) gl.uniform1f(uTime, t * 0.001);
+    if (uRes) gl.uniform2f(uRes, canvas.width, canvas.height);
+    if (uMouse) gl.uniform2f(uMouse, mouse.x, mouse.y);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(render);
+  }
+  render(0);
+})();
+</script>
+</div>
+<!-- STITCH_SHADER_END:ANIMATION_3 -->
+</div>
+<div class="relative z-10 max-w-4xl mx-auto px-container-padding text-center space-y-8">
+<h2 class="font-headline-xl text-headline-lg-mobile md:text-[48px] text-text-primary tracking-tight">
+                Ready to upgrade your organization's memory?
+            </h2>
+<p class="font-body-lg text-body-lg text-text-muted max-w-2xl mx-auto">
+                Join forward-thinking teams using Cue to turn conversations into actionable intelligence.
+            </p>
+<button class="primary-btn bg-inverse-primary text-text-primary px-10 py-4 rounded-lg font-label-caps text-label-caps tracking-wider uppercase font-bold shadow-[0_0_30px_rgba(192,193,255,0.3)] hover:shadow-[0_0_50px_rgba(192,193,255,0.6)]">
+                Get Started Now
+            </button>
+</div>
+</section>
+<!-- Footer -->
+<footer class="bg-surface-container-lowest py-12 border-t border-surface-border grid grid-cols-1 md:grid-cols-3 gap-gutter px-container-padding max-w-7xl mx-auto full-width">
+<div class="space-y-4">
+<div class="font-headline-md text-headline-md text-text-primary">
+                Cue Intelligence
+            </div>
+<div class="font-body-md text-body-md text-text-muted">
+                © 2024 Cue Intelligence. All rights reserved.
+            </div>
+</div>
+<div class="md:col-span-2 flex flex-wrap justify-end gap-8 items-center font-label-md text-label-md text-text-muted">
+<a class="hover:text-secondary transition-colors duration-200 opacity-80 hover:opacity-100" href="#">Privacy Policy</a>
+<a class="hover:text-secondary transition-colors duration-200 opacity-80 hover:opacity-100" href="#">Terms of Service</a>
+<a class="hover:text-secondary transition-colors duration-200 opacity-80 hover:opacity-100" href="#">Security</a>
+<div class="flex items-center gap-2 bg-surface-container px-3 py-1 rounded-full border border-surface-border font-label-caps text-label-caps">
+<span class="w-2 h-2 rounded-full bg-success-glow animate-pulse"></span>
+                System Status: Live
+            </div>
+</div>
+</footer>
+<script>
+        // Typewriter effect
+        const text = "Extracting Commitment: API Refactor (Sam) by Q3.";
+        const el = document.getElementById('typewriter');
+        let i = 0;
+        
+        function typeWriter() {
+            if (i < text.length) {
+                el.innerHTML = text.substring(0, i+1);
+                i++;
+                setTimeout(typeWriter, 50);
+            } else {
+                setTimeout(() => {
+                    i = 0;
+                    el.innerHTML = '';
+                    typeWriter();
+                }, 3000);
+            }
+        }
+        
+        // Start typing after a small delay
+        setTimeout(typeWriter, 1000);
+    </script>
+</body></html>
