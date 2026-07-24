@@ -67,5 +67,74 @@
         }
       ]
     }
+  },
+  {
+    "id": "mryhp682-dan16",
+    "title": "harvard",
+    "date": "2026-07-24T05:18:31.106Z",
+    "duration": "1m 51s",
+    "transcript": "[00:05] Alex (Engineering Lead): Hi team, let's discuss our infrastructure scaling roadmap for Q4. The key issue is our database CPU usage peaking at 90% during peak hours.\n[00:35] Sarah (Product Manager): Thanks Alex. What is causing this CPU peak? Is it read-heavy query load or lack of indexing?\n[00:55] Alex (Engineering Lead): Mainly read-heavy queries on our analytics table. We need to implement database replication and offload reporting queries to a read-replica.\n[01:15] Sarah (Product Manager): Okay, let's make that a formal decision. We will set up a read-replica for reporting by October 15th. Alex, you'll own this task.\n[01:35] Sarah (Product Manager): Also, what about security auditing? We had an action item to review IAM roles.\n[01:50] Michael (Security Specialist): Yes, I've started the review. I will finish auditing IAM roles and clean up unused user access tokens by end of next week. We should also move to short-lived session tokens to mitigate credential leakage risks.\n[02:15] Sarah (Product Manager): Moving to short-lived session tokens sounds like a solid security policy. Let's schedule the implementation of short-lived tokens for late October. Michael, please document the migration plan.\n[02:40] Alex (Engineering Lead): I should point out a risk: read-replicas could introduce a 2-3 second sync lag. We must make sure the UI handles eventual consistency gracefully.\n[03:00] Sarah (Product Manager): Good point, we need to alert the frontend team about eventual consistency. I'll ask David to sync with them. Thanks everyone!",
+    "status": "completed",
+    "analysis": {
+      "summary": "The team aligned on the Q4 infrastructure scaling roadmap. Key database performance issues were discussed, resulting in a decision to implement a read-replica for reporting queries to alleviate CPU peaks. In addition, a security audit is underway to review IAM roles and transition to short-lived session tokens. Read-replica sync lag was identified as a key risk.",
+      "decisions": [
+        {
+          "id": "dec-mock-1",
+          "decision": "Set up a read-replica for reporting database queries by October 15th.",
+          "decider": "Sarah (Product Manager) & Alex (Engineering Lead)",
+          "context": "Database CPU peaks at 90% during peak hours due to heavy read queries on the analytics table."
+        },
+        {
+          "id": "dec-mock-2",
+          "decision": "Implement short-lived session tokens as the new standard security policy.",
+          "decider": "Sarah (Product Manager) & Michael (Security Specialist)",
+          "context": "Mitigates credential leakage risks and enhances session security."
+        }
+      ],
+      "actionItems": [
+        {
+          "id": "act-mock-1",
+          "task": "Implement database replication and offload reporting queries to read-replica.",
+          "assignee": "Alex (Engineering Lead)",
+          "dueDate": "2026-10-15",
+          "status": "pending"
+        },
+        {
+          "id": "act-mock-2",
+          "task": "Finish auditing IAM roles and clean up unused access tokens.",
+          "assignee": "Michael (Security Specialist)",
+          "dueDate": "2026-10-02",
+          "status": "pending"
+        },
+        {
+          "id": "act-mock-3",
+          "task": "Document the migration plan for short-lived session tokens.",
+          "assignee": "Michael (Security Specialist)",
+          "dueDate": "2026-10-10",
+          "status": "pending"
+        },
+        {
+          "id": "act-mock-4",
+          "task": "Alert frontend team and ensure UI handles eventual consistency of read-replica.",
+          "assignee": "Sarah (Product Manager)",
+          "dueDate": "2026-10-05",
+          "status": "pending"
+        }
+      ],
+      "risks": [
+        {
+          "id": "risk-mock-1",
+          "risk": "Read-replica sync lag of 2-3 seconds causing data consistency issues in the UI.",
+          "impact": "medium",
+          "mitigation": "Ensure frontend components implement loading cues or optimistic updates to handle eventual consistency."
+        },
+        {
+          "id": "risk-mock-2",
+          "risk": "Potential database downtime during replication setup.",
+          "impact": "high",
+          "mitigation": "Schedule the migration window during low-traffic periods (Sunday 2 AM) with automated rollbacks."
+        }
+      ]
+    }
   }
 ]

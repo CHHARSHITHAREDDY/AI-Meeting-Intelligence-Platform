@@ -1,512 +1,349 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
-  UploadCloud, 
-  Search, 
-  Trash2, 
-  Calendar, 
-  Clock, 
-  AlertTriangle, 
-  CheckSquare, 
-  FileText,
-  Activity,
-  ArrowRight,
-  TrendingUp,
-  Volume2
+  ArrowRight, 
+  Play, 
+  Sparkles, 
+  Check, 
+  Terminal, 
+  Activity, 
+  Lock, 
+  Layers, 
+  ChevronDown 
 } from 'lucide-react';
-import { Meeting } from '@/lib/db';
 
-export default function HomePage() {
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+export default function LandingPage() {
+  // States for the interactive transcription animation card
+  const [stage, setStage] = useState(0);
+  const [alexText, setAlexText] = useState('');
+  const [samText, setSamText] = useState('');
   
-  // Uploading states
-  const [file, setFile] = useState<File | null>(null);
-  const [title, setTitle] = useState('');
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'transcribing' | 'extracting' | 'done' | 'failed'>('idle');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [dragActive, setDragActive] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Fetch meetings
-  const fetchMeetings = async () => {
-    try {
-      const response = await fetch('/api/meetings');
-      if (response.ok) {
-        const data = await response.json();
-        setMeetings(data);
-      }
-    } catch (error) {
-      console.error('Error fetching meetings:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fullAlexText = "We need to finalize the Q3 roadmap by Friday.";
+  const fullSamText = "I can commit to the API refactor, but the dashboard will spill over.";
 
   useEffect(() => {
-    fetchMeetings();
-  }, []);
-
-  // Poll processing meetings
-  useEffect(() => {
-    const processingMeetings = meetings.filter(m => m.status === 'processing');
-    if (processingMeetings.length === 0) return;
-
-    const timer = setInterval(async () => {
-      const response = await fetch('/api/meetings');
-      if (response.ok) {
-        const data = await response.json();
-        setMeetings(data);
-        
-        // If none are processing now, clear interval
-        if (!data.some((m: Meeting) => m.status === 'processing')) {
-          clearInterval(timer);
-        }
-      }
-    }, 3000);
-
-    return () => clearInterval(timer);
-  }, [meetings]);
-
-  // Handle Drag & Drop
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
+    let timer: NodeJS.Timeout;
     
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const droppedFile = e.dataTransfer.files[0];
-      if (droppedFile.type.startsWith('audio/') || droppedFile.name.endsWith('.mp3') || droppedFile.name.endsWith('.wav') || droppedFile.name.endsWith('.m4a')) {
-        setFile(droppedFile);
-        if (!title) {
-          setTitle(droppedFile.name.replace(/\.[^/.]+$/, ""));
+    // stage 0: idle / audio visualizer only (1.5s)
+    if (stage === 0) {
+      setAlexText('');
+      setSamText('');
+      timer = setTimeout(() => setStage(1), 1200);
+    } 
+    // stage 1: type Alex text
+    else if (stage === 1) {
+      let charIndex = 0;
+      const interval = setInterval(() => {
+        if (charIndex <= fullAlexText.length) {
+          setAlexText(fullAlexText.substring(0, charIndex));
+          charIndex++;
+        } else {
+          clearInterval(interval);
+          setStage(2);
         }
-      } else {
-        alert("Please upload an audio file (.mp3, .wav, .m4a)");
-      }
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      setFile(selectedFile);
-      if (!title) {
-        setTitle(selectedFile.name.replace(/\.[^/.]+$/, ""));
-      }
-    }
-  };
-
-  // Upload Action
-  const handleUploadSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file) return;
-
-    setUploadStatus('uploading');
-    setErrorMessage('');
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('title', title || file.name.replace(/\.[^/.]+$/, ""));
-
-    // Simulate upload states transitions for better UX if runs locally in mock mode
-    let progressTimer: NodeJS.Timeout;
-    const isMock = !process.env.NEXT_PUBLIC_OPENAI_API_KEY && !process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY;
-
-    if (isMock) {
-      progressTimer = setTimeout(() => {
-        setUploadStatus('transcribing');
-        progressTimer = setTimeout(() => {
-          setUploadStatus('extracting');
-        }, 3000);
-      }, 1500);
+      }, 35);
+      return () => clearInterval(interval);
+    } 
+    // stage 2: wait briefly and type Sam text
+    else if (stage === 2) {
+      timer = setTimeout(() => {
+        let charIndex = 0;
+        const interval = setInterval(() => {
+          if (charIndex <= fullSamText.length) {
+            setSamText(fullSamText.substring(0, charIndex));
+            charIndex++;
+          } else {
+            clearInterval(interval);
+            setStage(3);
+          }
+        }, 35);
+        return () => clearInterval(interval);
+      }, 800);
+    } 
+    // stage 3: Cue AI Processing / extraction (2s)
+    else if (stage === 3) {
+      timer = setTimeout(() => setStage(4), 2200);
+    } 
+    // stage 4: Results displayed (5s), then loop back to 0
+    else if (stage === 4) {
+      timer = setTimeout(() => setStage(0), 5500);
     }
 
-    try {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
+    return () => clearTimeout(timer);
+  }, [stage]);
 
-      clearTimeout(progressTimer!);
-
-      if (response.ok) {
-        setUploadStatus('done');
-        setFile(null);
-        setTitle('');
-        fetchMeetings();
-        setTimeout(() => setUploadStatus('idle'), 2000);
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to process file');
-      }
-    } catch (error: any) {
-      console.error(error);
-      setUploadStatus('failed');
-      setErrorMessage(error.message || 'Verification or processing failed.');
-    }
-  };
-
-  // Delete Action
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this meeting?')) return;
-
-    try {
-      const response = await fetch(`/api/meetings/${id}`, {
-        method: 'DELETE',
-      });
-      if (response.ok) {
-        setMeetings(meetings.filter(m => m.id !== id));
-      }
-    } catch (error) {
-      console.error('Failed to delete meeting:', error);
-    }
-  };
-
-  // Stats Calculations
-  const totalMeetings = meetings.length;
-  const completedMeetings = meetings.filter(m => m.status === 'completed');
-  
-  let totalActionItems = 0;
-  let completedActionItems = 0;
-  let highRisksCount = 0;
-
-  completedMeetings.forEach(m => {
-    if (m.analysis) {
-      if (m.analysis.actionItems) {
-        totalActionItems += m.analysis.actionItems.length;
-        completedActionItems += m.analysis.actionItems.filter(a => a.status === 'completed').length;
-      }
-      if (m.analysis.risks) {
-        highRisksCount += m.analysis.risks.filter(r => r.impact === 'high').length;
-      }
-    }
-  });
-
-  // Filter meetings
-  const filteredMeetings = meetings.filter(m =>
-    m.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Pill Ticker content (duplicated for infinite looping effect)
+  const tickerItems = [
+    "Who committed to what?",
+    "Endless status meetings",
+    "Decisions lost in slack",
+    "No searchable memory",
+    "Action items falling through",
+    "Forgotten risks",
+    "Who committed to what?",
+    "Endless status meetings",
+    "Decisions lost in slack",
+    "No searchable memory",
+    "Action items falling through",
+    "Forgotten risks",
+  ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex-1 flex flex-col justify-between">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-12">
-        <div>
-          <h1 className="text-4xl font-extrabold tracking-tight font-display bg-gradient-to-r from-violet-400 via-fuchsia-400 to-indigo-400 bg-clip-text text-transparent">
-            Vocalize Intelligence
-          </h1>
-          <p className="text-zinc-400 mt-2 text-base">
-            Upload meeting audio. Get instant summaries, deciders, structured tasks, and mitigations.
-          </p>
-        </div>
-        
-        {/* Connection status tag */}
-        <div className="self-start px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 flex items-center gap-2 text-xs font-medium text-zinc-400">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          Local Database Connected
-        </div>
-      </div>
+    <div className="min-h-screen bg-zinc-950 text-zinc-50 relative overflow-hidden flex flex-col font-sans bg-grid-pattern">
+      {/* Background gradients */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-violet-950/20 blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-[20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-fuchsia-950/15 blur-[150px] pointer-events-none -z-10" />
 
-      {/* Stats Ribbon */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-        <div className="glow-card p-6 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Processed</p>
-            <h3 className="text-3xl font-bold font-display mt-1 text-zinc-50">{totalMeetings}</h3>
-            <p className="text-xs text-zinc-400 mt-1">Total sync documents</p>
+      {/* Navigation Header */}
+      <header className="sticky top-0 z-50 backdrop-blur-md border-b border-zinc-900 bg-zinc-950/60 transition-colors duration-300">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-violet-600 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/20">
+              <span className="text-white font-extrabold text-base tracking-tighter">C</span>
+            </div>
+            <span className="text-xl font-bold font-display tracking-tight text-zinc-100">
+              Cue Intelligence
+            </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-400">
-            <Volume2 className="w-6 h-6" />
+
+          {/* Nav links */}
+          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-400">
+            <a href="#platform" className="hover:text-zinc-100 transition-colors">Platform</a>
+            <a href="#features" className="hover:text-zinc-100 transition-colors">Features</a>
+            <a href="#enterprise" className="hover:text-zinc-100 transition-colors">Enterprise</a>
+            <a href="#pricing" className="hover:text-zinc-100 transition-colors">Pricing</a>
+          </nav>
+
+          {/* CTA Buttons */}
+          <div className="flex items-center gap-4">
+            <Link 
+              href="/dashboard" 
+              className="text-sm font-semibold text-zinc-300 hover:text-zinc-50 transition hidden sm:inline-block"
+            >
+              Sign In
+            </Link>
+            <Link 
+              href="/dashboard"
+              className="relative group px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-white bg-zinc-900 border border-zinc-800 transition hover:border-zinc-700 shadow-md flex items-center overflow-hidden"
+            >
+              <span className="absolute inset-0 bg-gradient-to-r from-violet-600 to-fuchsia-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10" />
+              Request Demo
+            </Link>
           </div>
         </div>
+      </header>
 
-        <div className="glow-card p-6 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Action Completion</p>
-            <h3 className="text-3xl font-bold font-display mt-1 text-zinc-50">
-              {totalActionItems > 0 ? Math.round((completedActionItems / totalActionItems) * 100) : 0}%
-            </h3>
-            <p className="text-xs text-zinc-400 mt-1">{completedActionItems} / {totalActionItems} tasks done</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
-            <CheckSquare className="w-6 h-6" />
-          </div>
-        </div>
+      {/* Hero Section */}
+      <main className="flex-1 flex flex-col justify-center">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-20 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+          {/* Hero Left Info */}
+          <div className="lg:col-span-7 space-y-8 text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-950/40 border border-violet-900/30 text-xs text-violet-400 font-semibold">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Next-Gen Audio Intelligence Platform</span>
+            </div>
 
-        <div className="glow-card p-6 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Critical Risks</p>
-            <h3 className="text-3xl font-bold font-display mt-1 text-rose-400">{highRisksCount}</h3>
-            <p className="text-xs text-zinc-400 mt-1">Requiring direct mitigation</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-400">
-            <AlertTriangle className="w-6 h-6" />
-          </div>
-        </div>
+            <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight font-display leading-tight text-zinc-100">
+              Meetings end.<br />
+              <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-rose-400 bg-clip-text text-transparent">
+                The intelligence doesn't.
+              </span>
+            </h1>
 
-        <div className="glow-card p-6 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Engine Mode</p>
-            <h3 className="text-2xl font-bold font-display mt-1 text-fuchsia-400">Hybrid AI</h3>
-            <p className="text-xs text-zinc-400 mt-1">Whisper-1 + Claude 3.5</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-fuchsia-500/10 flex items-center justify-center text-fuchsia-400">
-            <Activity className="w-6 h-6" />
-          </div>
-        </div>
-      </div>
+            <p className="text-zinc-400 text-lg sm:text-xl font-normal leading-relaxed max-w-2xl">
+              Beyond transcripts. Cue captures decisions, predicts risks, and builds your organization's memory in real-time.
+            </p>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start mb-12">
-        {/* Upload Form (Left Column) */}
-        <div className="lg:col-span-1">
-          <div className="glow-card p-6 border border-zinc-800">
-            <h2 className="text-xl font-bold font-display mb-4 text-zinc-100 flex items-center gap-2">
-              <span>New Analysis</span>
-            </h2>
-            
-            <form onSubmit={handleUploadSubmit} className="space-y-4">
-              {/* Drag & Drop Area */}
-              <div 
-                className={`relative border-2 border-dashed rounded-xl p-8 transition-colors flex flex-col items-center justify-center text-center cursor-pointer ${
-                  dragActive 
-                    ? 'border-violet-500 bg-violet-500/5' 
-                    : 'border-zinc-800 hover:border-zinc-700 bg-zinc-950/50'
-                }`}
-                onDragEnter={handleDrag}
-                onDragOver={handleDrag}
-                onDragLeave={handleDrag}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
+              <Link 
+                href="/dashboard" 
+                className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide bg-violet-600 hover:bg-violet-500 text-white cursor-pointer shadow-lg shadow-violet-600/35 transition-all text-center flex items-center justify-center gap-2 group"
               >
-                <input 
-                  type="file" 
-                  ref={fileInputRef}
-                  className="hidden" 
-                  accept="audio/*"
-                  onChange={handleFileChange}
-                />
+                Start Free
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+              
+              <Link 
+                href="/dashboard" 
+                className="glow-border px-8 py-4 rounded-xl text-sm font-bold tracking-wide text-zinc-200 bg-zinc-900/40 hover:bg-zinc-900/80 transition-all text-center flex items-center justify-center gap-2"
+              >
+                <Play className="w-4 h-4 text-violet-400" />
+                Watch Demo
+              </Link>
+            </div>
+          </div>
+
+          {/* Hero Right Interactive Animation Card */}
+          <div className="lg:col-span-5 flex justify-center">
+            <div className="w-full max-w-md bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-6 shadow-2xl backdrop-blur-xl relative">
+              {/* Card Glow Effect */}
+              <div className="absolute -inset-0.5 bg-gradient-to-tr from-violet-500/10 to-fuchsia-500/10 rounded-2xl blur-lg -z-10" />
+
+              {/* Soundwaves and header */}
+              <div className="flex items-center justify-between mb-8 pb-4 border-b border-zinc-800/50">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Live Recording</span>
+                </div>
                 
-                <UploadCloud className="w-10 h-10 text-zinc-500 mb-3" />
-                
-                {file ? (
-                  <div className="w-full">
-                    <p className="text-sm font-semibold text-zinc-200 truncate px-2">{file.name}</p>
-                    <p className="text-xs text-zinc-500 mt-1">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
+                {/* Visualizer bars */}
+                <div className="flex items-end gap-1 h-5 overflow-hidden">
+                  <div className="w-1 bg-violet-400 rounded-full soundwave-bar soundwave-bar-1 h-full" />
+                  <div className="w-1 bg-violet-400 rounded-full soundwave-bar soundwave-bar-2 h-full" />
+                  <div className="w-1 bg-violet-400 rounded-full soundwave-bar soundwave-bar-3 h-full" />
+                  <div className="w-1 bg-violet-400 rounded-full soundwave-bar soundwave-bar-4 h-full" />
+                  <div className="w-1 bg-violet-400 rounded-full soundwave-bar soundwave-bar-5 h-full" />
+                </div>
+              </div>
+
+              {/* Conversations Body */}
+              <div className="space-y-5 min-h-[180px] flex flex-col justify-start">
+                {/* Alex Message */}
+                {(stage >= 1) && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-sky-400">[Alex - PM]</span>
+                    </div>
+                    <p className="text-sm text-zinc-300 font-medium pl-1 leading-relaxed">
+                      {alexText}
+                      {stage === 1 && <span className="inline-block w-1.5 h-4 ml-0.5 bg-sky-400 animate-pulse" />}
+                    </p>
                   </div>
-                ) : (
-                  <div>
-                    <p className="text-sm font-medium text-zinc-300">Drag audio file here, or browse</p>
-                    <p className="text-xs text-zinc-500 mt-1">Supports MP3, WAV, M4A up to 25MB</p>
+                )}
+
+                {/* Sam Message */}
+                {(stage >= 2) && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-fuchsia-400">[Sam - Eng]</span>
+                    </div>
+                    <p className="text-sm text-zinc-300 font-medium pl-1 leading-relaxed">
+                      {samText}
+                      {stage === 2 && <span className="inline-block w-1.5 h-4 ml-0.5 bg-fuchsia-400 animate-pulse" />}
+                    </p>
+                  </div>
+                )}
+
+                {/* Processing State */}
+                {stage === 3 && (
+                  <div className="flex items-center gap-2 bg-violet-950/20 border border-violet-900/30 rounded-xl p-3 text-xs text-violet-300 font-semibold animate-pulse mt-4">
+                    <div className="w-4 h-4 border border-violet-400 border-t-transparent rounded-full animate-spin shrink-0" />
+                    <span>[Cue AI] Extracting commitments and planning risk models...</span>
+                  </div>
+                )}
+
+                {/* Structured Extraction Result Card */}
+                {stage === 4 && (
+                  <div className="space-y-3 bg-zinc-950/80 border border-violet-950/80 rounded-xl p-4 mt-4 shadow-inner relative overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <div className="absolute top-0 right-0 px-2 py-0.5 bg-violet-500/10 text-violet-400 border-l border-b border-violet-950/80 text-[9px] font-bold uppercase tracking-wider rounded-bl-lg">
+                      Extracted
+                    </div>
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-violet-400 flex items-center gap-1.5">
+                      <Terminal className="w-3.5 h-3.5 text-violet-400" />
+                      <span>Intelligence output</span>
+                    </div>
+                    
+                    {/* Items */}
+                    <div className="space-y-2 text-xs text-zinc-300">
+                      <div className="flex items-start gap-2 bg-zinc-900/50 p-2 rounded border border-zinc-800">
+                        <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                        <div>
+                          <span className="font-semibold text-zinc-200">Action:</span> Finalize Q3 roadmap by Friday. 
+                          <span className="text-[10px] text-zinc-400 block mt-0.5">Assignee: Alex • Due: Friday</span>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2 bg-zinc-900/50 p-2 rounded border border-zinc-800">
+                        <span className="text-amber-400 font-bold shrink-0 mt-0.5">⚠</span>
+                        <div>
+                          <span className="font-semibold text-zinc-200">Risk:</span> Dashboard completion delay due to API refactor.
+                          <span className="text-[10px] text-zinc-400 block mt-0.5">Mitigation: Schedule dashboard MVP checkpoint</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        </section>
 
-              {/* Title input */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">
-                  Meeting Title (Optional)
-                </label>
-                <input 
-                  type="text" 
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Sales Standup Sync"
-                  className="w-full bg-zinc-950/60 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition"
-                />
+        {/* Arrow Down indicator */}
+        <div className="flex justify-center pb-8 animate-bounce">
+          <ChevronDown className="w-6 h-6 text-zinc-600" />
+        </div>
+
+        {/* Infinite Scrolling Pill Ticker */}
+        <section className="border-y border-zinc-900 bg-zinc-950/40 py-6 overflow-hidden relative">
+          {/* Gradient Overlays for smooth fading edges */}
+          <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-zinc-950 to-transparent pointer-events-none z-10" />
+          <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-zinc-950 to-transparent pointer-events-none z-10" />
+          
+          <div className="animate-ticker gap-6">
+            {tickerItems.map((item, i) => (
+              <div 
+                key={i} 
+                className="px-5 py-2 rounded-full bg-zinc-900/60 border border-zinc-800/80 text-zinc-300 text-xs font-semibold tracking-wide flex items-center gap-2 whitespace-nowrap"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                {item}
               </div>
+            ))}
+          </div>
+        </section>
+      </main>
 
-              {/* Upload Button or Process State */}
-              {uploadStatus === 'idle' ? (
-                <button
-                  type="submit"
-                  disabled={!file}
-                  className={`w-full py-3.5 px-4 rounded-xl text-sm font-bold tracking-wide transition flex items-center justify-center gap-2 ${
-                    file 
-                      ? 'bg-violet-600 hover:bg-violet-500 text-white cursor-pointer shadow-lg shadow-violet-600/20' 
-                      : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-                  }`}
-                >
-                  Generate Intelligence
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              ) : (
-                <div className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
-                  <div className="flex items-center justify-between text-xs font-medium">
-                    <span className="text-violet-400 capitalize flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-ping" />
-                      {uploadStatus === 'uploading' && 'Uploading audio...'}
-                      {uploadStatus === 'transcribing' && 'Transcribing with Whisper...'}
-                      {uploadStatus === 'extracting' && 'Structuring with Claude 3.5...'}
-                      {uploadStatus === 'done' && 'Done! Formatting insights...'}
-                      {uploadStatus === 'failed' && 'Process failed'}
-                    </span>
-                    <span className="text-zinc-500">
-                      {uploadStatus === 'uploading' && '20%'}
-                      {uploadStatus === 'transcribing' && '50%'}
-                      {uploadStatus === 'extracting' && '85%'}
-                      {uploadStatus === 'done' && '100%'}
-                    </span>
-                  </div>
-                  
-                  {/* Progress bar */}
-                  <div className="w-full h-1.5 bg-zinc-950 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full transition-all duration-500" 
-                      style={{
-                        width: 
-                          uploadStatus === 'uploading' ? '20%' :
-                          uploadStatus === 'transcribing' ? '50%' :
-                          uploadStatus === 'extracting' ? '85%' :
-                          uploadStatus === 'done' ? '100%' : '0%'
-                      }}
-                    />
-                  </div>
-                  
-                  {uploadStatus === 'failed' && (
-                    <p className="text-xs text-rose-500 font-medium leading-relaxed">{errorMessage}</p>
-                  )}
-                </div>
-              )}
-            </form>
+      {/* Ready to Upgrade CTA Section */}
+      <section className="border-t border-zinc-900 py-24 bg-zinc-950/30 relative">
+        <div className="max-w-4xl mx-auto px-4 text-center space-y-8">
+          <h2 className="text-4xl font-extrabold font-display text-zinc-100 tracking-tight leading-tight">
+            Ready to upgrade your organization's memory?
+          </h2>
+          
+          <p className="text-zinc-400 text-base max-w-xl mx-auto leading-relaxed">
+            Join forward-thinking teams using Cue to turn conversations into actionable intelligence.
+          </p>
+          
+          <div className="pt-2">
+            <Link 
+              href="/dashboard"
+              className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide bg-violet-600 hover:bg-violet-500 text-white cursor-pointer shadow-lg shadow-violet-600/35 hover:shadow-violet-600/50 transition-all inline-flex items-center gap-2"
+            >
+              Get Started Now
+            </Link>
           </div>
         </div>
+      </section>
 
-        {/* Meeting List (Right 2 Columns) */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* List Toolbar */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 bg-zinc-900/40 border border-zinc-900 p-4 rounded-2xl">
-            <div className="relative w-full">
-              <Search className="w-4 h-4 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2" />
-              <input 
-                type="text" 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search processed meetings..."
-                className="w-full bg-zinc-950/50 border border-zinc-800 rounded-xl pl-11 pr-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-700 transition"
-              />
+      {/* Footer */}
+      <footer className="border-t border-zinc-900 bg-zinc-950 py-12 text-sm text-zinc-500 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="space-y-2 text-center md:text-left">
+            <div className="flex items-center justify-center md:justify-start gap-2">
+              <div className="w-5 h-5 rounded-md bg-gradient-to-tr from-violet-600 to-fuchsia-500 flex items-center justify-center">
+                <span className="text-white font-extrabold text-[10px]">C</span>
+              </div>
+              <span className="font-bold text-zinc-300 font-display">Cue Intelligence</span>
             </div>
+            <p className="text-xs text-zinc-600">
+              © {new Date().getFullYear()} Cue Intelligence. All rights reserved.
+            </p>
           </div>
 
-          {/* Cards Grid */}
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3 text-zinc-500">
-              <div className="w-8 h-8 rounded-full border-2 border-violet-500/20 border-t-violet-500 animate-spin" />
-              <p className="text-sm font-medium">Loading sync dashboard...</p>
-            </div>
-          ) : filteredMeetings.length === 0 ? (
-            <div className="glow-card border-dashed border-zinc-800 p-12 text-center flex flex-col items-center justify-center">
-              <FileText className="w-12 h-12 text-zinc-600 mb-3" />
-              <h3 className="text-lg font-bold text-zinc-300">No meeting reports yet</h3>
-              <p className="text-sm text-zinc-500 max-w-sm mt-1 mx-auto">
-                {searchQuery ? 'No results match your search query.' : 'Upload your first meeting recording to generate intelligence dashboard.'}
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filteredMeetings.map((meeting) => {
-                const formattedDate = new Date(meeting.date).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric'
-                });
-                
-                const isProcessing = meeting.status === 'processing';
-                
-                return (
-                  <div key={meeting.id} className="relative group">
-                    <Link href={isProcessing ? '#' : `/meeting/${meeting.id}`}>
-                      <div className="glow-card p-6 h-full flex flex-col justify-between cursor-pointer border border-zinc-900">
-                        <div>
-                          <div className="flex items-start justify-between gap-3">
-                            <h3 className="font-bold text-lg text-zinc-100 group-hover:text-violet-400 transition line-clamp-2">
-                              {meeting.title}
-                            </h3>
-                            <button
-                              onClick={(e) => handleDelete(meeting.id, e)}
-                              className="text-zinc-600 hover:text-rose-400 p-1 rounded-lg hover:bg-zinc-800/40 transition opacity-0 group-hover:opacity-100 focus:opacity-100"
-                              title="Delete meeting"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                          
-                          <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-xs text-zinc-500">
-                            <span className="flex items-center gap-1.5">
-                              <Calendar className="w-3.5 h-3.5 text-zinc-600" />
-                              {formattedDate}
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                              <Clock className="w-3.5 h-3.5 text-zinc-600" />
-                              {meeting.duration}
-                            </span>
-                          </div>
-                        </div>
+          <div className="flex flex-wrap items-center justify-center gap-8 text-xs font-medium">
+            <a href="#" className="hover:text-zinc-300 transition-colors">Privacy Policy</a>
+            <a href="#" className="hover:text-zinc-300 transition-colors">Terms of Service</a>
+            <a href="#" className="hover:text-zinc-300 transition-colors">Security</a>
+          </div>
 
-                        <div className="mt-6 pt-5 border-t border-zinc-900">
-                          {isProcessing ? (
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between text-xs text-violet-400 font-medium">
-                                <span className="flex items-center gap-1">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-ping" />
-                                  Running AI analysis pipeline...
-                                </span>
-                              </div>
-                              <div className="w-full h-1 bg-zinc-950 rounded-full overflow-hidden">
-                                <div className="h-full bg-violet-500 rounded-full animate-pulse-slow w-[65%]" />
-                              </div>
-                            </div>
-                          ) : meeting.status === 'failed' ? (
-                            <div className="flex items-center gap-2 text-rose-500 text-xs font-semibold bg-rose-500/5 border border-rose-500/10 rounded-lg p-2.5">
-                              <AlertTriangle className="w-4 h-4 shrink-0" />
-                              <span className="truncate">Pipeline failed: {meeting.error || 'Unknown error'}</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-between">
-                              <div className="flex gap-3 text-xs font-medium">
-                                <span className="px-2.5 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400">
-                                  {meeting.analysis?.decisions.length || 0} Decs
-                                </span>
-                                <span className="px-2.5 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400">
-                                  {meeting.analysis?.actionItems.length || 0} Actions
-                                </span>
-                                {meeting.analysis?.risks && meeting.analysis.risks.length > 0 && (
-                                  <span className="px-2.5 py-1 rounded-full bg-rose-950/20 border border-rose-900/20 text-rose-400">
-                                    {meeting.analysis.risks.length} Risks
-                                  </span>
-                                )}
-                              </div>
-                              <span className="text-zinc-500 group-hover:text-violet-400 transition text-xs font-bold flex items-center gap-1">
-                                View
-                                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          {/* System status tag */}
+          <div className="px-3 py-1.5 rounded-full bg-zinc-900/60 border border-zinc-800/80 flex items-center gap-2 text-xs font-semibold text-zinc-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            System Status: Live
+          </div>
         </div>
-      </div>
+      </footer>
     </div>
   );
 }
