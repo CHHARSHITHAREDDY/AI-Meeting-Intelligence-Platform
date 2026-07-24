@@ -86,7 +86,7 @@ export default function KnowledgeGraphPage() {
             x,
             y,
             radius: 16,
-            color: '#a2eeff', // cyan-glow
+            color: '#d946ef', // fuchsia-glow
             description: `Active stakeholder participating in decisions and taking ownership of actions.`,
             meta: `Stakeholder • Active`
           });
@@ -107,7 +107,7 @@ export default function KnowledgeGraphPage() {
             x: mx,
             y: my,
             radius: 28,
-            color: '#c0c1ff', // violet-glow
+            color: '#a78bfa', // violet-glow
             description: meeting.analysis?.summary || 'No summary available.',
             meta: `${meeting.duration} sync • ${new Date(meeting.date).toLocaleDateString()}`,
             meetingId: meeting.id
@@ -159,7 +159,7 @@ export default function KnowledgeGraphPage() {
 
             const colors = {
               decision: '#34d399', // emerald
-              task: '#8b5cf6', // violet
+              task: '#c084fc', // light-violet
               risk: '#f59e0b' // amber
             };
 
@@ -245,15 +245,15 @@ export default function KnowledgeGraphPage() {
   const renderTypeIcon = (type: string) => {
     switch (type) {
       case 'meeting':
-        return <Network className="w-5 h-5 text-[#c0c1ff]" />;
+        return <Network className="w-5 h-5 text-violet-400" />;
       case 'person':
-        return <User className="w-5 h-5 text-[#a2eeff]" />;
+        return <User className="w-5 h-5 text-fuchsia-400" />;
       case 'decision':
-        return <Award className="w-5 h-5 text-[#34D399]" />;
+        return <Award className="w-5 h-5 text-emerald-400" />;
       case 'task':
-        return <ClipboardList className="w-5 h-5 text-[#8083ff]" />;
+        return <ClipboardList className="w-5 h-5 text-violet-450" />;
       case 'risk':
-        return <AlertTriangle className="w-5 h-5 text-[#F59E0B]" />;
+        return <AlertTriangle className="w-5 h-5 text-amber-500" />;
       default:
         return null;
     }
@@ -262,10 +262,10 @@ export default function KnowledgeGraphPage() {
   return (
     <div className="w-full flex flex-col space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 border-b border-[#232B45] pb-6">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 border-b border-zinc-800 pb-6">
         <div>
           <h2 className="text-3xl font-extrabold font-display text-white mb-1">Knowledge Graph</h2>
-          <p className="text-sm text-[#94A3B8]">Interactive intelligence network mapping entities and context.</p>
+          <p className="text-sm text-zinc-400">Interactive intelligence network mapping entities and context.</p>
         </div>
       </div>
 
@@ -275,8 +275,8 @@ export default function KnowledgeGraphPage() {
           <p className="text-sm font-medium">Computing knowledge graph geometry...</p>
         </div>
       ) : nodes.length === 0 ? (
-        <div className="bg-[#12172A] border border-[#232B45] rounded-xl p-12 text-center text-[#94A3B8]">
-          <Network className="w-12 h-12 mx-auto text-[#232B45] mb-4" />
+        <div className="bg-zinc-900/40 border border-zinc-805 rounded-xl p-12 text-center text-zinc-500">
+          <Network className="w-12 h-12 mx-auto text-zinc-800 mb-4" />
           <p className="text-sm font-semibold">No sync documents found. Upload meetings to populate knowledge graph.</p>
         </div>
       ) : (
@@ -289,8 +289,8 @@ export default function KnowledgeGraphPage() {
                 onClick={() => setActiveFilter(filter as any)}
                 className={`px-4 py-2 rounded-full font-semibold text-xs transition capitalize ${
                   activeFilter === filter 
-                    ? 'bg-[#c0c1ff] text-[#1000a9]' 
-                    : 'bg-[#12172A] border border-[#232B45] text-[#94A3B8] hover:text-[#F8FAFC]'
+                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/25' 
+                    : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-100'
                 }`}
               >
                 {filter === 'all' ? 'All Nodes' : `${filter}s`}
@@ -302,18 +302,18 @@ export default function KnowledgeGraphPage() {
           <div className="grid grid-cols-12 gap-6 h-[calc(100vh-270px)] min-h-[500px] animate-in fade-in duration-300">
             
             {/* Left: SVG Canvas Panel (Span 8) */}
-            <div className="col-span-12 lg:col-span-8 bg-[#12172A] border border-[#232B45] rounded-xl relative overflow-hidden flex items-center justify-center p-6 shadow-2xl">
+            <div className="col-span-12 lg:col-span-8 bg-zinc-900/40 border border-zinc-805 rounded-xl relative overflow-hidden flex items-center justify-center p-6 shadow-2xl">
               {/* Glass Overlay instruction */}
-              <div className="absolute top-4 left-4 bg-[#0a0e17]/80 backdrop-blur-md px-3.5 py-2 rounded-lg border border-[#232B45] text-[10px] text-[#94A3B8] flex items-center gap-1.5 z-10 pointer-events-none uppercase font-semibold">
-                <HelpCircle className="w-3.5 h-3.5 text-[#5de6ff]" /> Click nodes to explore relationships
+              <div className="absolute top-4 left-4 bg-zinc-900/80 backdrop-blur-md px-3.5 py-2 rounded-lg border border-zinc-800 text-[10px] text-zinc-500 flex items-center gap-1.5 z-10 pointer-events-none uppercase font-semibold">
+                <HelpCircle className="w-3.5 h-3.5 text-violet-400" /> Click nodes to explore relationships
               </div>
 
               {/* Interactive SVG Canvas */}
               <svg viewBox="0 0 500 400" className="w-full h-full max-h-[420px] select-none">
                 <defs>
                   <radialGradient id="meeting-grad" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stopColor="#1e223b" />
-                    <stop offset="100%" stopColor="#0a0e17" />
+                    <stop offset="0%" stopColor="#4c1d95" />
+                    <stop offset="100%" stopColor="#09090b" />
                   </radialGradient>
                 </defs>
 
@@ -336,7 +336,7 @@ export default function KnowledgeGraphPage() {
                       y1={sourceNode.y}
                       x2={targetNode.x}
                       y2={targetNode.y}
-                      stroke={isHighlighted ? '#5de6ff' : '#232B45'}
+                      stroke={isHighlighted ? '#a78bfa' : '#27272a'}
                       strokeWidth={isHighlighted ? 1.5 : 1}
                       strokeDasharray={sourceNode.type === 'task' || targetNode.type === 'task' ? '3 3' : undefined}
                       opacity={isLinkFiltered ? 0.05 : isHighlighted ? 0.8 : 0.3}
@@ -390,8 +390,8 @@ export default function KnowledgeGraphPage() {
                         cx={node.x}
                         cy={node.y}
                         r={node.radius}
-                        fill={node.type === 'meeting' ? 'url(#meeting-grad)' : '#181b25'}
-                        stroke={isSelected ? '#5de6ff' : node.color}
+                        fill={node.type === 'meeting' ? 'url(#meeting-grad)' : '#09090b'}
+                        stroke={isSelected ? '#a78bfa' : node.color}
                         strokeWidth={isSelected ? 3 : isHighlighted ? 2 : 1.2}
                         className="transition-all duration-200"
                       />
@@ -420,14 +420,14 @@ export default function KnowledgeGraphPage() {
             </div>
 
             {/* Right: Selected Node Details Inspector (Span 4) */}
-            <div className="col-span-12 lg:col-span-4 bg-[#12172A] border border-[#232B45] rounded-xl p-6 shadow-2xl flex flex-col justify-between">
+            <div className="col-span-12 lg:col-span-4 bg-zinc-900/40 border border-zinc-805 rounded-xl p-6 shadow-2xl flex flex-col justify-between">
               {activeNode ? (
                 <div className="space-y-6 flex-1 flex flex-col justify-between">
                   <div className="space-y-4">
                     {/* Node Type Badge */}
                     <div className="flex items-center space-x-2">
                       {renderTypeIcon(activeNode.type)}
-                      <span className="text-[10px] font-mono text-[#94A3B8] uppercase tracking-wider font-bold">
+                      <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider font-bold">
                         {activeNode.type} Node
                       </span>
                     </div>
@@ -435,12 +435,12 @@ export default function KnowledgeGraphPage() {
                     {/* Node Title */}
                     <div>
                       <h3 className="text-xl font-bold text-white tracking-tight">{activeNode.label}</h3>
-                      <p className="text-[10px] font-mono text-[#5de6ff] mt-1">{activeNode.meta}</p>
+                      <p className="text-[10px] font-mono text-violet-400 mt-1">{activeNode.meta}</p>
                     </div>
 
                     {/* Node Description */}
-                    <div className="pt-4 border-t border-[#232B45]">
-                      <p className="text-xs text-[#c7c4d7] leading-relaxed font-medium">
+                    <div className="pt-4 border-t border-zinc-800">
+                      <p className="text-xs text-zinc-400 leading-relaxed font-medium">
                         {activeNode.description}
                       </p>
                     </div>
@@ -448,10 +448,10 @@ export default function KnowledgeGraphPage() {
 
                   {/* Actions based on node type */}
                   {activeNode.meetingId && (
-                    <div className="pt-6 border-t border-[#232B45] shrink-0">
+                    <div className="pt-6 border-t border-zinc-800 shrink-0">
                       <Link 
                         href={`/dashboard/meeting/${activeNode.meetingId}`}
-                        className="w-full bg-[#1c1f29] border border-[#232B45] hover:border-[#5de6ff] hover:bg-[#262a34] text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-2 text-xs transition duration-200"
+                        className="w-full bg-zinc-900 border border-zinc-800 hover:border-violet-500 hover:bg-zinc-850 text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-2 text-xs transition duration-200"
                       >
                         <span>Open Dashboard</span>
                         <ExternalLink className="w-3.5 h-3.5" />
@@ -460,7 +460,7 @@ export default function KnowledgeGraphPage() {
                   )}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center h-full text-center text-[#94A3B8]">
+                <div className="flex flex-col items-center justify-center h-full text-center text-zinc-500">
                   <Network className="w-8 h-8 opacity-25 mb-2" />
                   <p className="text-xs italic">Select a node in the network to inspect its relationships and metadata.</p>
                 </div>

@@ -192,32 +192,32 @@ export default function TasksPage() {
         <>
           {/* Stats Summary cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 animate-in fade-in duration-300">
-            <div className="bg-[#12172A] border border-[#232B45] rounded-xl p-5 shadow-lg flex items-center justify-between">
+            <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-5 shadow-lg flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-mono text-[#94A3B8] uppercase tracking-wider">Total Tasks</p>
-                <h3 className="text-2xl font-bold text-[#F8FAFC] mt-1">{totalTasks}</h3>
+                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Total Tasks</p>
+                <h3 className="text-2xl font-bold text-zinc-100 mt-1">{totalTasks}</h3>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-[#c0c1ff]/10 flex items-center justify-center text-[#c0c1ff]">
+              <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-400">
                 <Link2 className="w-5 h-5" />
               </div>
             </div>
 
-            <div className="bg-[#12172A] border border-[#232B45] rounded-xl p-5 shadow-lg flex items-center justify-between">
+            <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-5 shadow-lg flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-mono text-[#94A3B8] uppercase tracking-wider">Pending Tasks</p>
-                <h3 className="text-2xl font-bold text-[#ffb0cd] mt-1">{pendingTasks}</h3>
+                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Pending Tasks</p>
+                <h3 className="text-2xl font-bold text-fuchsia-400 mt-1">{pendingTasks}</h3>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-[#ffb0cd]/10 flex items-center justify-center text-[#ffb0cd]">
+              <div className="w-10 h-10 rounded-lg bg-fuchsia-500/10 flex items-center justify-center text-fuchsia-400">
                 <Clock className="w-5 h-5" />
               </div>
             </div>
 
-            <div className="bg-[#12172A] border border-[#232B45] rounded-xl p-5 shadow-lg flex items-center justify-between">
+            <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-5 shadow-lg flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-mono text-[#94A3B8] uppercase tracking-wider">Completed Tasks</p>
-                <h3 className="text-2xl font-bold text-[#34D399] mt-1">{completedTasks}</h3>
+                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Completed Tasks</p>
+                <h3 className="text-2xl font-bold text-emerald-400 mt-1">{completedTasks}</h3>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-[#34D399]/10 flex items-center justify-center text-[#34D399]">
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
                 <CheckCircle className="w-5 h-5" />
               </div>
             </div>
@@ -226,13 +226,13 @@ export default function TasksPage() {
           {/* Controls Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             {/* Tab buttons */}
-            <div className="flex bg-[#12172A] border border-[#232B45] rounded-lg p-1">
+            <div className="flex bg-zinc-900 border border-zinc-800 rounded-lg p-1">
               <button 
                 onClick={() => setActiveTab('all')}
                 className={`px-4 py-1.5 rounded font-semibold text-xs transition-all ${
                   activeTab === 'all' 
-                    ? 'bg-[#262a34] text-[#5de6ff] shadow-[0_0_10px_rgba(93,230,255,0.1)]' 
-                    : 'text-[#94A3B8] hover:text-[#F8FAFC]'
+                    ? 'bg-zinc-800 text-violet-400 shadow-[0_0_10px_rgba(167,139,250,0.15)]' 
+                    : 'text-zinc-500 hover:text-zinc-100'
                 }`}
               >
                 All Tasks
@@ -241,8 +241,8 @@ export default function TasksPage() {
                 onClick={() => setActiveTab('pending')}
                 className={`px-4 py-1.5 rounded font-semibold text-xs transition-all ${
                   activeTab === 'pending' 
-                    ? 'bg-[#262a34] text-[#5de6ff] shadow-[0_0_10px_rgba(93,230,255,0.1)]' 
-                    : 'text-[#94A3B8] hover:text-[#F8FAFC]'
+                    ? 'bg-zinc-800 text-violet-400 shadow-[0_0_10px_rgba(167,139,250,0.15)]' 
+                    : 'text-zinc-500 hover:text-zinc-100'
                 }`}
               >
                 Pending
@@ -251,8 +251,8 @@ export default function TasksPage() {
                 onClick={() => setActiveTab('completed')}
                 className={`px-4 py-1.5 rounded font-semibold text-xs transition-all ${
                   activeTab === 'completed' 
-                    ? 'bg-[#262a34] text-[#5de6ff] shadow-[0_0_10px_rgba(93,230,255,0.1)]' 
-                    : 'text-[#94A3B8] hover:text-[#F8FAFC]'
+                    ? 'bg-zinc-800 text-violet-400 shadow-[0_0_10px_rgba(167,139,250,0.15)]' 
+                    : 'text-zinc-500 hover:text-zinc-100'
                 }`}
               >
                 Completed
@@ -262,11 +262,11 @@ export default function TasksPage() {
             {/* Search & Filters */}
             <div className="flex gap-3">
               <div className="relative w-64">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
                   <Search className="w-4 h-4" />
                 </span>
                 <input
-                  className="w-full bg-[#12172A] border border-[#232B45] rounded-lg pl-10 pr-4 py-2 text-xs text-[#F8FAFC] focus:border-[#5de6ff] focus:outline-none placeholder-[#94A3B8]/30"
+                  className="w-full bg-zinc-900/40 border border-zinc-800 rounded-lg pl-10 pr-4 py-2 text-xs text-zinc-100 focus:border-violet-500 focus:outline-none placeholder-zinc-650"
                   placeholder="Search tasks..."
                   type="text"
                   value={searchQuery}
@@ -279,8 +279,8 @@ export default function TasksPage() {
           {/* Task List Grid */}
           <div className="space-y-3 animate-in fade-in duration-300">
             {filteredTasks.length === 0 ? (
-              <div className="bg-[#12172A] border border-[#232B45] rounded-xl p-12 text-center text-[#94A3B8]">
-                <Clock className="w-12 h-12 mx-auto text-[#232B45] mb-4" />
+              <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-12 text-center text-zinc-500">
+                <Clock className="w-12 h-12 mx-auto text-zinc-800 mb-4" />
                 <p className="text-sm font-semibold">No tasks found matching current filters.</p>
               </div>
             ) : (
@@ -292,13 +292,13 @@ export default function TasksPage() {
                     onClick={() => toggleTaskStatus(task.id)}
                     className={`p-4 rounded-xl border select-none transition-all duration-200 cursor-pointer flex items-center justify-between gap-4 ${
                       isCompleted 
-                        ? 'bg-[#12172A]/40 border-[#232B45] opacity-60' 
-                        : 'bg-[#12172A] border-[#232B45] hover:border-[#5de6ff]/30 shadow-md shadow-black/10'
+                        ? 'bg-zinc-900/20 border-zinc-800/60 opacity-60' 
+                        : 'bg-zinc-900/40 border-zinc-800/80 hover:border-violet-500/30 shadow-md shadow-black/10'
                     }`}
                   >
                     <div className="flex items-center gap-4">
                       {/* Custom Checkbox */}
-                      <button className={`shrink-0 transition-colors ${isCompleted ? 'text-[#34D399]' : 'text-[#94A3B8]'}`}>
+                      <button className={`shrink-0 transition-colors ${isCompleted ? 'text-emerald-400' : 'text-zinc-500'}`}>
                         {isCompleted ? (
                           <CheckSquare2 className="w-5 h-5" />
                         ) : (
@@ -308,18 +308,18 @@ export default function TasksPage() {
 
                       <div className="space-y-1">
                         <p className={`text-sm font-semibold leading-relaxed transition-all ${
-                          isCompleted ? 'line-through text-zinc-500' : 'text-[#F8FAFC]'
+                          isCompleted ? 'line-through text-zinc-600' : 'text-zinc-100'
                         }`}>
                           {task.task}
                         </p>
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-[#94A3B8] font-semibold">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-zinc-500 font-semibold">
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3.5 h-3.5" /> Due: {task.dueDate}
                           </span>
-                          <span className="mx-1 text-[#232B45]">•</span>
+                          <span className="mx-1 text-zinc-800">•</span>
                           <Link 
                             href={`/dashboard/meeting/${task.meetingId}`}
-                            className="flex items-center gap-1 bg-[#1c1f29] border border-[#232B45] px-2 py-0.5 rounded text-[#c0c1ff] hover:text-[#5de6ff] transition-colors"
+                            className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded text-violet-400 hover:text-violet-300 transition-colors"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <Link2 className="w-3 h-3" /> {task.sourceMeeting}
@@ -335,17 +335,17 @@ export default function TasksPage() {
                           ? 'bg-rose-950/20 text-rose-400 border-rose-800/40'
                           : task.priority === 'Medium'
                             ? 'bg-amber-950/20 text-amber-400 border-amber-800/40'
-                            : 'bg-zinc-800/20 text-zinc-400 border-[#232B45]'
+                            : 'bg-zinc-800/20 text-zinc-400 border-zinc-800'
                       }`}>
                         {task.priority}
                       </span>
 
                       {/* Assignee Avatar */}
                       <div className="flex items-center gap-2 shrink-0">
-                        <div className="w-6 h-6 rounded-full bg-[#ffb0cd]/10 text-[#ffb0cd] border border-[#ffb0cd]/20 flex items-center justify-center font-bold text-[9px]">
+                        <div className="w-6 h-6 rounded-full bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 flex items-center justify-center font-bold text-[9px]">
                           {task.avatarText}
                         </div>
-                        <span className="text-xs font-semibold text-[#dfe2ef] hidden sm:inline">{task.assignee}</span>
+                        <span className="text-xs font-semibold text-zinc-200 hidden sm:inline">{task.assignee}</span>
                       </div>
                     </div>
                   </div>

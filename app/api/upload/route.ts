@@ -5,14 +5,32 @@ import { saveMeeting, Meeting } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData();
-    const file = formData.get('file') as File | null;
-    
-    if (!file) {
-      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+    const contentType = request.headers.get('content-type') || '';
+    let title = '';
+    let audioInput: Buffer | Float32Array;
+    let fileName = '';
+
+    if (contentType.includes('application/octet-stream')) {
+      const url = new URL(request.url);
+      title = url.searchParams.get('title') || 'Local Recording';
+      fileName = 'audio.pcm';
+      const arrayBuffer = await request.arrayBuffer();
+      const audioData = new Float32Array(arrayBuffer);
+      audioInput = audioData;
+    } else {
+      const formData = await request.formData();
+      const file = formData.get('file') as File | null;
+      
+      if (!file) {
+        return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+      }
+      
+      title = (formData.get('title') as string) || file.name.replace(/\.[^/.]+$/, "");
+      fileName = file.name;
+      const arrayBuffer = await file.arrayBuffer();
+      audioInput = Buffer.from(arrayBuffer);
     }
 
-    const title = (formData.get('title') as string) || file.name.replace(/\.[^/.]+$/, "");
     const id = Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 7);
     
     // Save initial processing state
@@ -27,13 +45,9 @@ export async function POST(request: NextRequest) {
     
     await saveMeeting(newMeeting);
 
-    // Convert file to Buffer
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
     try {
-      console.log(`Transcribing audio file: ${file.name}...`);
-      const transcript = await transcribeAudio(buffer, file.name);
+      console.log(`Transcribing audio file: ${fileName}...`);
+      const transcript = await transcribeAudio(audioInput, fileName);
       
       console.log('Extracting insights with Claude...');
       const insights = await extractMeetingInsights(transcript);

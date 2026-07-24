@@ -89,13 +89,20 @@ export default function HomePage() {
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const droppedFile = e.dataTransfer.files[0];
-      if (droppedFile.type.startsWith('audio/') || droppedFile.name.endsWith('.mp3') || droppedFile.name.endsWith('.wav') || droppedFile.name.endsWith('.m4a')) {
+      if (
+        droppedFile.type.startsWith('audio/') || 
+        droppedFile.type.startsWith('video/') || 
+        droppedFile.name.endsWith('.mp3') || 
+        droppedFile.name.endsWith('.wav') || 
+        droppedFile.name.endsWith('.m4a') ||
+        droppedFile.name.endsWith('.mp4')
+      ) {
         setFile(droppedFile);
         if (!title) {
           setTitle(droppedFile.name.replace(/\.[^/.]+$/, ""));
         }
       } else {
-        alert("Please upload an audio file (.mp3, .wav, .m4a)");
+        alert("Please upload an audio or video file (.mp3, .wav, .m4a, .mp4)");
       }
     }
   };
@@ -118,30 +125,41 @@ export default function HomePage() {
     setUploadStatus('uploading');
     setErrorMessage('');
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('title', title || file.name.replace(/\.[^/.]+$/, ""));
-
-    // Simulate upload states transitions for better UX if runs locally in mock mode
-    let progressTimer: NodeJS.Timeout;
-    const isMock = !process.env.NEXT_PUBLIC_OPENAI_API_KEY && !process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY;
-
-    if (isMock) {
-      progressTimer = setTimeout(() => {
-        setUploadStatus('transcribing');
-        progressTimer = setTimeout(() => {
-          setUploadStatus('extracting');
-        }, 3000);
-      }, 1500);
-    }
-
     try {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
+      console.log('Decoding audio in browser...');
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const arrayBuffer = await file.arrayBuffer();
+      
+      let audioBuffer: AudioBuffer;
+      try {
+        audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      } catch (decodeErr) {
+        throw new Error('Failed to decode audio file. Make sure the file format is valid.');
+      }
+      
+      // Resample to 16000Hz mono using OfflineAudioContext
+      const offlineCtx = new OfflineAudioContext(
+        1, 
+        Math.round(audioBuffer.duration * 16000), 
+        16000
+      );
+      const source = offlineCtx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(offlineCtx.destination);
+      source.start();
+      
+      const resampledBuffer = await offlineCtx.startRendering();
+      const float32Data = resampledBuffer.getChannelData(0);
 
-      clearTimeout(progressTimer!);
+      setUploadStatus('transcribing');
+      const uploadTitle = title || file.name.replace(/\.[^/.]+$/, "");
+      const response = await fetch(`/api/upload?title=${encodeURIComponent(uploadTitle)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/octet-stream'
+        },
+        body: float32Data.buffer
+      });
 
       if (response.ok) {
         setUploadStatus('done');
@@ -217,7 +235,7 @@ export default function HomePage() {
         </div>
         
         {/* Connection status tag */}
-        <div className="self-start px-3 py-1.5 rounded-full bg-[#181b25] border border-[#232B45] flex items-center gap-2 text-xs font-medium text-[#94A3B8]">
+        <div className="self-start px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 flex items-center gap-2 text-xs font-medium text-zinc-400">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           Local Database Connected
         </div>
@@ -298,7 +316,7 @@ export default function HomePage() {
                   type="file" 
                   ref={fileInputRef}
                   className="hidden" 
-                  accept="audio/*"
+                  accept="audio/*,video/mp4,video/*"
                   onChange={handleFileChange}
                 />
                 
@@ -311,8 +329,8 @@ export default function HomePage() {
                   </div>
                 ) : (
                   <div>
-                    <p className="text-sm font-medium text-zinc-300">Drag audio file here, or browse</p>
-                    <p className="text-xs text-zinc-500 mt-1">Supports MP3, WAV, M4A up to 25MB</p>
+                    <p className="text-sm font-medium text-zinc-300">Drag audio/video file here, or browse</p>
+                    <p className="text-xs text-zinc-500 mt-1">Supports MP3, WAV, M4A, MP4 up to 25MB</p>
                   </div>
                 )}
               </div>

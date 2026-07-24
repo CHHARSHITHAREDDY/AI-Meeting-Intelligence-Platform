@@ -69,72 +69,189 @@
     }
   },
   {
-    "id": "mryhp682-dan16",
+    "id": "mryl2cqr-8hlk5",
     "title": "harvard",
-    "date": "2026-07-24T05:18:31.106Z",
-    "duration": "1m 51s",
-    "transcript": "[00:05] Alex (Engineering Lead): Hi team, let's discuss our infrastructure scaling roadmap for Q4. The key issue is our database CPU usage peaking at 90% during peak hours.\n[00:35] Sarah (Product Manager): Thanks Alex. What is causing this CPU peak? Is it read-heavy query load or lack of indexing?\n[00:55] Alex (Engineering Lead): Mainly read-heavy queries on our analytics table. We need to implement database replication and offload reporting queries to a read-replica.\n[01:15] Sarah (Product Manager): Okay, let's make that a formal decision. We will set up a read-replica for reporting by October 15th. Alex, you'll own this task.\n[01:35] Sarah (Product Manager): Also, what about security auditing? We had an action item to review IAM roles.\n[01:50] Michael (Security Specialist): Yes, I've started the review. I will finish auditing IAM roles and clean up unused user access tokens by end of next week. We should also move to short-lived session tokens to mitigate credential leakage risks.\n[02:15] Sarah (Product Manager): Moving to short-lived session tokens sounds like a solid security policy. Let's schedule the implementation of short-lived tokens for late October. Michael, please document the migration plan.\n[02:40] Alex (Engineering Lead): I should point out a risk: read-replicas could introduce a 2-3 second sync lag. We must make sure the UI handles eventual consistency gracefully.\n[03:00] Sarah (Product Manager): Good point, we need to alert the frontend team about eventual consistency. I'll ask David to sync with them. Thanks everyone!",
+    "date": "2026-07-24T06:52:44.931Z",
+    "duration": "1m 20s",
+    "transcript": " The stale smell of old beer lingers. It takes heat to bring out the odor. A cold dip restores health and zest. A salt pickle tastes fine with ham. Tacos al pastor are my favorite. A zestful food is the hot cross bun.",
     "status": "completed",
     "analysis": {
-      "summary": "The team aligned on the Q4 infrastructure scaling roadmap. Key database performance issues were discussed, resulting in a decision to implement a read-replica for reporting queries to alleviate CPU peaks. In addition, a security audit is underway to review IAM roles and transition to short-lived session tokens. Read-replica sync lag was identified as a key risk.",
+      "summary": "The meeting covered project progress and next key milestones. The team aligned on timelines, delegated action items, and analyzed active risks surrounding integration dependencies.",
       "decisions": [
         {
-          "id": "dec-mock-1",
-          "decision": "Set up a read-replica for reporting database queries by October 15th.",
-          "decider": "Sarah (Product Manager) & Alex (Engineering Lead)",
-          "context": "Database CPU peaks at 90% during peak hours due to heavy read queries on the analytics table."
-        },
-        {
-          "id": "dec-mock-2",
-          "decision": "Implement short-lived session tokens as the new standard security policy.",
-          "decider": "Sarah (Product Manager) & Michael (Security Specialist)",
-          "context": "Mitigates credential leakage risks and enhances session security."
+          "id": "dec-gen-1",
+          "decision": "Adopt the proposed feature scope and timeline changes.",
+          "decider": "Project Lead",
+          "context": "Adjusting timeline due to minor upstream module dependency delays."
         }
       ],
       "actionItems": [
         {
-          "id": "act-mock-1",
-          "task": "Implement database replication and offload reporting queries to read-replica.",
-          "assignee": "Alex (Engineering Lead)",
-          "dueDate": "2026-10-15",
+          "id": "act-gen-1",
+          "task": "Complete API endpoint documentation and share with frontend partners.",
+          "assignee": "Lead Developer",
+          "dueDate": "2026-07-30",
           "status": "pending"
         },
         {
-          "id": "act-mock-2",
-          "task": "Finish auditing IAM roles and clean up unused access tokens.",
-          "assignee": "Michael (Security Specialist)",
-          "dueDate": "2026-10-02",
-          "status": "pending"
-        },
-        {
-          "id": "act-mock-3",
-          "task": "Document the migration plan for short-lived session tokens.",
-          "assignee": "Michael (Security Specialist)",
-          "dueDate": "2026-10-10",
-          "status": "pending"
-        },
-        {
-          "id": "act-mock-4",
-          "task": "Alert frontend team and ensure UI handles eventual consistency of read-replica.",
-          "assignee": "Sarah (Product Manager)",
-          "dueDate": "2026-10-05",
+          "id": "act-gen-2",
+          "task": "Schedule user acceptance testing session for key stakeholders.",
+          "assignee": "Product Manager",
+          "dueDate": "2026-08-04",
           "status": "pending"
         }
       ],
       "risks": [
         {
-          "id": "risk-mock-1",
-          "risk": "Read-replica sync lag of 2-3 seconds causing data consistency issues in the UI.",
+          "id": "risk-gen-1",
+          "risk": "API integration delays due to third-party sandbox stability.",
           "impact": "medium",
-          "mitigation": "Ensure frontend components implement loading cues or optimistic updates to handle eventual consistency."
-        },
-        {
-          "id": "risk-mock-2",
-          "risk": "Potential database downtime during replication setup.",
-          "impact": "high",
-          "mitigation": "Schedule the migration window during low-traffic periods (Sunday 2 AM) with automated rollbacks."
+          "mitigation": "Create offline mock services to unblock front-end developer workflow."
         }
       ]
+    }
+  },
+  {
+    "id": "mrylabw5-qdx7j",
+    "title": "Fluent English Conversation Practice _ Ram & Rajni_0_236 (1)",
+    "date": "2026-07-24T06:58:57.077Z",
+    "duration": "4m 7s",
+    "transcript": " Hi, I'm doing great. Thank you so much for asking. How are you doing, Ron? I'm doing great. Well, we're hot. Not ever saying that it's so hot in here. Hot. Yeah. I'm thinking of buying an app conditioner. Okay. So since this is the first time we are in my channel, please introduce yourself. I was from the last conversation I had, I have to tell something because last time when I spoke in your video, I said something that, you know, a book reading is waste of time, something like that, I said, right? Actually, I didn't mean to say that, but some of my friends and their families, they say, \"Rome, how come you say like this? This is wrong with something like that.\" They said, \"Actually, I want to clarify, if I want to take it this video.\" It's not about the book reading that I said, it's all about the knowledge that you acquire from those books, and if you're not using it, that is what wasted, that's what I said. So I just wanted to clarify that in this video. Now I want to know, okay, tell me about your English journey. Why you started this learning language and how about your English journey? It was great. Sometimes I faced a lot of challenges because I was in minus. I didn't know how to even read properly. Okay. In the class I used to face, I used to struggle a lot while reading the chapter. So it was really difficult for me at the same time. I enjoyed because I loved the language. When I heard this, my physics teacher for the very first time, she was quoting somebody in English. You know she used to speak in Hindi, but when she got angry, she used to speak in English and that sounded something beautiful to me. I didn't know at that time like this is a language and you can learn. I don't know. I don't know how to master it. But later when I started learning Korean that time I started learning words in English and from there my journey started and for four years. So your learning English wanted to scroll someone in English. Sorry. So you learnt English to want to call someone in English. No, no, that's not me. I learnt school. Yeah, after that, for four years, I guess I worked on understanding path. I didn't know like because of learning Korean and English simultaneously. I'm just getting that. But later I struggled, especially when it comes to speaking. So I started speaking practice in 2022 when I started my YouTube channel. So after that, also I faced a lot of difficulties, but I took the feedback seriously always and worked accordingly. So that's how it's going. - Okay, so in the last video you said you read a lot of books right. Okay, now you tell me some books. according to the book. Okay, for me. Anyone. Yeah. You are not a big enough. Actually, I could see that there is a book Rich Dad Buddha that you have in your wardrobe. Yeah, I have read that long time ago. Deep work.",
+    "status": "completed",
+    "analysis": {
+      "summary": "The meeting covered project progress and next key milestones. The team aligned on timelines, delegated action items, and analyzed active risks surrounding integration dependencies.",
+      "decisions": [
+        {
+          "id": "dec-gen-1",
+          "decision": "Adopt the proposed feature scope and timeline changes.",
+          "decider": "Project Lead",
+          "context": "Adjusting timeline due to minor upstream module dependency delays."
+        }
+      ],
+      "actionItems": [
+        {
+          "id": "act-gen-1",
+          "task": "Complete API endpoint documentation and share with frontend partners.",
+          "assignee": "Lead Developer",
+          "dueDate": "2026-07-30",
+          "status": "pending"
+        },
+        {
+          "id": "act-gen-2",
+          "task": "Schedule user acceptance testing session for key stakeholders.",
+          "assignee": "Product Manager",
+          "dueDate": "2026-08-04",
+          "status": "pending"
+        }
+      ],
+      "risks": [
+        {
+          "id": "risk-gen-1",
+          "risk": "API integration delays due to third-party sandbox stability.",
+          "impact": "medium",
+          "mitigation": "Create offline mock services to unblock front-end developer workflow."
+        }
+      ]
+    }
+  },
+  {
+    "id": "mrylve3z-zs5gw",
+    "title": "harvard",
+    "date": "2026-07-24T07:15:19.727Z",
+    "duration": "1m 19s",
+    "transcript": " The stale smell of old-beer lingers. It takes heat to bring out the odor. A cold dip restores health and zest. A salt pickle tastes fine with ham. Tacos al pastor are my favorite. A zestful food is the hot cross bun.",
+    "status": "completed",
+    "analysis": {
+      "summary": "The meeting covered project progress and next key milestones. The team aligned on timelines, delegated action items, and analyzed active risks surrounding integration dependencies.",
+      "decisions": [
+        {
+          "id": "dec-gen-1",
+          "decision": "Adopt the proposed feature scope and timeline changes.",
+          "decider": "Project Lead",
+          "context": "Adjusting timeline due to minor upstream module dependency delays."
+        }
+      ],
+      "actionItems": [
+        {
+          "id": "act-gen-1",
+          "task": "Complete API endpoint documentation and share with frontend partners.",
+          "assignee": "Lead Developer",
+          "dueDate": "2026-07-30",
+          "status": "pending"
+        },
+        {
+          "id": "act-gen-2",
+          "task": "Schedule user acceptance testing session for key stakeholders.",
+          "assignee": "Product Manager",
+          "dueDate": "2026-08-04",
+          "status": "pending"
+        }
+      ],
+      "risks": [
+        {
+          "id": "risk-gen-1",
+          "risk": "API integration delays due to third-party sandbox stability.",
+          "impact": "medium",
+          "mitigation": "Create offline mock services to unblock front-end developer workflow."
+        }
+      ]
+    }
+  },
+  {
+    "id": "mrylxk99-kaqfu",
+    "title": "harvard",
+    "date": "2026-07-24T07:17:01.005Z",
+    "duration": "1m 19s",
+    "transcript": " The stale smell of old-beer lingers. It takes heat to bring out the odor. A cold dip restores health and zest. A salt pickle tastes fine with ham. Tacos al pastor are my favorite. A zestful food is the hot cross bun.",
+    "status": "completed",
+    "analysis": {
+      "summary": "The meeting covered project progress and next key milestones. The team aligned on timelines, delegated action items, and analyzed active risks surrounding integration dependencies.",
+      "decisions": [
+        {
+          "id": "dec-gen-1",
+          "decision": "Adopt the proposed feature scope and timeline changes.",
+          "decider": "Project Lead",
+          "context": "Adjusting timeline due to minor upstream module dependency delays."
+        }
+      ],
+      "actionItems": [
+        {
+          "id": "act-gen-1",
+          "task": "Complete API endpoint documentation and share with frontend partners.",
+          "assignee": "Lead Developer",
+          "dueDate": "2026-07-30",
+          "status": "pending"
+        },
+        {
+          "id": "act-gen-2",
+          "task": "Schedule user acceptance testing session for key stakeholders.",
+          "assignee": "Product Manager",
+          "dueDate": "2026-08-04",
+          "status": "pending"
+        }
+      ],
+      "risks": [
+        {
+          "id": "risk-gen-1",
+          "risk": "API integration delays due to third-party sandbox stability.",
+          "impact": "medium",
+          "mitigation": "Create offline mock services to unblock front-end developer workflow."
+        }
+      ]
+    }
+  },
+  {
+    "id": "mrym7j51-u3rjx",
+    "title": "harvard",
+    "date": "2026-07-24T07:24:46.117Z",
+    "duration": "1m 19s",
+    "transcript": " The stale smell of old-beer lingers. It takes heat to bring out the odor. A cold dip restores health and zest. A salt pickle tastes fine with ham. Tacos al pastor are my favorite. A zestful food is the hot cross bun.",
+    "status": "completed",
+    "analysis": {
+      "summary": "The text consists of various observations about smells and foods, including preferences for tacos al pastor and hot cross buns. There is no indication of a meeting or actionable outcomes.",
+      "decisions": [],
+      "actionItems": [],
+      "risks": []
     }
   }
 ]
