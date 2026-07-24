@@ -45,7 +45,9 @@ export default function TasksPage() {
         const extractedTasks: TaskItem[] = [];
         meetingsData.forEach(meeting => {
           if (meeting.status === 'completed' && meeting.analysis?.actionItems) {
-            meeting.analysis.actionItems.forEach(a => {
+            meeting.analysis.actionItems.forEach((a, idx) => {
+              const itemId = a.id || `act-${idx + 1}`;
+
               // Avatar initials
               const owner = a.assignee || 'Team';
               const parts = owner.replace(/[^a-zA-Z\s]/g, '').trim().split(/\s+/);
@@ -78,8 +80,8 @@ export default function TasksPage() {
               }
 
               extractedTasks.push({
-                id: `${meeting.id}-${a.id}`,
-                dbId: a.id,
+                id: `${meeting.id}-${itemId}`,
+                dbId: itemId,
                 meetingId: meeting.id,
                 task: a.task,
                 assignee: owner,
@@ -87,7 +89,7 @@ export default function TasksPage() {
                 dueDate: a.dueDate || 'No due date',
                 sourceMeeting: meeting.title,
                 priority: priority,
-                status: a.status
+                status: a.status || 'pending'
               });
             });
           }
@@ -118,8 +120,9 @@ export default function TasksPage() {
     const parentMeeting = meetings.find(m => m.id === task.meetingId);
     if (!parentMeeting || !parentMeeting.analysis) return;
 
-    const updatedDbActionItems: ActionItem[] = parentMeeting.analysis.actionItems.map(item => {
-      if (item.id === task.dbId) {
+    const updatedDbActionItems: ActionItem[] = parentMeeting.analysis.actionItems.map((item, idx) => {
+      const itemId = item.id || `act-${idx + 1}`;
+      if (itemId === task.dbId || item.id === task.dbId) {
         return { ...item, status: updatedStatus as 'pending' | 'completed' };
       }
       return item;

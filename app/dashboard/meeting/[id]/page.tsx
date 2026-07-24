@@ -69,8 +69,9 @@ export default function MeetingPage({ params }: MeetingPageProps) {
   const handleToggleAction = async (itemId: string) => {
     if (!meeting || !meeting.analysis) return;
 
-    const updatedActions: ActionItem[] = meeting.analysis.actionItems.map(item => {
-      if (item.id === itemId) {
+    const updatedActions: ActionItem[] = meeting.analysis.actionItems.map((item, idx) => {
+      const currentId = item.id || `act-${idx + 1}`;
+      if (currentId === itemId || item.id === itemId) {
         return { 
           ...item, 
           status: (item.status === 'completed' ? 'pending' : 'completed') as 'pending' | 'completed'
