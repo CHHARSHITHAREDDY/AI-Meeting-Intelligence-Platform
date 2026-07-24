@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Decisions - Cue Intelligence</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                            "tertiary-fixed-dim": "#ffb0cd",
+                            "secondary-fixed": "#a2eeff",
+                            "on-tertiary-fixed-variant": "#8c0053",
+                            "inverse-on-surface": "#2c303a",
+                            "on-primary-fixed-variant": "#2f2ebe",
+                            "text-primary": "#F8FAFC",
+                            "on-primary-container": "#0d0096",
+                            "surface-variant": "#31353f",
+                            "surface-container": "#1c1f29",
+                            "surface": "#0f131c",
+                            "on-tertiary": "#640039",
+                            "error-container": "#93000a",
+                            "surface-border": "#232B45",
+                            "primary-fixed": "#e1e0ff",
+                            "primary": "#c0c1ff",
+                            "surface-dim": "#0f131c",
+                            "surface-container-lowest": "#0a0e17",
+                            "on-surface": "#dfe2ef",
+                            "on-surface-variant": "#c7c4d7",
+                            "surface-card": "#12172A",
+                            "on-secondary": "#00363e",
+                            "on-primary": "#1000a9",
+                            "surface-tint": "#c0c1ff",
+                            "success-glow": "#34D399",
+                            "surface-container-highest": "#31353f",
+                            "secondary": "#5de6ff",
+                            "inverse-primary": "#494bd6",
+                            "background": "#0f131c",
+                            "outline-variant": "#464554",
+                            "on-error-container": "#ffdad6",
+                            "surface-bright": "#353943",
+                            "primary-fixed-dim": "#c0c1ff",
+                            "inverse-surface": "#dfe2ef",
+                            "surface-container-high": "#262a34",
+                            "tertiary-container": "#f751a1",
+                            "primary-container": "#8083ff",
+                            "outline": "#908fa0",
+                            "on-secondary-container": "#00515d",
+                            "on-tertiary-fixed": "#3e0022",
+                            "on-error": "#690005",
+                            "tertiary-fixed": "#ffd9e4",
+                            "secondary-fixed-dim": "#2fd9f4",
+                            "on-secondary-fixed-variant": "#004e5a",
+                            "error": "#ffb4ab",
+                            "on-secondary-fixed": "#001f25",
+                            "text-muted": "#94A3B8",
+                            "on-tertiary-container": "#570032",
+                            "surface-container-low": "#181b25",
+                            "secondary-container": "#00cbe6",
+                            "on-background": "#dfe2ef",
+                            "tertiary": "#ffb0cd",
+                            "on-primary-fixed": "#07006c"
+                    },
+                    "borderRadius": {
+                            "DEFAULT": "0.25rem",
+                            "lg": "0.5rem",
+                            "xl": "0.75rem",
+                            "full": "9999px"
+                    },
+                    "spacing": {
+                            "gutter": "24px",
+                            "base": "8px",
+                            "bento-gap": "16px",
+                            "container-padding": "32px",
+                            "margin-mobile": "16px"
+                    },
+                    "fontFamily": {
+                            "headline-lg": ["Sora"],
+                            "body-lg": ["Inter"],
+                            "headline-lg-mobile": ["Sora"],
+                            "body-md": ["Inter"],
+                            "label-md": ["Inter"],
+                            "label-caps": ["JetBrains Mono"],
+                            "headline-md": ["Sora"],
+                            "headline-xl": ["Sora"]
+                    },
+                    "fontSize": {
+                            "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.03em", "fontWeight": "700"}],
+                            "body-lg": ["18px", {"lineHeight": "1.6", "letterSpacing": "0em", "fontWeight": "400"}],
+                            "headline-lg-mobile": ["28px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                            "body-md": ["16px", {"lineHeight": "1.5", "letterSpacing": "0em", "fontWeight": "400"}],
+                            "label-md": ["14px", {"lineHeight": "1.4", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                            "label-caps": ["12px", {"lineHeight": "1.0", "letterSpacing": "0.1em", "fontWeight": "600"}],
+                            "headline-md": ["24px", {"lineHeight": "1.3", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                            "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "800"}]
+                    }
+                }
+            }
+        }
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&amp;family=Inter:wght@400;500&amp;family=JetBrains+Mono:wght@600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            background-color: theme('colors.surface-container-lowest');
+            color: theme('colors.text-primary');
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
+        }
+        
+        .glass-panel {
+            background-color: rgba(15, 19, 28, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .row-expand-enter {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+        }
+        
+        .row-expand-enter.active {
+            max-height: 200px;
+            opacity: 1;
+        }
+
+        @keyframes bg-pan-left {
+            0% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .highlight-text {
+            background: linear-gradient(to right, theme('colors.secondary'), theme('colors.primary'), theme('colors.secondary'));
+            background-size: 200% auto;
+            color: transparent;
+            -webkit-background-clip: text;
+            background-clip: text;
+            animation: bg-pan-left 3s linear infinite;
+        }
+    </style>
+</head>
+<body class="flex min-h-screen">
+<!-- SideNavBar (Standardized COMPONENTS_14) -->
+<nav class="fixed left-0 top-0 h-screen w-[260px] bg-surface-container-lowest border-r border-surface-border flex flex-col py-base z-50">
+<div class="px-gutter py-4 mb-4">
+<h1 class="font-headline-md text-headline-md font-bold text-text-primary">Cue Intelligence</h1>
+<p class="font-label-md text-label-md text-text-muted mt-1">System Status: Live</p>
+</div>
+<div class="px-4 mb-6">
+<button class="w-full bg-primary-container hover:bg-primary-container/80 text-on-primary-container font-label-md text-label-md py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">add_circle</span>
+            New Initiative
+        </button>
+</div>
+<ul class="flex flex-col flex-grow">
+<li>
+<a class="flex items-center gap-3 h-[48px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200 font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="videocam">videocam</span>
+                Live Meeting
+            </a>
+</li>
+<li>
+<a class="flex items-center gap-3 h-[48px] px-4 bg-surface-container-high text-text-primary border-l-[3px] border-primary-container opacity-100 scale-[0.99] transition-all font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="fact_check" style="font-variation-settings: 'FILL' 1;">fact_check</span>
+                Decisions
+            </a>
+</li>
+<li>
+<a class="flex items-center gap-3 h-[48px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200 font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="task_alt">task_alt</span>
+                Tasks
+            </a>
+</li>
+<li>
+<a class="flex items-center gap-3 h-[48px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200 font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="account_tree">account_tree</span>
+                Knowledge Graph
+            </a>
+</li>
+<li>
+<a class="flex items-center gap-3 h-[48px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200 font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="memory">memory</span>
+                Company Memory
+            </a>
+</li>
+<li>
+<a class="flex items-center gap-3 h-[48px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200 font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                Settings
+            </a>
+</li>
+</ul>
+<div class="mt-auto px-4 pt-4 border-t border-surface-border">
+<a class="flex items-center gap-3 h-[40px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200 font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="help">help</span>
+            Help
+        </a>
+<a class="flex items-center gap-3 h-[40px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200 font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="logout">logout</span>
+            Sign Out
+        </a>
+<div class="flex items-center gap-3 px-4 py-4 mt-2">
+<img alt="User Profile" class="w-8 h-8 rounded-full border border-surface-border object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBjNhdCiXzKVHf48nMoIgWgFntXu--PQ4qsXyq2T0NCC3AbUKZJ7Wg5yXOhOuXSeNoqe5TrVPFg3Yu9dzSFo1JObLwjzsiRieE5yoQjvio5qn4OOal2kG8Pl1Sn20SprXn8gnf6Iw8BGPeMUqGEnpIbUydeHQVwth9XIH53HUMlTyTbB0vsUf1TJqTI1lkGG8HfIwNf1tzNPFDcolze2VF_8Olw_3rkEUl56D0Av-KtWInhRD1KTi1tdwzSPYoRTVlyjiMrA03MJ7k"/>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-text-primary">Sarah Chen</span>
+<span class="font-label-caps text-[10px] text-text-muted uppercase">Lead Architect</span>
+</div>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="ml-[260px] flex-1 flex flex-col w-full max-w-[1440px] mx-auto min-h-screen">
+<!-- Standardized Top Bar -->
+<header class="fixed top-0 right-0 left-[260px] h-16 bg-surface-dim/70 backdrop-blur-md border-b border-surface-border flex justify-between items-center px-container-padding z-40 shadow-sm">
+<div class="flex flex-col">
+<div class="flex items-center gap-2 mb-0.5">
+<span class="font-label-caps text-[10px] text-text-muted tracking-widest uppercase">Analytics /</span>
+<span class="font-label-caps text-[10px] text-primary tracking-widest uppercase font-bold">Decisions</span>
+</div>
+<h2 class="font-headline-md text-headline-md text-text-primary leading-none">Decisions Register</h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex bg-surface-card border border-surface-border rounded-lg p-0.5 mr-2">
+<button class="px-3 py-1 rounded bg-surface-container-highest text-secondary font-label-md text-[13px] flex items-center gap-1.5 transition-all">
+<span class="material-symbols-outlined text-[16px]">table_rows</span>
+                    Table
+                </button>
+<button class="px-3 py-1 rounded text-text-muted hover:text-text-primary font-label-md text-[13px] flex items-center gap-1.5 transition-all">
+<span class="material-symbols-outlined text-[16px]">timeline</span>
+                    Timeline
+                </button>
+</div>
+<button class="px-4 py-2 bg-surface-card border border-surface-border rounded-lg text-text-primary font-label-md text-label-md hover:bg-surface-container-high transition-all flex items-center gap-2 active:scale-95">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                Export
+            </button>
+<button class="bg-primary-container hover:bg-primary-container/90 text-on-primary-container font-label-md text-label-md py-2 px-4 rounded-lg flex items-center gap-2 transition-all active:scale-95 shadow-sm">
+                New Meeting
+            </button>
+<div class="flex items-center gap-1 border-l border-surface-border pl-4">
+<button class="p-2 text-text-muted hover:text-text-primary transition-all rounded-lg hover:bg-surface-container-high/50">
+<span class="material-symbols-outlined">search</span>
+</button>
+<button class="p-2 text-text-muted hover:text-text-primary transition-all rounded-lg hover:bg-surface-container-high/50">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<div class="mt-16 p-container-padding flex flex-col gap-gutter">
+<!-- Sub-header/Meta info -->
+<div class="flex justify-between items-center">
+<p class="font-body-md text-body-md text-text-muted">Track and verify executive commitments derived from meeting intelligence.</p>
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px]">search</span>
+<input class="w-full bg-surface-card border border-surface-border rounded-lg pl-10 pr-4 py-2 font-body-md text-label-md text-text-primary focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-colors placeholder:text-surface-variant" placeholder="Filter decisions..." type="text"/>
+</div>
+</div>
+<!-- Table View Container -->
+<div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container border-b border-surface-border font-label-caps text-label-caps text-text-muted uppercase tracking-wider">
+<tr>
+<th class="px-6 py-4 font-medium">Decision</th>
+<th class="px-6 py-4 font-medium">Source Meeting</th>
+<th class="px-6 py-4 font-medium">Date</th>
+<th class="px-6 py-4 font-medium">Owner</th>
+<th class="px-6 py-4 font-medium">Status</th>
+</tr>
+</thead>
+<tbody class="font-body-md text-body-md divide-y divide-surface-border">
+<!-- Row 1: Expanded -->
+<tr class="bg-surface-container-low border-l-[3px] border-l-secondary hover:bg-surface-container transition-colors group cursor-pointer">
+<td class="px-6 py-4">
+<span class="font-bold text-text-primary">Migrate Core DB to Postgres</span>
+</td>
+<td class="px-6 py-4">
+<a class="text-primary hover:text-secondary underline decoration-primary/30 underline-offset-4 flex items-center gap-1" href="#">
+                                Q3 Architecture Sync
+                                <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+</a>
+</td>
+<td class="px-6 py-4 text-text-muted">Oct 24, 2023</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<img alt="David Kim" class="w-6 h-6 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAFIGhYQT3NqapsEdswa7HdrEq5XhN3BBWwffwV_Bt383TXpE1Qr3qPZ3e5SJisbzrpPPd23ojvRiZqcq6RMNzj9eSc97527qmuE8zRKR6_GzEqO9gSAZYy6GTCFBtw4QaG-th0iYg7Lek-tm05fJ_Jwf4iNisIzzq4fQndVa6Oc0WcZ9LOB9PepW0vriD6j4W8iKaclPpS0JRmyah0w4YDVnE0x69fyQl624-HvFrb-e6RCT9ziG3CMWRrX6s4T4oKd__FYfY0A64"/>
+<span class="text-label-md">David K.</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-900/30 text-emerald-400 border border-emerald-800 shadow-[0_0_8px_rgba(52,211,153,0.15)]">
+                                Approved
+                            </span>
+</td>
+</tr>
+<tr class="bg-surface-container-lowest">
+<td class="p-0" colspan="5">
+<div class="row-expand-enter active px-6 py-4 border-l-[3px] border-l-secondary/30">
+<div class="bg-surface-card rounded-lg border border-surface-border p-5 shadow-inner">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-[16px] text-secondary">format_quote</span>
+<span class="font-label-caps text-[11px] text-text-muted tracking-wider">TRANSCRIPT CONTEXT</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+                                        David K: "Given the scaling issues with Mongo, we need a relational structure for the new module."<br/>
+                                        Sarah C: "Agreed. Let's <span class="highlight-text font-semibold">officially decide to migrate the core DB to Postgres</span>. David, you own the rollout."
+                                    </p>
+<div class="mt-4 flex gap-3">
+<button class="text-xs bg-surface-container px-3 py-1.5 rounded border border-surface-border hover:border-secondary text-text-muted hover:text-text-primary transition-colors flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">play_circle</span> Play snippet
+                                        </button>
+<button class="text-xs bg-surface-container px-3 py-1.5 rounded border border-surface-border hover:border-secondary text-text-muted hover:text-text-primary transition-colors flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">history</span> View thread
+                                        </button>
+</div>
+</div>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low transition-colors group cursor-pointer">
+<td class="px-6 py-4">
+<span class="font-bold text-text-primary">Delay Mobile App Launch</span>
+</td>
+<td class="px-6 py-4">
+<a class="text-primary hover:text-secondary underline decoration-primary/30 underline-offset-4 flex items-center gap-1" href="#">
+                                Product Roadmap Review
+                                <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+</a>
+</td>
+<td class="px-6 py-4 text-text-muted">Oct 22, 2023</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center font-bold text-[10px]">EL</div>
+<span class="text-label-md">Elena L.</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-900/30 text-amber-400 border border-amber-800 shadow-[0_0_8px_rgba(251,191,36,0.15)]">
+                                Pending
+                            </span>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low transition-colors group cursor-pointer">
+<td class="px-6 py-4">
+<span class="font-bold text-text-primary">Cancel Vendor Contract X</span>
+</td>
+<td class="px-6 py-4">
+<a class="text-primary hover:text-secondary underline decoration-primary/30 underline-offset-4 flex items-center gap-1" href="#">
+                                Budget Planning Q4
+                                <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+</a>
+</td>
+<td class="px-6 py-4 text-text-muted">Oct 15, 2023</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-[10px]">MR</div>
+<span class="text-label-md">Marcus R.</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-900/30 text-red-400 border border-red-800 shadow-[0_0_8px_rgba(248,113,113,0.15)]">
+                                Rejected
+                            </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Timeline Section -->
+<div class="mt-8 flex flex-col gap-bento-gap">
+<h3 class="font-headline-md text-headline-md text-text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">timeline</span> Timeline View
+            </h3>
+<div class="w-full h-48 bg-surface-card border border-surface-border rounded-xl relative overflow-hidden flex flex-col justify-center px-12 shadow-md">
+<!-- Timeline Grid Lines -->
+<div class="absolute inset-0 grid grid-cols-6 pointer-events-none">
+<div class="border-r border-surface-border/30 h-full"></div>
+<div class="border-r border-surface-border/30 h-full"></div>
+<div class="border-r border-surface-border/30 h-full"></div>
+<div class="border-r border-surface-border/30 h-full"></div>
+<div class="border-r border-surface-border/30 h-full"></div>
+</div>
+<!-- Main Axis -->
+<div class="absolute left-0 right-0 h-px bg-surface-border/50 top-1/2 -translate-y-1/2"></div>
+<div class="w-full flex justify-between relative z-10">
+<!-- Oct 15 Node -->
+<div class="flex flex-col items-center gap-3 -mt-6">
+<div class="w-4 h-4 rounded-full bg-surface-card border-2 border-red-400 shadow-[0_0_12px_rgba(248,113,113,0.4)] transition-transform hover:scale-125 cursor-pointer"></div>
+<div class="text-center">
+<span class="block font-label-caps text-[10px] text-text-primary">OCT 15</span>
+<span class="block text-[9px] text-text-muted mt-0.5">Rejected</span>
+</div>
+</div>
+<!-- Oct 22 Node -->
+<div class="flex flex-col items-center gap-3 -mt-6">
+<div class="w-4 h-4 rounded-full bg-surface-card border-2 border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.4)] transition-transform hover:scale-125 cursor-pointer"></div>
+<div class="text-center">
+<span class="block font-label-caps text-[10px] text-text-primary">OCT 22</span>
+<span class="block text-[9px] text-text-muted mt-0.5">Pending</span>
+</div>
+</div>
+<!-- Oct 24 Active Node -->
+<div class="flex flex-col items-center gap-3 mt-8">
+<div class="text-center mb-1">
+<span class="block font-label-caps text-[10px] text-secondary font-bold">OCT 24</span>
+<span class="block text-[9px] text-secondary/80 mt-0.5">Approved</span>
+</div>
+<div class="w-7 h-7 rounded-full bg-secondary-container/20 border-2 border-secondary shadow-[0_0_20px_rgba(93,230,255,0.4)] flex items-center justify-center transition-all hover:shadow-[0_0_30px_rgba(93,230,255,0.6)] cursor-pointer">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+</div>
+</div>
+<!-- Future Node -->
+<div class="flex flex-col items-center gap-3 -mt-6">
+<div class="w-4 h-4 rounded-full bg-surface-card border-2 border-surface-variant transition-transform hover:scale-125 cursor-pointer"></div>
+<div class="text-center">
+<span class="block font-label-caps text-[10px] text-text-muted">Q1 2024</span>
+<span class="block text-[9px] text-text-muted mt-0.5">Projected</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const rows = document.querySelectorAll('tbody tr.group');
+        rows.forEach(row => {
+            row.addEventListener('click', () => {
+                // Interactivity logic would go here
+            });
+        });
+    });
+</script>
+</body></html>

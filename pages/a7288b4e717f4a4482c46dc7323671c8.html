@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tasks - Cue Intelligence</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Sora:wght@600;700;800&amp;family=JetBrains+Mono:wght@600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface": "#0f131c",
+                      "on-secondary-container": "#00515d",
+                      "surface-container-high": "#262a34",
+                      "on-background": "#dfe2ef",
+                      "on-tertiary": "#640039",
+                      "on-primary-fixed": "#07006c",
+                      "primary-fixed": "#e1e0ff",
+                      "inverse-primary": "#494bd6",
+                      "on-tertiary-fixed-variant": "#8c0053",
+                      "tertiary": "#ffb0cd",
+                      "secondary-fixed-dim": "#2fd9f4",
+                      "tertiary-fixed-dim": "#ffb0cd",
+                      "surface-container-low": "#181b25",
+                      "on-secondary-fixed": "#001f25",
+                      "primary-fixed-dim": "#c0c1ff",
+                      "on-primary": "#1000a9",
+                      "primary": "#c0c1ff",
+                      "on-tertiary-container": "#570032",
+                      "surface-variant": "#31353f",
+                      "on-error-container": "#ffdad6",
+                      "text-muted": "#94A3B8",
+                      "surface-card": "#12172A",
+                      "error-container": "#93000a",
+                      "on-error": "#690005",
+                      "on-surface-variant": "#c7c4d7",
+                      "on-secondary": "#00363e",
+                      "background": "#0f131c",
+                      "secondary-fixed": "#a2eeff",
+                      "tertiary-container": "#f751a1",
+                      "surface-container": "#1c1f29",
+                      "surface-tint": "#c0c1ff",
+                      "surface-container-highest": "#31353f",
+                      "secondary-container": "#00cbe6",
+                      "on-tertiary-fixed": "#3e0022",
+                      "inverse-on-surface": "#2c303a",
+                      "surface-border": "#232B45",
+                      "surface-dim": "#0f131c",
+                      "on-primary-fixed-variant": "#2f2ebe",
+                      "tertiary-fixed": "#ffd9e4",
+                      "primary-container": "#8083ff",
+                      "error": "#ffb4ab",
+                      "inverse-surface": "#dfe2ef",
+                      "surface-container-lowest": "#0a0e17",
+                      "on-secondary-fixed-variant": "#004e5a",
+                      "success-glow": "#34D399",
+                      "on-surface": "#dfe2ef",
+                      "text-primary": "#F8FAFC",
+                      "secondary": "#5de6ff",
+                      "outline-variant": "#464554",
+                      "outline": "#908fa0",
+                      "on-primary-container": "#0d0096",
+                      "surface-bright": "#353943"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "bento-gap": "16px",
+                      "container-padding": "32px",
+                      "margin-mobile": "16px",
+                      "base": "8px",
+                      "gutter": "24px"
+              },
+              "fontFamily": {
+                      "body-lg": ["Inter"],
+                      "body-md": ["Inter"],
+                      "headline-lg-mobile": ["Sora"],
+                      "headline-xl": ["Sora"],
+                      "headline-md": ["Sora"],
+                      "headline-lg": ["Sora"],
+                      "label-md": ["Inter"],
+                      "label-caps": ["JetBrains Mono"]
+              },
+              "fontSize": {
+                      "body-lg": ["18px", {"lineHeight": "1.6", "letterSpacing": "0em", "fontWeight": "400"}],
+                      "body-md": ["16px", {"lineHeight": "1.5", "letterSpacing": "0em", "fontWeight": "400"}],
+                      "headline-lg-mobile": ["28px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "800"}],
+                      "headline-md": ["24px", {"lineHeight": "1.3", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                      "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.03em", "fontWeight": "700"}],
+                      "label-md": ["14px", {"lineHeight": "1.4", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                      "label-caps": ["12px", {"lineHeight": "1.0", "letterSpacing": "0.1em", "fontWeight": "600"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        body {
+            background-color: #0A0E17;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+        }
+        
+        .glass-panel {
+            backdrop-filter: blur(12px);
+            background: rgba(10, 14, 23, 0.7);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .task-card {
+            transition: all 0.3s ease;
+        }
+        
+        .task-card:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 24px rgba(93, 230, 255, 0.1);
+            border-color: rgba(93, 230, 255, 0.3);
+        }
+
+        .done-card {
+            opacity: 0.8;
+            border-color: rgba(52, 211, 153, 0.2);
+        }
+        
+        .done-card:hover {
+            box-shadow: 0 8px 24px rgba(52, 211, 153, 0.1);
+            border-color: rgba(52, 211, 153, 0.4);
+        }
+
+        /* Custom Scrollbar for columns */
+        .kanban-col::-webkit-scrollbar {
+            width: 4px;
+        }
+        .kanban-col::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .kanban-col::-webkit-scrollbar-thumb {
+            background: #232B45;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="text-on-surface font-body-md h-screen overflow-hidden flex">
+<!-- SideNavBar (Predicted & Modified) -->
+<nav class="bg-surface-container-lowest/70 backdrop-blur-xl border-r border-white/10 h-screen w-64 fixed left-0 top-0 flex flex-col h-full py-base z-50">
+<div class="px-6 py-8 flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-card border border-surface-border flex items-center justify-center overflow-hidden relative group">
+<img class="w-full h-full object-cover" data-alt="A futuristic geometric AI avatar logo glowing in a dark environment. The avatar features sharp, angular shapes emitting a cool cyan and indigo light against a deep space charcoal background. It embodies a high-tech, operational command center aesthetic, symbolizing advanced artificial intelligence and cyber-enterprise." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDFl43dXxlR72CRCYUx3-k_3kBKJiSmeCukxpqbu6lvP94BKKgjMYo3vxIbQfWaHYBbDfBnhrFZ2OpUaWBm-4gTPdYI6pQUwfC1GWrCAeCiSzJxuFV064_E6rcxjRURGOrr804d3eizfaYwENRN2rSMsG1xNHKwwWFMZxOliJ3Cwt4JwqD53NOorHp_0ia-KCQ7bdZiMCWkBXwMvuyHaspsxcQiD1Birm3MQGJdmChsCtORshPd92N-OHBA2bhAkBB1yF3h16LBVjI"/>
+<div class="absolute inset-0 bg-secondary/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md font-bold text-primary">Cue Intelligence</h1>
+<p class="font-label-md text-label-md text-text-muted mt-1">Operational Command</p>
+</div>
+</div>
+<button class="mx-6 mb-8 mt-4 bg-primary text-on-primary font-label-md text-label-md py-3 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-secondary transition-colors relative overflow-hidden group">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">add</span>
+            New Meeting
+            <div class="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12"></div>
+</button>
+<ul class="flex-1 px-4 space-y-2">
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-colors duration-200 ease-in-out font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                    Dashboard
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-colors duration-200 ease-in-out font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">videocam</span>
+                    Meetings
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-colors duration-200 ease-in-out font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">psychology</span>
+                    Intelligence
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary font-bold border-r-2 border-secondary bg-primary/5 transition-colors duration-200 ease-in-out font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">format_list_bulleted</span>
+                    Tasks
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-colors duration-200 ease-in-out font-label-md text-label-md mt-8" href="#">
+<span class="material-symbols-outlined">settings</span>
+                    Settings
+                </a>
+</li>
+</ul>
+</nav>
+<!-- Main Content Area -->
+<div class="ml-64 flex-1 flex flex-col h-screen overflow-hidden">
+<!-- TopAppBar -->
+<header class="bg-surface/70 backdrop-blur-xl border-b border-surface-border flex justify-between items-center px-gutter h-16 sticky top-0 z-40 w-full glass-panel">
+<h2 class="font-headline-md text-headline-md text-on-surface">Task Board</h2>
+<div class="flex items-center gap-6">
+<!-- View Toggle -->
+<div class="flex bg-surface-container-high rounded-lg p-1 border border-surface-border">
+<button class="px-4 py-1.5 rounded bg-surface-card shadow-sm border border-secondary/30 text-secondary font-label-md text-label-md flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">view_column</span>
+                        Kanban
+                    </button>
+<button class="px-4 py-1.5 rounded text-on-surface-variant hover:text-primary font-label-md text-label-md flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[18px]">list</span>
+                        List
+                    </button>
+<button class="px-4 py-1.5 rounded text-on-surface-variant hover:text-primary font-label-md text-label-md flex items-center gap-2 transition-colors hidden lg:flex">
+<span class="material-symbols-outlined text-[18px]">timeline</span>
+                        Timeline
+                    </button>
+<button class="px-4 py-1.5 rounded text-on-surface-variant hover:text-primary font-label-md text-label-md flex items-center gap-2 transition-colors hidden xl:flex">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+                        Calendar
+                    </button>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-secondary transition-all duration-300 relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-tertiary-container rounded-full animate-ping"></span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-tertiary-container rounded-full"></span>
+</button>
+<button class="text-on-surface-variant hover:text-secondary transition-all duration-300">
+<span class="material-symbols-outlined">history</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container overflow-hidden border border-surface-border ml-2 cursor-pointer hover:border-secondary transition-colors">
+<img class="w-full h-full object-cover" data-alt="A portrait of a tech professional in a softly lit, modern workspace. The lighting has a subtle neon blue rim light, fitting a cyberpunk or advanced operational command aesthetic. The mood is focused and professional, against a dark background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuArQ_FSth-FMUQQPj_e7yEg3Sl2ptkv1LlHnPbENrxKYVAWxV3JAvpeUpXV7uOELg_gh8a_QkxfnQOHiUjR5pHG0xIf-bKiYOaqiTbHSu-efVyr0Ja3aCHBz7lVPUZTPO84-IqAoTsQ6kr35VU0C_VTnR9z5eNrpdRgfGFU_4A4eCT6YZYifEK_VYdSDyLPeYkVdHA1vqh_fQ2Zr92-HywPqCj-gGpJ3l1VljH5N8N_WwZStyUUqHXfl3PlnjysR6KcEeVmghHvOzc"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Kanban Board Canvas -->
+<main class="flex-1 overflow-x-auto overflow-y-hidden p-container-padding flex gap-bento-gap items-start h-full">
+<!-- Column 1: To Do -->
+<div class="w-[380px] shrink-0 flex flex-col h-full bg-surface-container/30 rounded-xl border border-surface-border/50 backdrop-blur-sm">
+<div class="p-4 border-b border-surface-border/50 flex justify-between items-center bg-surface-container-lowest/40 rounded-t-xl">
+<h3 class="font-label-caps text-label-caps text-on-surface flex items-center gap-2 uppercase tracking-wider">
+<span class="w-2 h-2 rounded-full bg-text-muted"></span>
+                        To Do
+                    </h3>
+<span class="bg-surface-container-high text-on-surface-variant px-2 py-0.5 rounded text-xs font-label-caps border border-surface-border">5</span>
+</div>
+<div class="p-4 flex-1 overflow-y-auto kanban-col space-y-4">
+<!-- Task Card: High Priority -->
+<div class="task-card bg-surface-card rounded-lg border border-surface-border p-4 relative overflow-hidden cursor-pointer group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-[#EC4899]"></div>
+<h4 class="font-headline-md text-[18px] text-text-primary mb-3 pl-2 leading-tight">Finalize Q3 Pipeline Architecture</h4>
+<div class="flex items-center justify-between pl-2 mt-4">
+<div class="flex items-center gap-2">
+<img class="w-6 h-6 rounded-full object-cover border border-surface-border" data-alt="Small circular avatar profile picture of a woman with glasses, smiling subtly. Lit with high-key soft white lighting against a dark charcoal background. High quality corporate portrait." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB3-oJJhNuWqqYQSR_b4mJhdpL1uht3Ja49Q7fs8Z0ebm3T0dtqrfUu8B0GX74e5a7ZpZABbtDyjKp57wpFb8PIxOAMMTzHiyGT7dZXlqjZhkc_hRUsXtBwn9o8UI1CHBqINdoDovjhk96wl0UKpciRBv7eO3W8ZiB6fllWXsuS6bpea1CGqBfMpjnsYPA6ARPNpbQwfM7cZnm6Ma8KnqRG53Rdjbtp4yyBMcIrZcExFBSnNb1CXhdyYcKViSIAJ5eZniolaQzPimg"/>
+<span class="bg-surface-variant text-text-muted text-[11px] px-2 py-1 rounded font-label-md flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                                    Oct 28
+                                </span>
+</div>
+<span class="bg-primary/10 text-primary text-[11px] px-2 py-1 rounded border border-primary/20 font-label-md flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">link</span>
+                                Strategy Sync
+                            </span>
+</div>
+</div>
+<!-- Task Card: Medium Priority -->
+<div class="task-card bg-surface-card rounded-lg border border-surface-border p-4 relative overflow-hidden cursor-pointer group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-[#F59E0B]"></div>
+<h4 class="font-headline-md text-[18px] text-text-primary mb-3 pl-2 leading-tight">Review Security Audit Logs</h4>
+<div class="flex items-center justify-between pl-2 mt-4">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-variant border border-surface-border flex items-center justify-center text-xs text-text-muted font-label-caps">JD</div>
+<span class="bg-surface-variant text-text-muted text-[11px] px-2 py-1 rounded font-label-md flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                                    Oct 30
+                                </span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Column 2: In Progress -->
+<div class="w-[380px] shrink-0 flex flex-col h-full bg-surface-container/30 rounded-xl border border-surface-border/50 backdrop-blur-sm">
+<div class="p-4 border-b border-surface-border/50 flex justify-between items-center bg-surface-container-lowest/40 rounded-t-xl">
+<h3 class="font-label-caps text-label-caps text-secondary flex items-center gap-2 uppercase tracking-wider">
+<span class="w-2 h-2 rounded-full bg-secondary shadow-[0_0_8px_rgba(93,230,255,0.8)]"></span>
+                        In Progress
+                    </h3>
+<span class="bg-secondary/20 text-secondary px-2 py-0.5 rounded text-xs font-label-caps border border-secondary/30 shadow-[0_0_10px_rgba(93,230,255,0.2)]">3</span>
+</div>
+<div class="p-4 flex-1 overflow-y-auto kanban-col space-y-4">
+<!-- Task Card: Low Priority, Active -->
+<div class="task-card bg-surface-card rounded-lg border border-secondary/40 shadow-[0_0_15px_rgba(93,230,255,0.05)] p-4 relative overflow-hidden cursor-pointer group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-[#22D3EE]"></div>
+<h4 class="font-headline-md text-[18px] text-text-primary mb-3 pl-2 leading-tight">Implement WebSocket Syncing for Dashboards</h4>
+<div class="flex items-center justify-between pl-2 mt-4">
+<div class="flex items-center gap-2">
+<img class="w-6 h-6 rounded-full object-cover border border-surface-border" data-alt="Small circular avatar profile picture of a young man looking focused. Lit with high-key soft white lighting and a hint of cyan glow against a dark charcoal background. Modern professional headshot." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrvrWew37AZuwRAClyFz-GUFYADlz6iGtSugfqFyE56hNIEN5VCk8DJlvis4eelXnY0pn_tvSPPmgiKSfoAf2epvruOuJ2E3Y1k_bnen-zZ2vB6bLQfa_dvWa-boAvdm1bjLCicLFF79xC_frPOk7WJw9_NetqGJKUfUjp4SKz3eQ8wYN1DTWp7dwSCGqBtrSaPR3SnoKCeN2l1QR5jN5kPSohgDaI4UtXlUD1YwImR0TOUQyPGnqvjtEVetgfa08FTW4kAa_xyiU"/>
+<span class="bg-surface-variant text-text-muted text-[11px] px-2 py-1 rounded font-label-md flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                                    Nov 02
+                                </span>
+</div>
+<span class="bg-primary/10 text-primary text-[11px] px-2 py-1 rounded border border-primary/20 font-label-md flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">link</span>
+                                Dev Standup
+                            </span>
+</div>
+</div>
+</div>
+</div>
+<!-- Column 3: Done -->
+<div class="w-[380px] shrink-0 flex flex-col h-full bg-surface-container/20 rounded-xl border border-surface-border/30 backdrop-blur-sm">
+<div class="p-4 border-b border-surface-border/30 flex justify-between items-center bg-surface-container-lowest/30 rounded-t-xl">
+<h3 class="font-label-caps text-label-caps text-success-glow flex items-center gap-2 uppercase tracking-wider">
+<span class="w-2 h-2 rounded-full bg-success-glow"></span>
+                        Done
+                    </h3>
+<span class="bg-success-glow/10 text-success-glow px-2 py-0.5 rounded text-xs font-label-caps border border-success-glow/20">12</span>
+</div>
+<div class="p-4 flex-1 overflow-y-auto kanban-col space-y-4">
+<!-- Task Card: Done -->
+<div class="task-card done-card bg-surface-card rounded-lg border p-4 relative overflow-hidden cursor-pointer group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-success-glow/50"></div>
+<h4 class="font-headline-md text-[18px] text-text-muted line-through decoration-text-muted/50 mb-3 pl-2 leading-tight">Update Authentication JWT Logic</h4>
+<div class="flex items-center justify-between pl-2 mt-4 opacity-70">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-variant border border-surface-border flex items-center justify-center text-xs text-text-muted font-label-caps">MK</div>
+<span class="bg-surface-variant text-text-muted text-[11px] px-2 py-1 rounded font-label-md flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                                    Oct 25
+                                </span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

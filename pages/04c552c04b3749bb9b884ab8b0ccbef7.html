@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cue Intelligence - Live Meeting Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&amp;family=JetBrains+Mono:wght@600&amp;family=Sora:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-tint": "#c0c1ff",
+                        "primary-fixed-dim": "#c0c1ff",
+                        "tertiary-fixed-dim": "#ffb0cd",
+                        "on-secondary-fixed": "#001f25",
+                        "on-background": "#dfe2ef",
+                        "on-primary-container": "#0d0096",
+                        "surface-container-highest": "#31353f",
+                        "inverse-primary": "#494bd6",
+                        "on-tertiary-fixed-variant": "#8c0053",
+                        "primary-fixed": "#e1e0ff",
+                        "success-glow": "#34D399",
+                        "on-surface-variant": "#c7c4d7",
+                        "background": "#0f131c",
+                        "error": "#ffb4ab",
+                        "on-tertiary": "#640039",
+                        "secondary-container": "#00cbe6",
+                        "surface-container-high": "#262a34",
+                        "surface-container-lowest": "#0a0e17",
+                        "outline": "#908fa0",
+                        "surface-border": "#232B45",
+                        "tertiary": "#ffb0cd",
+                        "secondary-fixed-dim": "#2fd9f4",
+                        "surface-card": "#12172A",
+                        "surface-bright": "#353943",
+                        "text-muted": "#94A3B8",
+                        "on-secondary-fixed-variant": "#004e5a",
+                        "surface-dim": "#0f131c",
+                        "inverse-surface": "#dfe2ef",
+                        "tertiary-fixed": "#ffd9e4",
+                        "on-secondary": "#00363e",
+                        "on-primary": "#1000a9",
+                        "surface": "#0f131c",
+                        "primary-container": "#8083ff",
+                        "on-tertiary-fixed": "#3e0022",
+                        "surface-container": "#1c1f29",
+                        "secondary-fixed": "#a2eeff",
+                        "on-secondary-container": "#00515d",
+                        "on-primary-fixed-variant": "#2f2ebe",
+                        "tertiary-container": "#f751a1",
+                        "primary": "#c0c1ff",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-container": "#570032",
+                        "text-primary": "#F8FAFC",
+                        "on-surface": "#dfe2ef",
+                        "outline-variant": "#464554",
+                        "surface-container-low": "#181b25",
+                        "secondary": "#5de6ff",
+                        "inverse-on-surface": "#2c303a",
+                        "on-primary-fixed": "#07006c",
+                        "surface-variant": "#31353f",
+                        "on-error": "#690005",
+                        "error-container": "#93000a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "8px",
+                        "gutter": "24px",
+                        "container-padding": "32px",
+                        "bento-gap": "24px",
+                        "margin-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "headline-xl": ["Sora"],
+                        "headline-md": ["Sora"],
+                        "label-caps": ["JetBrains Mono"],
+                        "headline-lg-mobile": ["Sora"],
+                        "headline-lg": ["Sora"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-md": ["14px", { "lineHeight": "1.4", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "headline-xl": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "800" }],
+                        "headline-md": ["24px", { "lineHeight": "1.3", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "1.0", "letterSpacing": "0.1em", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.03em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "letterSpacing": "0em", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "1.5", "letterSpacing": "0em", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.text-primary');
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E%3C/svg%3E");
+            overflow: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(10, 14, 23, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .neon-underglow {
+            box-shadow: 0 0 20px rgba(192, 193, 255, 0.2);
+        }
+
+        .gradient-border {
+            position: relative;
+            border-radius: theme('borderRadius.xl');
+        }
+        .gradient-border::before {
+            content: "";
+            position: absolute;
+            inset: -1px;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(45deg, theme('colors.primary'), theme('colors.secondary'), theme('colors.tertiary'));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0.5;
+            animation: borderRotate 10s linear infinite;
+        }
+
+        @keyframes borderRotate {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
+        }
+
+        @keyframes slideUpFade {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .transcript-line {
+            animation: slideUpFade 0.5s ease-out forwards;
+            opacity: 0;
+        }
+        
+        .transcript-line:nth-child(1) { animation-delay: 0.1s; }
+        .transcript-line:nth-child(2) { animation-delay: 0.8s; }
+        .transcript-line:nth-child(3) { animation-delay: 1.5s; }
+        .transcript-line:nth-child(4) { animation-delay: 2.2s; }
+        .transcript-line:nth-child(5) { animation-delay: 2.9s; }
+
+        @keyframes popScale {
+            0% { transform: scale(0.95); opacity: 0; }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .insight-item {
+            animation: popScale 0.4s ease-out forwards;
+            opacity: 0;
+        }
+        
+        .insight-item:nth-child(1) { animation-delay: 1.2s; }
+        .insight-item:nth-child(2) { animation-delay: 2.0s; }
+        
+        .btn-shimmer {
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-shimmer::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
+            transform: rotate(45deg);
+            transition: all 0.5s;
+            opacity: 0;
+        }
+        .btn-shimmer:hover::after {
+            animation: shimmer 1s;
+        }
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) rotate(45deg); opacity: 1; }
+            100% { transform: translateX(100%) rotate(45deg); opacity: 0; }
+        }
+
+        @keyframes ping-subtle {
+            0% { transform: scale(1); opacity: 0.8; }
+            75% { transform: scale(2); opacity: 0; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+        .animate-ping-subtle {
+            animation: ping-subtle 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+        
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: theme('colors.surface-border');
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: theme('colors.outline');
+        }
+    </style>
+</head>
+<body class="flex h-screen w-screen overflow-hidden antialiased selection:bg-primary-container selection:text-on-primary-container">
+<!-- Standardized SideNavBar from {{DATA:COMPONENTS:COMPONENTS_14}} -->
+<nav class="bg-[#0A0E17] text-primary dark:text-primary font-label-md text-label-md h-screen w-[260px] fixed left-0 top-0 border-r border-[#232B45] flex flex-col py-base z-50">
+<!-- Brand / Header -->
+<div class="px-gutter mb-8 flex items-center space-x-3 mt-4">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined font-bold text-[20px]" style="font-variation-settings: 'FILL' 1;">hub</span>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md font-bold text-text-primary tracking-tighter leading-tight">Cue Intelligence</h1>
+<p class="text-[10px] text-text-muted uppercase tracking-widest font-label-caps mt-0.5">System Status: Live</p>
+</div>
+</div>
+<!-- Navigation Links -->
+<ul class="flex-1 space-y-1">
+<!-- Active State: Live Meeting -->
+<li>
+<a class="flex items-center gap-3 h-[48px] px-4 bg-surface-container-high text-text-primary border-l-[3px] border-primary-container opacity-100 scale-[0.99] transition-all" href="#">
+<span class="material-symbols-outlined text-[22px]" style="font-variation-settings: 'FILL' 1;">videocam</span>
+<span class="font-bold">Live Meeting</span>
+</a>
+</li>
+<!-- Inactive States -->
+<li>
+<a class="flex items-center gap-3 h-[48px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[22px]">fact_check</span>
+<span>Decisions</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 h-[48px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[22px]">task_alt</span>
+<span>Tasks</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 h-[48px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[22px]">account_tree</span>
+<span>Knowledge Graph</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 h-[48px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[22px]">memory</span>
+<span>Company Memory</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 h-[48px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[22px]">settings</span>
+<span>Settings</span>
+</a>
+</li>
+</ul>
+<!-- Bottom Actions -->
+<div class="px-4 mt-auto mb-4 space-y-2">
+<a class="flex items-center gap-3 h-[40px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]">help</span>
+<span class="text-sm">Help</span>
+</a>
+<a class="flex items-center gap-3 h-[40px] px-4 text-text-muted hover:text-text-primary hover:bg-surface-variant/50 transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+<span class="text-sm">Sign Out</span>
+</a>
+<button class="w-full bg-primary text-on-primary font-bold py-3 rounded-lg btn-shimmer flex items-center justify-center shadow-[0_0_15px_rgba(192,193,255,0.4)] mt-4">
+<span class="material-symbols-outlined mr-2">add</span>
+            New Initiative
+        </button>
+</div>
+</nav>
+<!-- Main Content Area Wrapper -->
+<div class="ml-[260px] flex-1 flex flex-col h-screen relative">
+<!-- Standardized TopAppBar from {{DATA:COMPONENTS:COMPONENTS_14}} -->
+<header class="bg-surface-dim/70 dark:bg-surface-dim/70 backdrop-blur-md text-primary dark:text-primary font-label-md text-label-md fixed top-0 right-0 left-[260px] h-16 border-b border-surface-border flex items-center justify-between px-container-padding z-40 shadow-sm">
+<div class="flex items-center space-x-4">
+<h2 class="font-headline-md text-headline-md font-bold text-text-primary mr-6">Live Meeting Dashboard</h2>
+<div class="flex items-center text-text-muted text-[13px]">
+<span class="font-label-caps uppercase tracking-wider bg-surface-container-high px-2 py-1 rounded border border-surface-border">Project: Project Apollo</span>
+<span class="mx-3 text-surface-border opacity-50">/</span>
+<span class="text-on-surface">Weekly Sync</span>
+</div>
+</div>
+<div class="flex items-center space-x-6">
+<div class="relative group focus-within:ring-1 focus-within:ring-secondary rounded-full overflow-hidden transition-all bg-surface-container-low border border-surface-border">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-text-muted text-[18px]">search</span>
+</div>
+<input class="bg-transparent text-on-surface pl-10 pr-4 py-1.5 w-64 text-sm focus:outline-none transition-colors placeholder-text-muted/50" placeholder="Search knowledge graph..." type="text"/>
+</div>
+<div class="flex items-center space-x-4 text-on-surface-variant">
+<button class="hover:bg-surface-container-high/50 p-2 rounded-lg transition-all relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-tertiary-container rounded-full border border-surface-dim"></span>
+</button>
+<div class="h-6 w-[1px] bg-surface-border"></div>
+<div class="flex items-center space-x-3 pl-2">
+<div class="text-right hidden xl:block">
+<p class="text-xs font-bold text-text-primary leading-none">Sarah Chen</p>
+<p class="text-[10px] text-text-muted">Marketing Lead</p>
+</div>
+<button class="hover:scale-95 transition-all">
+<span class="material-symbols-outlined text-[32px] text-primary" style="font-variation-settings: 'FILL' 1;">account_circle</span>
+</button>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 mt-16 p-container-padding overflow-y-auto">
+<!-- Page Header -->
+<div class="flex items-end justify-between mb-bento-gap">
+<div>
+<div class="flex items-center space-x-3 mb-2">
+<div class="relative flex h-3 w-3">
+<span class="animate-ping-subtle absolute inline-flex h-full w-full rounded-full bg-tertiary-container opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-tertiary-container"></span>
+</div>
+<span class="text-tertiary font-label-caps uppercase tracking-widest text-[12px]">Live AI Processing</span>
+</div>
+<h2 class="font-headline-xl text-headline-xl text-text-primary tracking-tight">Project Apollo Sync</h2>
+</div>
+<div class="flex space-x-2 text-text-muted font-label-md text-label-md">
+<span class="flex items-center bg-surface-container-high px-4 py-2 rounded-full border border-surface-border">
+<span class="material-symbols-outlined text-[18px] mr-2">timer</span> 45:12
+                </span>
+<span class="flex items-center bg-surface-container-high px-4 py-2 rounded-full border border-surface-border">
+<span class="material-symbols-outlined text-[18px] mr-2">group</span> 4 Participants
+                </span>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-bento-gap h-[calc(100vh-240px)]">
+<!-- Main Panel: Live Transcript -->
+<div class="col-span-12 lg:col-span-8 bg-surface-card rounded-xl border border-surface-border flex flex-col relative overflow-hidden neon-underglow">
+<div class="glass-panel px-6 py-4 flex items-center justify-between border-b border-surface-border/50 z-10 absolute top-0 w-full">
+<h3 class="font-headline-md text-headline-md text-primary text-[18px]">Streaming Transcript</h3>
+<div class="flex items-center space-x-2">
+<span class="h-1.5 w-1.5 bg-secondary rounded-full shadow-[0_0_8px_#5de6ff]"></span>
+<span class="text-text-muted text-sm">Active Listening</span>
+</div>
+</div>
+<div class="flex-1 p-6 pt-24 pb-8 overflow-y-auto flex flex-col space-y-6 bg-gradient-to-t from-surface-card to-surface-card/50">
+<!-- Line 1 -->
+<div class="transcript-line flex items-start space-x-4 max-w-3xl">
+<div class="flex-shrink-0 w-10 h-10 rounded-full bg-[#3B82F6]/20 border border-[#3B82F6]/50 flex items-center justify-center text-[#3B82F6] font-bold">SC</div>
+<div>
+<div class="flex items-baseline space-x-2 mb-1">
+<span class="font-semibold text-on-surface">Sarah Chen</span>
+<span class="text-xs text-text-muted">10:04 AM</span>
+</div>
+<p class="text-on-surface-variant font-body-md text-body-md bg-surface-container-high px-4 py-3 rounded-2xl rounded-tl-sm border border-surface-border">
+                                We need to finalize the Q3 marketing budget by tomorrow. If we don't, we'll miss the window for the ad spend allocation.
+                            </p>
+</div>
+</div>
+<!-- Line 2 -->
+<div class="transcript-line flex items-start space-x-4 max-w-3xl ml-auto flex-row-reverse space-x-reverse">
+<div class="flex-shrink-0 w-10 h-10 rounded-full bg-[#10B981]/20 border border-[#10B981]/50 flex items-center justify-center text-[#10B981] font-bold">MW</div>
+<div class="text-right">
+<div class="flex items-baseline justify-end space-x-2 mb-1 space-x-reverse">
+<span class="font-semibold text-on-surface">Marcus Wright</span>
+<span class="text-xs text-text-muted">10:05 AM</span>
+</div>
+<p class="text-on-surface-variant font-body-md text-body-md bg-surface-container-highest px-4 py-3 rounded-2xl rounded-tr-sm border border-surface-border text-left">
+                                Agreed. I've already drafted the proposal. Let's make it a formal decision: we cap the initial spend at $150k and review after 30 days.
+                            </p>
+</div>
+</div>
+<!-- Line 3 -->
+<div class="transcript-line flex items-start space-x-4 max-w-3xl">
+<div class="flex-shrink-0 w-10 h-10 rounded-full bg-[#8B5CF6]/20 border border-[#8B5CF6]/50 flex items-center justify-center text-[#8B5CF6] font-bold">JD</div>
+<div>
+<div class="flex items-baseline space-x-2 mb-1">
+<span class="font-semibold text-on-surface">Jane Doe</span>
+<span class="text-xs text-text-muted">10:05 AM</span>
+</div>
+<p class="text-on-surface-variant font-body-md text-body-md bg-surface-container-high px-4 py-3 rounded-2xl rounded-tl-sm border border-surface-border">
+                                Sounds good. Marcus, can you send that draft to the finance team by EOD today?
+                            </p>
+</div>
+</div>
+<!-- Line 4 -->
+<div class="transcript-line flex items-start space-x-4 max-w-3xl ml-auto flex-row-reverse space-x-reverse">
+<div class="flex-shrink-0 w-10 h-10 rounded-full bg-[#10B981]/20 border border-[#10B981]/50 flex items-center justify-center text-[#10B981] font-bold">MW</div>
+<div class="text-right">
+<div class="flex items-baseline justify-end space-x-2 mb-1 space-x-reverse">
+<span class="font-semibold text-on-surface">Marcus Wright</span>
+<span class="text-xs text-text-muted">10:06 AM</span>
+</div>
+<p class="text-on-surface-variant font-body-md text-body-md bg-surface-container-highest px-4 py-3 rounded-2xl rounded-tr-sm border border-surface-border text-left">
+                                Will do. Just a heads up, the API integration with the new vendor is delayed, which might impact the launch date slightly.
+                            </p>
+</div>
+</div>
+<!-- Processing Indicator -->
+<div class="transcript-line flex items-start space-x-4 max-w-3xl">
+<div class="flex-shrink-0 w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center border border-surface-border">
+<span class="material-symbols-outlined text-text-muted text-[20px] animate-pulse">more_horiz</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Panel: Stacked Insights -->
+<div class="col-span-12 lg:col-span-4 flex flex-col space-y-bento-gap h-full">
+<!-- Insight Card 1: Decisions -->
+<div class="gradient-border flex-[1.2] flex flex-col bg-surface-card rounded-xl overflow-hidden">
+<div class="p-5 border-b border-surface-border/50 flex items-center justify-between">
+<h4 class="font-headline-md text-[16px] text-on-surface flex items-center">
+<span class="material-symbols-outlined mr-2 text-success-glow text-[20px]">fact_check</span>
+                            Decisions Detected
+                        </h4>
+<span class="bg-success-glow/10 text-success-glow text-xs px-2 py-0.5 rounded font-label-caps">1 New</span>
+</div>
+<div class="p-5 space-y-3 overflow-y-auto">
+<div class="insight-item bg-surface-container-low border border-success-glow/30 rounded-lg p-4 flex items-start space-x-3">
+<span class="material-symbols-outlined text-success-glow text-[20px] mt-0.5">check_circle</span>
+<div>
+<p class="text-sm text-on-surface font-medium leading-snug">Cap initial ad spend at $150k</p>
+<p class="text-xs text-text-muted mt-1.5">Agreed by Marcus Wright &amp; Sarah Chen. Review scheduled after 30 days.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Insight Card 2: Action Items -->
+<div class="flex-1 bg-surface-card border border-surface-border rounded-xl flex flex-col overflow-hidden">
+<div class="p-5 border-b border-surface-border/50">
+<h4 class="font-headline-md text-[16px] text-on-surface flex items-center">
+<span class="material-symbols-outlined mr-2 text-primary text-[20px]">task_alt</span>
+                            Action Items
+                        </h4>
+</div>
+<div class="p-5 space-y-3 overflow-y-auto">
+<div class="insight-item bg-surface-container-low border border-surface-border rounded-lg p-3 flex justify-between items-center hover:border-primary/50 transition-colors cursor-pointer group">
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 rounded-full bg-[#10B981]/20 text-[#10B981] flex items-center justify-center text-xs font-bold">MW</div>
+<p class="text-sm text-on-surface font-medium group-hover:text-primary transition-colors">Send draft to finance</p>
+</div>
+<span class="text-[10px] bg-surface-container-highest px-2 py-1 rounded text-text-muted border border-surface-border font-label-caps">TODAY, EOD</span>
+</div>
+</div>
+</div>
+<!-- Insight Card 3: Risks -->
+<div class="flex-1 bg-surface-card border border-surface-border rounded-xl flex flex-col relative overflow-hidden">
+<div class="absolute top-0 right-0 w-32 h-32 bg-error/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+<div class="p-5 border-b border-surface-border/50">
+<h4 class="font-headline-md text-[16px] text-on-surface flex items-center">
+<span class="material-symbols-outlined mr-2 text-[#F59E0B] text-[20px]">warning</span>
+                            Risks Flagged
+                        </h4>
+</div>
+<div class="p-5 space-y-3 overflow-y-auto z-10">
+<div class="insight-item bg-surface-container-low border border-[#F59E0B]/30 rounded-lg p-4 flex items-start space-x-3">
+<span class="material-symbols-outlined text-[#F59E0B] text-[20px] mt-0.5">report_problem</span>
+<div>
+<p class="text-sm text-on-surface font-medium leading-snug">API Integration Delayed</p>
+<p class="text-xs text-text-muted mt-1.5">Impacts launch date. Marcus highlighted vendor issue.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

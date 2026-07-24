@@ -3,22 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  Video, 
-  CheckSquare, 
-  ListTodo, 
-  Network, 
-  Database, 
-  Settings, 
-  Plus, 
-  Search, 
-  HelpCircle, 
-  User, 
-  Bell,
-  Info,
-  X
-} from 'lucide-react';
-
+import { X } from 'lucide-react';
 
 export default function DashboardLayout({
   children,
@@ -30,7 +15,10 @@ export default function DashboardLayout({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authTab, setAuthTab] = useState<'signin' | 'signup'>('signin');
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; email: string } | null>({
+    name: 'Sarah Chen',
+    email: 'sarah@company.com'
+  });
 
   const handleAuthSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,76 +30,77 @@ export default function DashboardLayout({
   };
 
   const navItems = [
-    { name: 'Live Meeting', href: '/dashboard/live', icon: Video },
-    { name: 'Decisions', href: '/dashboard/decisions', icon: CheckSquare },
-    { name: 'Tasks', href: '/dashboard/tasks', icon: ListTodo },
-    { name: 'Knowledge Graph', href: '/dashboard/graph', icon: Network },
-    { name: 'Company Memory', href: '/dashboard', icon: Database },
+    { name: 'Home Page', href: '/', icon: 'home' },
+    { name: 'Live Meeting', href: '/dashboard/live', icon: 'videocam' },
+    { name: 'Decisions', href: '/dashboard/decisions', icon: 'fact_check' },
+    { name: 'Tasks', href: '/dashboard/tasks', icon: 'assignment' },
+    { name: 'Knowledge Graph', href: '/dashboard/graph', icon: 'hub' },
+    { name: 'Company Memory', href: '/dashboard', icon: 'database' },
   ];
 
-  // Breadcrumbs title based on current path
   const getPageTitle = () => {
-    if (pathname.startsWith('/dashboard/meeting/')) {
-      return 'Meeting Insights';
-    }
+    if (pathname?.startsWith('/dashboard/meeting/')) return 'Meeting Detail';
     switch (pathname) {
-      case '/dashboard/live':
-        return 'Live Meeting';
-      case '/dashboard/decisions':
-        return 'Decisions Register';
-      case '/dashboard/tasks':
-        return 'Tasks Register';
-      case '/dashboard/graph':
-        return 'Knowledge Graph';
+      case '/dashboard/live': return 'Live Meeting';
+      case '/dashboard/decisions': return 'Decisions Register';
+      case '/dashboard/tasks': return 'Tasks Register';
+      case '/dashboard/graph': return 'Knowledge Graph';
       case '/dashboard':
-      default:
-        return 'Company Memory';
+      default: return 'Company Memory';
     }
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-50 flex relative overflow-hidden bg-grid-pattern antialiased">
-      {/* Ambient backgrounds */}
-      <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-violet-950/20 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-[10%] left-[-10%] w-[500px] h-[500px] bg-fuchsia-950/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      
-      {/* SideNavBar */}
-      <nav className="h-screen w-64 fixed left-0 top-0 bg-zinc-900/60 backdrop-blur-md border-r border-zinc-800/80 shadow-xl flex flex-col py-6 z-50">
-        {/* Brand / Header */}
-        <div className="px-6 mb-8 flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-violet-600 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/20 text-white">
-            <span className="font-extrabold text-sm tracking-tighter">C</span>
+    <div className="min-h-screen bg-[#0f131c] text-[#dfe2ef] flex relative overflow-hidden bg-grid-pattern antialiased">
+      {/* Ambient glow */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#c0c1ff]/5 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#5de6ff]/3 rounded-full blur-[100px] pointer-events-none -z-10" />
+
+      {/* Sidebar */}
+      <nav className="h-screen w-64 fixed left-0 top-0 bg-[#0a0e17] border-r border-[#232B45] shadow-xl flex flex-col py-6 z-50">
+        {/* Brand / Header - Links to Home Page */}
+        <Link href="/" title="Cue Intelligence - Return to Home Page" className="px-6 mb-6 flex items-center space-x-3 group">
+          <div className="w-8 h-8 rounded bg-[#c0c1ff] flex items-center justify-center text-[#1000a9] shadow-[0_0_12px_rgba(192,193,255,0.4)] group-hover:scale-105 transition-transform">
+            <span className="material-symbols-outlined font-bold text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>hub</span>
           </div>
           <div>
-            <h1 className="text-[18px] font-bold font-display text-zinc-100 tracking-tighter leading-tight">Cue Intelligence</h1>
-            <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-mono mt-0.5">Enterprise Suite</p>
+            <h1 className="font-display text-[18px] font-bold text-[#c0c1ff] tracking-tighter leading-tight group-hover:text-white transition-colors">Cue Intelligence</h1>
+            <p className="text-[10px] text-[#94A3B8] uppercase tracking-widest font-mono mt-0.5">Enterprise Suite</p>
           </div>
-        </div>
+        </Link>
 
-        {/* New Meeting Button */}
-        <div className="px-4 mb-6">
-          <Link href="/dashboard" className="w-full bg-violet-600 hover:bg-violet-500 text-white font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 shadow-lg shadow-violet-600/35 hover:scale-[1.02]">
-            <Plus className="w-4 h-4" />
-            <span>New Meeting</span>
-          </Link>
+        {/* System Status */}
+        <div className="px-6 mb-4">
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-mono text-[#94A3B8] bg-[#181b25] px-3 py-1.5 rounded border border-[#232B45]">
+            <span className="w-2 h-2 rounded-full bg-[#34D399] animate-live-pulse"></span>
+            System Status: Live
+          </div>
         </div>
 
         {/* Navigation Links */}
         <ul className="flex-1 space-y-1.5 px-3">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
-            const Icon = item.icon;
+            const isActive = item.href === '/'
+              ? pathname === '/'
+              : item.href === '/dashboard'
+                ? pathname === '/dashboard'
+                : pathname?.startsWith(item.href);
             return (
               <li key={item.name}>
                 <Link
                   href={item.href}
-                  className={`flex items-center px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                  className={`flex items-center px-4 py-3 rounded-lg text-[14px] font-medium transition-all duration-200 ${
                     isActive
-                      ? 'text-violet-400 bg-violet-500/10 border-r-2 border-violet-500'
-                      : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/50 hover:translate-x-1'
+                      ? 'text-[#5de6ff] font-bold border-r-2 border-[#5de6ff] bg-[#00cbe6]/10 shadow-[0_0_15px_rgba(0,203,230,0.1)]'
+                      : 'text-[#c7c4d7] hover:text-[#c0c1ff] hover:bg-[#262a34]/50 active:scale-95'
                   }`}
                 >
-                  <Icon className={`w-4.5 h-4.5 mr-3 ${isActive ? 'text-violet-400' : 'text-zinc-400'}`} />
+                  <span
+                    className={`material-symbols-outlined text-[20px] mr-3 ${isActive ? 'text-[#5de6ff]' : 'text-[#94A3B8] group-hover:text-[#c0c1ff]'}`}
+                    style={isActive ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                  >
+                    {item.icon}
+                  </span>
                   <span>{item.name}</span>
                 </Link>
               </li>
@@ -119,58 +108,74 @@ export default function DashboardLayout({
           })}
         </ul>
 
-        {/* Footer Actions */}
-        <div className="px-4 mt-auto space-y-4">
+        {/* Bottom Actions */}
+        <div className="px-4 mt-auto space-y-3">
+          <Link
+            href="/"
+            className="flex items-center px-4 py-2.5 rounded-lg text-[#c7c4d7] hover:text-[#c0c1ff] hover:bg-[#262a34]/50 transition-colors text-[14px] font-medium"
+          >
+            <span className="material-symbols-outlined text-[20px] mr-3">home</span>
+            Landing Page
+          </Link>
           <Link
             href="/dashboard"
-            className="flex items-center px-4 py-2.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/50 transition-all text-sm font-semibold border-t border-zinc-800 pt-4"
+            className="flex items-center px-4 py-2.5 rounded-lg text-[#c7c4d7] hover:text-[#c0c1ff] hover:bg-[#262a34]/50 transition-colors text-[14px] font-medium"
           >
-            <Settings className="w-4.5 h-4.5 mr-3" />
-            <span>Settings</span>
+            <span className="material-symbols-outlined text-[20px] mr-3">settings</span>
+            Settings
           </Link>
 
-          {/* User profile avatar info */}
-          <div className="flex items-center gap-3 px-4 py-2">
-            <div className="w-8 h-8 rounded-full border border-zinc-800 bg-violet-500/10 flex items-center justify-center text-xs font-bold text-violet-400">
+          <Link
+            href="/dashboard/live"
+            className="w-full bg-[#c0c1ff] text-[#1000a9] font-bold py-3 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(192,193,255,0.4)] hover:bg-[#e1e0ff] transition-all text-[14px]"
+          >
+            <span className="material-symbols-outlined mr-2 text-[20px]">add</span>
+            New Meeting
+          </Link>
+
+          {/* User Badge */}
+          <div className="flex items-center gap-3 px-3 py-3 mt-2 border-t border-[#232B45]">
+            <div className="w-8 h-8 rounded-full bg-[#c0c1ff] text-[#1000a9] flex items-center justify-center text-[12px] font-bold shadow-md">
               SC
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-bold text-zinc-200">Sarah Chen</span>
-              <span className="text-[10px] text-zinc-500 font-mono">Lead Architect</span>
+              <span className="text-[13px] font-semibold text-[#F8FAFC]">{user ? user.name : 'Sarah Chen'}</span>
+              <span className="text-[10px] text-[#94A3B8] font-mono">Marketing Lead</span>
             </div>
           </div>
         </div>
       </nav>
 
-      {/* Main Content Wrapper */}
+      {/* Main Content Area Wrapper */}
       <div className="ml-64 flex-1 flex flex-col h-screen relative">
-        {/* TopAppBar */}
-        <header className="bg-zinc-950/60 backdrop-blur-md text-zinc-100 fixed top-0 right-0 left-64 h-16 border-b border-zinc-900 flex items-center justify-between px-8 w-auto z-40">
+        {/* Top App Bar */}
+        <header className="bg-[#0f131c]/80 backdrop-blur-md fixed top-0 right-0 left-64 h-16 border-b border-[#232B45] flex items-center justify-between px-6 z-40">
           {/* Breadcrumbs */}
-          <div className="flex items-center text-xs font-semibold text-zinc-400">
-            <span className="uppercase tracking-wider text-[10px] bg-zinc-900 px-2 py-1 rounded border border-zinc-800 text-violet-400">
-              Project: Apollo
+          <div className="flex items-center gap-2 text-[13px] font-medium">
+            <Link href="/" title="Go to Home Page" className="flex items-center gap-1.5 text-[#94A3B8] hover:text-[#c0c1ff] transition-colors bg-[#181b25] px-2.5 py-1 rounded border border-[#232B45] text-[11px] font-mono">
+              <span className="material-symbols-outlined text-[14px]">home</span>
+              <span>Home</span>
+            </Link>
+            <span className="text-[#232B45] mx-0.5">/</span>
+            <span className="uppercase tracking-wider text-[11px] bg-[#262a34] px-2.5 py-1 rounded border border-[#232B45] text-[#c0c1ff] font-mono font-semibold">
+              Project: Project Apollo
             </span>
-            <span className="mx-2 text-zinc-700">/</span>
-            <span className="text-zinc-300">{getPageTitle()}</span>
+            <span className="text-[#232B45] mx-1">/</span>
+            <span className="text-[#94A3B8]">{getPageTitle()}</span>
           </div>
 
-          {/* Search & Actions */}
-          <div className="flex items-center space-x-6">
-            {/* Global Search */}
-            <div className="relative group rounded-full overflow-hidden transition-all border border-zinc-850 bg-zinc-900/50 focus-within:border-violet-500/50">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="w-4 h-4 text-zinc-500" />
-              </div>
+          {/* Search + Controls */}
+          <div className="flex items-center space-x-4">
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-[#94A3B8]">search</span>
               <input
-                className="bg-transparent text-zinc-100 pl-9 pr-4 py-2 w-60 text-xs focus:outline-none placeholder-zinc-650"
+                className="bg-[#1c1f29] text-[#dfe2ef] pl-9 pr-4 py-1.5 w-64 text-[13px] rounded-lg border border-[#232B45] focus:outline-none focus:border-[#5de6ff]/50 placeholder-[#94A3B8]/60 transition"
                 placeholder="Search knowledge graph..."
                 type="text"
               />
             </div>
 
-            {/* Profile Icons */}
-            <div className="flex items-center space-x-4 text-zinc-400 relative">
+            <div className="flex items-center space-x-2 text-[#94A3B8] relative">
               {/* Dropdown Overlay Backdrop */}
               {isDropdownOpen && (
                 <div 
@@ -179,41 +184,46 @@ export default function DashboardLayout({
                 />
               )}
 
-              <button className="hover:text-violet-400 transition-all relative p-1 rounded-lg hover:bg-zinc-900">
-                <Bell className="w-4.5 h-4.5" />
-                <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-[#f751a1] rounded-full"></span>
+              <button className="hover:text-[#5de6ff] transition relative p-2 rounded-lg hover:bg-[#1c1f29]">
+                <span className="material-symbols-outlined text-[20px]">notifications</span>
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#f751a1] rounded-full"></span>
               </button>
-              <button className="hover:text-violet-400 transition-all p-1 rounded-lg hover:bg-zinc-900">
-                <HelpCircle className="w-4.5 h-4.5" />
+              <button className="hover:text-[#5de6ff] transition p-2 rounded-lg hover:bg-[#1c1f29]">
+                <span className="material-symbols-outlined text-[20px]">help</span>
               </button>
               
-              {/* Profile Avatar / Trigger */}
               <div 
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="w-7 h-7 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center hover:border-violet-500/40 transition cursor-pointer relative z-50"
+                className="w-8 h-8 rounded-full bg-[#1c1f29] border border-[#232B45] flex items-center justify-center hover:border-[#5de6ff]/50 transition cursor-pointer text-[#c0c1ff] relative z-50"
               >
-                {user ? (
-                  <span className="text-[10px] font-bold text-violet-400">SC</span>
-                ) : (
-                  <User className="w-4 h-4 text-violet-400" />
-                )}
+                <span className="material-symbols-outlined text-[18px]">person</span>
               </div>
 
               {/* Dropdown Menu */}
               {isDropdownOpen && (
-                <div className="absolute right-0 top-9 w-56 rounded-xl bg-zinc-950/95 border border-zinc-800 shadow-2xl backdrop-blur-md p-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute right-0 top-11 w-56 rounded-xl bg-[#0a0e17] border border-[#232B45] shadow-2xl backdrop-blur-md p-2.5 z-50">
+                  <div className="mb-2 pb-2 border-b border-[#232B45]">
+                    <Link 
+                      href="/"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="w-full flex items-center px-3 py-2 text-xs font-semibold text-[#c0c1ff] hover:bg-[#181b25] rounded-lg transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[16px] mr-2">home</span>
+                      Home Page (Landing)
+                    </Link>
+                  </div>
                   {user ? (
                     <>
-                      <div className="px-3 py-2 border-b border-zinc-900 mb-2">
+                      <div className="px-3 py-2 border-b border-[#232B45] mb-2">
                         <p className="text-xs font-bold text-white truncate">{user.name}</p>
-                        <p className="text-[10px] text-zinc-500 truncate">{user.email}</p>
+                        <p className="text-[10px] text-[#94A3B8] truncate">{user.email}</p>
                       </div>
                       <button 
                         onClick={() => {
                           setUser(null);
                           setIsDropdownOpen(false);
                         }}
-                        className="w-full text-left px-3 py-2 text-xs font-semibold text-rose-450 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                        className="w-full text-left px-3 py-2 text-xs font-semibold text-[#ffb4ab] hover:bg-[#93000a]/20 rounded-lg transition-colors cursor-pointer"
                       >
                         Sign Out
                       </button>
@@ -226,7 +236,7 @@ export default function DashboardLayout({
                           setIsAuthModalOpen(true);
                           setIsDropdownOpen(false);
                         }}
-                        className="w-full text-center py-2 text-xs font-bold bg-violet-600 hover:bg-violet-500 text-white rounded-lg transition shadow-md shadow-violet-600/20 cursor-pointer"
+                        className="w-full text-center py-2 text-xs font-bold bg-[#c0c1ff] hover:bg-[#e1e0ff] text-[#1000a9] rounded-lg transition shadow-md shadow-[#c0c1ff]/20 cursor-pointer"
                       >
                         Sign In
                       </button>
@@ -236,7 +246,7 @@ export default function DashboardLayout({
                           setIsAuthModalOpen(true);
                           setIsDropdownOpen(false);
                         }}
-                        className="w-full text-center py-2 text-xs font-bold bg-zinc-900 hover:bg-zinc-850 text-zinc-300 border border-zinc-800 rounded-lg transition cursor-pointer"
+                        className="w-full text-center py-2 text-xs font-bold bg-[#181b25] hover:bg-[#262a34] text-[#c7c4d7] border border-[#232B45] rounded-lg transition cursor-pointer"
                       >
                         Sign Up
                       </button>
@@ -248,34 +258,32 @@ export default function DashboardLayout({
           </div>
         </header>
 
-        {/* Scrollable Dashboard Viewport */}
-        <main className="flex-1 mt-16 p-8 overflow-y-auto w-full max-w-[1440px] mx-auto">
-          {children}
+        {/* Scrollable Content */}
+        <main className="flex-1 mt-16 p-6 overflow-y-auto">
+          <div className="max-w-[1400px] mx-auto animate-fade-in-up">
+            {children}
+          </div>
         </main>
       </div>
 
       {/* Authentication Modal */}
       {isAuthModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          {/* Modal Card */}
-          <div className="w-full max-w-sm glow-card border border-zinc-800 p-6 flex flex-col gap-6 relative shadow-2xl bg-zinc-950 animate-in zoom-in-95 duration-200">
-            
-            {/* Close Button */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm border border-[#232B45] p-6 flex flex-col gap-6 relative shadow-2xl bg-[#0a0e17] rounded-2xl">
             <button 
               onClick={() => setIsAuthModalOpen(false)}
-              className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-300 transition-colors p-1 hover:bg-zinc-900 rounded-lg cursor-pointer"
+              className="absolute top-4 right-4 text-[#94A3B8] hover:text-white transition-colors p-1 hover:bg-[#181b25] rounded-lg cursor-pointer"
             >
               <X className="w-4.5 h-4.5" />
             </button>
 
-            {/* Modal Header / Tabs */}
-            <div className="flex border-b border-zinc-900 pb-1 mt-2">
+            <div className="flex border-b border-[#232B45] pb-1 mt-2">
               <button 
                 onClick={() => setAuthTab('signin')}
                 className={`flex-1 pb-3 text-sm font-bold border-b-2 transition cursor-pointer ${
                   authTab === 'signin' 
-                    ? 'border-violet-500 text-violet-400' 
-                    : 'border-transparent text-zinc-500 hover:text-zinc-350'
+                    ? 'border-[#5de6ff] text-[#5de6ff]' 
+                    : 'border-transparent text-[#94A3B8] hover:text-white'
                 }`}
               >
                 Sign In
@@ -284,87 +292,54 @@ export default function DashboardLayout({
                 onClick={() => setAuthTab('signup')}
                 className={`flex-1 pb-3 text-sm font-bold border-b-2 transition cursor-pointer ${
                   authTab === 'signup' 
-                    ? 'border-violet-500 text-violet-400' 
-                    : 'border-transparent text-zinc-500 hover:text-zinc-350'
+                    ? 'border-[#5de6ff] text-[#5de6ff]' 
+                    : 'border-transparent text-[#94A3B8] hover:text-white'
                 }`}
               >
                 Sign Up
               </button>
             </div>
 
-            {/* Auth Forms */}
             <form onSubmit={handleAuthSubmit} className="space-y-4">
               {authTab === 'signup' && (
                 <div>
-                  <label className="block text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1.5">Full Name</label>
+                  <label className="block text-[10px] font-mono uppercase tracking-wider text-[#94A3B8] mb-1.5">Full Name</label>
                   <input 
                     type="text" 
                     required
                     placeholder="Sarah Chen"
-                    className="w-full bg-zinc-950/60 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-100 placeholder-zinc-650 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition"
+                    className="w-full bg-[#181b25] border border-[#232B45] rounded-xl px-4 py-2.5 text-xs text-[#dfe2ef] placeholder-[#94A3B8]/60 focus:outline-none focus:border-[#5de6ff] transition"
                   />
                 </div>
               )}
               
               <div>
-                <label className="block text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1.5">Email Address</label>
+                <label className="block text-[10px] font-mono uppercase tracking-wider text-[#94A3B8] mb-1.5">Email Address</label>
                 <input 
                   type="email" 
                   required
                   placeholder="sarah@company.com"
-                  className="w-full bg-zinc-950/60 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-100 placeholder-zinc-650 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition"
+                  className="w-full bg-[#181b25] border border-[#232B45] rounded-xl px-4 py-2.5 text-xs text-[#dfe2ef] placeholder-[#94A3B8]/60 focus:outline-none focus:border-[#5de6ff] transition"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono uppercase tracking-wider text-zinc-550 mb-1.5">Password</label>
+                <label className="block text-[10px] font-mono uppercase tracking-wider text-[#94A3B8] mb-1.5">Password</label>
                 <input 
                   type="password" 
                   required
                   placeholder="••••••••"
-                  className="w-full bg-zinc-950/60 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-100 placeholder-zinc-650 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition"
+                  className="w-full bg-[#181b25] border border-[#232B45] rounded-xl px-4 py-2.5 text-xs text-[#dfe2ef] placeholder-[#94A3B8]/60 focus:outline-none focus:border-[#5de6ff] transition"
                 />
               </div>
 
               <button 
                 type="submit"
-                className="w-full py-3 px-4 rounded-xl text-xs font-bold uppercase tracking-wider bg-violet-600 hover:bg-violet-500 text-white cursor-pointer shadow-lg shadow-violet-600/25 transition flex items-center justify-center gap-2 mt-2"
+                className="w-full py-3 px-4 rounded-xl text-xs font-bold uppercase tracking-wider bg-[#c0c1ff] hover:bg-[#e1e0ff] text-[#1000a9] cursor-pointer shadow-lg shadow-[#c0c1ff]/20 transition flex items-center justify-center gap-2 mt-2"
               >
                 {authTab === 'signin' ? 'Continue' : 'Create Account'}
               </button>
             </form>
-
-            {/* Social Sign In */}
-            <div className="space-y-3">
-              <div className="relative flex py-1 items-center">
-                <div className="flex-grow border-t border-zinc-900"></div>
-                <span className="flex-shrink mx-4 text-[9px] font-mono uppercase tracking-widest text-zinc-650">Or continue with</span>
-                <div className="flex-grow border-t border-zinc-900"></div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setUser({ name: 'Sarah Chen', email: 'sarah@company.com' });
-                    setIsAuthModalOpen(false);
-                  }}
-                  className="py-2.5 px-4 bg-zinc-950 border border-zinc-850 hover:border-zinc-700 rounded-xl text-[10px] font-semibold text-zinc-300 hover:text-white transition flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  Google
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setUser({ name: 'Sarah Chen', email: 'sarah@company.com' });
-                    setIsAuthModalOpen(false);
-                  }}
-                  className="py-2.5 px-4 bg-zinc-950 border border-zinc-850 hover:border-zinc-700 rounded-xl text-[10px] font-semibold text-zinc-300 hover:text-white transition flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  GitHub
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}

@@ -6,16 +6,11 @@ import {
   ArrowRight, 
   Play, 
   Sparkles, 
-  Check, 
   Terminal, 
-  Activity, 
-  Lock, 
-  Layers, 
   ChevronDown 
 } from 'lucide-react';
 
 export default function LandingPage() {
-  // States for the interactive transcription animation card
   const [stage, setStage] = useState(0);
   const [alexText, setAlexText] = useState('');
   const [samText, setSamText] = useState('');
@@ -23,270 +18,329 @@ export default function LandingPage() {
   const fullAlexText = "We need to finalize the Q3 roadmap by Friday.";
   const fullSamText = "I can commit to the API refactor, but the dashboard will spill over.";
 
+  // WebGL Shader Animation Effect (STITCH Shader ANIMATION_3)
+  useEffect(() => {
+    const canvas = document.getElementById('shader-canvas-ANIMATION_3') as HTMLCanvasElement | null;
+    if (!canvas) return;
+
+    function syncSize() {
+      if (!canvas) return;
+      const w = canvas.clientWidth || 1280;
+      const h = canvas.clientHeight || 720;
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+    }
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(syncSize);
+      resizeObserver.observe(canvas);
+    }
+    syncSize();
+
+    const gl = (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')) as WebGLRenderingContext | null;
+    if (!gl) return;
+
+    const vs = `attribute vec2 a_position;
+varying vec2 v_texCoord;
+void main() {
+  v_texCoord = a_position * 0.5 + 0.5;
+  gl_Position = vec4(a_position, 0.0, 1.0);
+}`;
+
+    const fs = `precision highp float;
+uniform float u_time;
+uniform vec2 u_resolution;
+
+vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
+float snoise(vec2 v){
+  const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+  vec2 i  = floor(v + dot(v, C.yy) );
+  vec2 x0 = v - i + dot(i, C.xx);
+  vec2 i1;
+  i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+  vec4 x12 = x0.xyxy + C.xxzz;
+  x12.xy -= i1;
+  i = mod(i, 289.0);
+  vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 )) + i.x + vec3(0.0, i1.x, 1.0 ));
+  vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+  m = m*m;
+  m = m*m;
+  vec3 x = 2.0 * fract(p * C.www) - 1.0;
+  vec3 h = abs(x) - 0.5;
+  vec3 ox = floor(x + 0.5);
+  vec3 a0 = x - ox;
+  m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+  vec3 g;
+  g.x  = a0.x  * x0.x  + h.x  * x0.y;
+  g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+  return 130.0 * dot(m, g);
+}
+
+void main() {
+    vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+    float time = u_time * 0.2;
+    vec3 color1 = vec3(0.388, 0.4, 0.945); // Indigo (#6366F1)
+    vec3 color2 = vec3(0.133, 0.827, 0.933); // Cyan (#22D3EE)
+    vec3 color3 = vec3(0.925, 0.282, 0.6);  // Magenta (#EC4899)
+    float n1 = snoise(uv * 1.5 + time) * 0.5 + 0.5;
+    float n2 = snoise(uv * 1.2 - time * 0.7) * 0.5 + 0.5;
+    vec3 mixed = mix(color1, color2, n1);
+    mixed = mix(mixed, color3, n2 * 0.5);
+    float grain = fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453) * 0.05;
+    gl_FragColor = vec4(mixed * 0.4 + grain, 1.0);
+}`;
+
+    function cs(type: number, src: string) {
+      const s = gl!.createShader(type)!;
+      gl!.shaderSource(s, src);
+      gl!.compileShader(s);
+      return s;
+    }
+
+    const prog = gl.createProgram()!;
+    gl.attachShader(prog, cs(gl.VERTEX_SHADER, vs));
+    gl.attachShader(prog, cs(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(prog);
+    gl.useProgram(prog);
+
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+
+    const pos = gl.getAttribLocation(prog, 'a_position');
+    gl.enableVertexAttribArray(pos);
+    gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+
+    const uTime = gl.getUniformLocation(prog, 'u_time');
+    const uRes = gl.getUniformLocation(prog, 'u_resolution');
+
+    let animationFrameId: number;
+    function render(t: number) {
+      syncSize();
+      gl!.viewport(0, 0, canvas!.width, canvas!.height);
+      if (uTime) gl!.uniform1f(uTime, t * 0.001);
+      if (uRes) gl!.uniform2f(uRes, canvas!.width, canvas!.height);
+      gl!.drawArrays(gl!.TRIANGLE_STRIP, 0, 4);
+      animationFrameId = requestAnimationFrame(render);
+    }
+    animationFrameId = requestAnimationFrame(render);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      if (resizeObserver) resizeObserver.disconnect();
+    };
+  }, []);
+
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    
-    // stage 0: idle / audio visualizer only (1.5s)
     if (stage === 0) {
-      setAlexText('');
-      setSamText('');
+      setAlexText(''); setSamText('');
       timer = setTimeout(() => setStage(1), 1200);
-    } 
-    // stage 1: type Alex text
-    else if (stage === 1) {
-      let charIndex = 0;
+    } else if (stage === 1) {
+      let i = 0;
       const interval = setInterval(() => {
-        if (charIndex <= fullAlexText.length) {
-          setAlexText(fullAlexText.substring(0, charIndex));
-          charIndex++;
-        } else {
-          clearInterval(interval);
-          setStage(2);
-        }
+        if (i <= fullAlexText.length) { setAlexText(fullAlexText.substring(0, i)); i++; }
+        else { clearInterval(interval); setStage(2); }
       }, 35);
       return () => clearInterval(interval);
-    } 
-    // stage 2: wait briefly and type Sam text
-    else if (stage === 2) {
+    } else if (stage === 2) {
       timer = setTimeout(() => {
-        let charIndex = 0;
+        let i = 0;
         const interval = setInterval(() => {
-          if (charIndex <= fullSamText.length) {
-            setSamText(fullSamText.substring(0, charIndex));
-            charIndex++;
-          } else {
-            clearInterval(interval);
-            setStage(3);
-          }
+          if (i <= fullSamText.length) { setSamText(fullSamText.substring(0, i)); i++; }
+          else { clearInterval(interval); setStage(3); }
         }, 35);
         return () => clearInterval(interval);
       }, 800);
-    } 
-    // stage 3: Cue AI Processing / extraction (2s)
-    else if (stage === 3) {
+    } else if (stage === 3) {
       timer = setTimeout(() => setStage(4), 2200);
-    } 
-    // stage 4: Results displayed (5s), then loop back to 0
-    else if (stage === 4) {
+    } else if (stage === 4) {
       timer = setTimeout(() => setStage(0), 5500);
     }
-
     return () => clearTimeout(timer);
   }, [stage]);
 
-  // Pill Ticker content (duplicated for infinite looping effect)
   const tickerItems = [
-    "Who committed to what?",
-    "Endless status meetings",
-    "Decisions lost in slack",
-    "No searchable memory",
-    "Action items falling through",
-    "Forgotten risks",
-    "Who committed to what?",
-    "Endless status meetings",
-    "Decisions lost in slack",
-    "No searchable memory",
-    "Action items falling through",
-    "Forgotten risks",
+    "Who committed to what?", "Endless status meetings", "Decisions lost in slack",
+    "No searchable memory", "Action items falling through", "Forgotten risks",
+    "Who committed to what?", "Endless status meetings", "Decisions lost in slack",
+    "No searchable memory", "Action items falling through", "Forgotten risks",
   ];
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-50 relative overflow-hidden flex flex-col font-sans bg-grid-pattern">
-      {/* Background gradients */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-violet-950/20 blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-[20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-fuchsia-950/15 blur-[150px] pointer-events-none -z-10" />
-
-      {/* Navigation Header */}
-      <header className="sticky top-0 z-50 backdrop-blur-md border-b border-zinc-900 bg-zinc-950/60 transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-violet-600 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/20">
-              <span className="text-white font-extrabold text-base tracking-tighter">C</span>
+    <div className="min-h-screen bg-[#0f131c] text-[#dfe2ef] relative overflow-hidden flex flex-col font-sans bg-grid-pattern selection:bg-[#8083ff]/30 selection:text-[#c0c1ff]">
+      {/* Navbar */}
+      <header className="sticky top-0 z-50 backdrop-blur-xl border-b border-[#232B45] bg-[#0f131c]/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-8 h-8 rounded bg-[#c0c1ff] flex items-center justify-center text-[#1000a9] shadow-[0_0_15px_rgba(192,193,255,0.4)] group-hover:scale-105 transition-transform">
+              <span className="material-symbols-outlined font-bold text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>hub</span>
             </div>
-            <span className="text-xl font-bold font-display tracking-tight text-zinc-100">
-              Cue Intelligence
-            </span>
-          </div>
+            <div>
+              <span className="text-lg font-bold font-display tracking-tight text-[#c0c1ff]">Cue Intelligence</span>
+              <p className="text-[9px] text-[#94A3B8] uppercase tracking-widest font-mono -mt-1">Enterprise Suite</p>
+            </div>
+          </Link>
 
-          {/* Nav links */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-400">
-            <a href="#platform" className="hover:text-zinc-100 transition-colors">Platform</a>
-            <a href="#features" className="hover:text-zinc-100 transition-colors">Features</a>
-            <a href="#enterprise" className="hover:text-zinc-100 transition-colors">Enterprise</a>
-            <a href="#pricing" className="hover:text-zinc-100 transition-colors">Pricing</a>
+          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-[#94A3B8]">
+            <a href="#platform" className="hover:text-[#c0c1ff] transition-colors">Platform</a>
+            <a href="#features" className="hover:text-[#c0c1ff] transition-colors">Features</a>
+            <a href="#enterprise" className="hover:text-[#c0c1ff] transition-colors">Enterprise</a>
+            <a href="#pricing" className="hover:text-[#c0c1ff] transition-colors">Pricing</a>
           </nav>
 
-          {/* CTA Buttons */}
           <div className="flex items-center gap-4">
-            <Link 
-              href="/dashboard" 
-              className="text-sm font-semibold text-zinc-300 hover:text-zinc-50 transition hidden sm:inline-block"
-            >
+            <Link href="/dashboard" className="text-sm font-semibold text-[#c7c4d7] hover:text-[#c0c1ff] transition hidden sm:inline-block">
               Sign In
             </Link>
-            <Link 
+            <Link
               href="/dashboard"
-              className="relative group px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-white bg-zinc-900 border border-zinc-800 transition hover:border-zinc-700 shadow-md flex items-center overflow-hidden"
+              className="px-5 py-2.5 rounded-lg text-[12px] font-bold uppercase tracking-wider text-[#1000a9] bg-[#c0c1ff] hover:bg-[#e1e0ff] transition-all shadow-[0_0_15px_rgba(192,193,255,0.4)]"
             >
-              <span className="absolute inset-0 bg-gradient-to-r from-violet-600 to-fuchsia-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10" />
               Request Demo
             </Link>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
+      {/* Hero with WebGL Shader Canvas */}
       <main className="flex-1 flex flex-col justify-center">
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-20 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-          {/* Hero Left Info */}
-          <div className="lg:col-span-7 space-y-8 text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-950/40 border border-violet-900/30 text-xs text-violet-400 font-semibold">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Next-Gen Audio Intelligence Platform</span>
-            </div>
-
-            <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight font-display leading-tight text-zinc-100">
-              Meetings end.<br />
-              <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-rose-400 bg-clip-text text-transparent">
-                The intelligence doesn't.
-              </span>
-            </h1>
-
-            <p className="text-zinc-400 text-lg sm:text-xl font-normal leading-relaxed max-w-2xl">
-              Beyond transcripts. Cue captures decisions, predicts risks, and builds your organization's memory in real-time.
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
-              <Link 
-                href="/dashboard" 
-                className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide bg-violet-600 hover:bg-violet-500 text-white cursor-pointer shadow-lg shadow-violet-600/35 transition-all text-center flex items-center justify-center gap-2 group"
-              >
-                Start Free
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-              </Link>
-              
-              <Link 
-                href="/dashboard" 
-                className="glow-border px-8 py-4 rounded-xl text-sm font-bold tracking-wide text-zinc-200 bg-zinc-900/40 hover:bg-zinc-900/80 transition-all text-center flex items-center justify-center gap-2"
-              >
-                <Play className="w-4 h-4 text-violet-400" />
-                Watch Demo
-              </Link>
-            </div>
+        <section className="relative min-h-[85vh] flex items-center justify-center pt-16 pb-20 overflow-hidden">
+          {/* STITCH WEBGL SHADER CANVAS BACKGROUND */}
+          <div className="absolute inset-0 z-0 opacity-70">
+            <canvas id="shader-canvas-ANIMATION_3" className="block w-full h-full pointer-events-none" />
           </div>
 
-          {/* Hero Right Interactive Animation Card */}
-          <div className="lg:col-span-5 flex justify-center">
-            <div className="w-full max-w-md bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-6 shadow-2xl backdrop-blur-xl relative">
-              {/* Card Glow Effect */}
-              <div className="absolute -inset-0.5 bg-gradient-to-tr from-violet-500/10 to-fuchsia-500/10 rounded-2xl blur-lg -z-10" />
-
-              {/* Soundwaves and header */}
-              <div className="flex items-center justify-between mb-8 pb-4 border-b border-zinc-800/50">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Live Recording</span>
-                </div>
-                
-                {/* Visualizer bars */}
-                <div className="flex items-end gap-1 h-5 overflow-hidden">
-                  <div className="w-1 bg-violet-400 rounded-full soundwave-bar soundwave-bar-1 h-full" />
-                  <div className="w-1 bg-violet-400 rounded-full soundwave-bar soundwave-bar-2 h-full" />
-                  <div className="w-1 bg-violet-400 rounded-full soundwave-bar soundwave-bar-3 h-full" />
-                  <div className="w-1 bg-violet-400 rounded-full soundwave-bar soundwave-bar-4 h-full" />
-                  <div className="w-1 bg-violet-400 rounded-full soundwave-bar soundwave-bar-5 h-full" />
-                </div>
+          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+            {/* Left Column */}
+            <div className="lg:col-span-7 space-y-8 text-left">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#181b25]/80 border border-[#232B45] text-xs text-[#c0c1ff] font-semibold backdrop-blur-md">
+                <Sparkles className="w-4 h-4 text-[#5de6ff]" />
+                <span>Next-Gen Audio Intelligence Platform</span>
               </div>
 
-              {/* Conversations Body */}
-              <div className="space-y-5 min-h-[180px] flex flex-col justify-start">
-                {/* Alex Message */}
-                {(stage >= 1) && (
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-sky-400">[Alex - PM]</span>
-                    </div>
-                    <p className="text-sm text-zinc-300 font-medium pl-1 leading-relaxed">
-                      {alexText}
-                      {stage === 1 && <span className="inline-block w-1.5 h-4 ml-0.5 bg-sky-400 animate-pulse" />}
-                    </p>
-                  </div>
-                )}
+              <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight font-display leading-[1.1] text-[#F8FAFC]">
+                Meetings end.<br />
+                <span className="bg-gradient-to-r from-[#c0c1ff] via-[#5de6ff] to-[#ffb0cd] bg-clip-text text-transparent">
+                  The intelligence doesn&apos;t.
+                </span>
+              </h1>
 
-                {/* Sam Message */}
-                {(stage >= 2) && (
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-fuchsia-400">[Sam - Eng]</span>
-                    </div>
-                    <p className="text-sm text-zinc-300 font-medium pl-1 leading-relaxed">
-                      {samText}
-                      {stage === 2 && <span className="inline-block w-1.5 h-4 ml-0.5 bg-fuchsia-400 animate-pulse" />}
-                    </p>
-                  </div>
-                )}
+              <p className="text-[#c7c4d7] text-lg sm:text-xl font-normal leading-relaxed max-w-2xl">
+                Beyond transcripts. Cue captures decisions, predicts risks, and builds your organization&apos;s memory in real-time.
+              </p>
 
-                {/* Processing State */}
-                {stage === 3 && (
-                  <div className="flex items-center gap-2 bg-violet-950/20 border border-violet-900/30 rounded-xl p-3 text-xs text-violet-300 font-semibold animate-pulse mt-4">
-                    <div className="w-4 h-4 border border-violet-400 border-t-transparent rounded-full animate-spin shrink-0" />
-                    <span>[Cue AI] Extracting commitments and planning risk models...</span>
-                  </div>
-                )}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
+                <Link
+                  href="/dashboard"
+                  className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide bg-[#c0c1ff] hover:bg-[#e1e0ff] text-[#1000a9] shadow-[0_0_20px_rgba(192,193,255,0.4)] transition-all text-center flex items-center justify-center gap-2 group"
+                >
+                  Start Free
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+                <Link
+                  href="/dashboard"
+                  className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide text-[#c7c4d7] bg-[#0a0e17]/70 border border-[#232B45] hover:bg-[#181b25] hover:text-[#F8FAFC] transition-all text-center flex items-center justify-center gap-2 backdrop-blur-md"
+                >
+                  <Play className="w-4 h-4 text-[#5de6ff] fill-[#5de6ff]" />
+                  Watch Demo
+                </Link>
+              </div>
+            </div>
 
-                {/* Structured Extraction Result Card */}
-                {stage === 4 && (
-                  <div className="space-y-3 bg-zinc-950/80 border border-violet-950/80 rounded-xl p-4 mt-4 shadow-inner relative overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500">
-                    <div className="absolute top-0 right-0 px-2 py-0.5 bg-violet-500/10 text-violet-400 border-l border-b border-violet-950/80 text-[9px] font-bold uppercase tracking-wider rounded-bl-lg">
-                      Extracted
+            {/* Right Column: Live Recording Card */}
+            <div className="lg:col-span-5 flex justify-center">
+              <div className="w-full max-w-md bg-[#0a0e17]/80 border border-[#232B45] rounded-2xl p-6 shadow-2xl backdrop-blur-xl relative">
+                <div className="absolute -inset-0.5 bg-gradient-to-tr from-[#c0c1ff]/20 to-[#5de6ff]/20 rounded-2xl blur-xl -z-10" />
+
+                {/* Card Header */}
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#232B45]">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#34D399] animate-live-pulse" />
+                    <span className="text-xs font-semibold uppercase tracking-wider text-[#94A3B8] font-mono">Live Recording</span>
+                  </div>
+                  <div className="flex items-end gap-1 h-5 overflow-hidden">
+                    {[1,2,3,4,5].map(i => (
+                      <div key={i} className={`w-1 bg-[#5de6ff] rounded-full soundwave-bar soundwave-bar-${i} h-full`} />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Simulated Transcript */}
+                <div className="space-y-5 min-h-[180px] flex flex-col justify-start">
+                  {stage >= 1 && (
+                    <div className="space-y-1">
+                      <span className="text-xs font-bold text-[#5de6ff] font-mono">[Alex - PM]</span>
+                      <p className="text-sm text-[#dfe2ef] font-medium pl-1 leading-relaxed">
+                        {alexText}
+                        {stage === 1 && <span className="inline-block w-1.5 h-4 ml-0.5 bg-[#5de6ff] animate-pulse" />}
+                      </p>
                     </div>
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-violet-400 flex items-center gap-1.5">
-                      <Terminal className="w-3.5 h-3.5 text-violet-400" />
-                      <span>Intelligence output</span>
+                  )}
+                  {stage >= 2 && (
+                    <div className="space-y-1">
+                      <span className="text-xs font-bold text-[#ffb0cd] font-mono">[Sam - Eng]</span>
+                      <p className="text-sm text-[#dfe2ef] font-medium pl-1 leading-relaxed">
+                        {samText}
+                        {stage === 2 && <span className="inline-block w-1.5 h-4 ml-0.5 bg-[#ffb0cd] animate-pulse" />}
+                      </p>
                     </div>
-                    
-                    {/* Items */}
-                    <div className="space-y-2 text-xs text-zinc-300">
-                      <div className="flex items-start gap-2 bg-zinc-900/50 p-2 rounded border border-zinc-800">
-                        <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
-                        <div>
-                          <span className="font-semibold text-zinc-200">Action:</span> Finalize Q3 roadmap by Friday. 
-                          <span className="text-[10px] text-zinc-400 block mt-0.5">Assignee: Alex • Due: Friday</span>
+                  )}
+                  {stage === 3 && (
+                    <div className="flex items-center gap-2 bg-[#00cbe6]/10 border border-[#5de6ff]/30 rounded-xl p-3 text-xs text-[#5de6ff] font-semibold animate-pulse mt-4">
+                      <div className="w-4 h-4 border-2 border-[#5de6ff] border-t-transparent rounded-full animate-spin shrink-0" />
+                      <span>[Cue AI] Extracting commitments and planning risk models...</span>
+                    </div>
+                  )}
+                  {stage === 4 && (
+                    <div className="space-y-3 bg-[#181b25] border border-[#232B45] rounded-xl p-4 mt-4 shadow-inner relative overflow-hidden">
+                      <div className="absolute top-0 right-0 px-2 py-0.5 bg-[#c0c1ff]/10 text-[#c0c1ff] border-l border-b border-[#232B45] text-[9px] font-bold uppercase tracking-wider rounded-bl-lg font-mono">
+                        Extracted
+                      </div>
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-[#c0c1ff] flex items-center gap-1.5 font-mono">
+                        <Terminal className="w-3.5 h-3.5 text-[#5de6ff]" />
+                        <span>Intelligence Output</span>
+                      </div>
+                      <div className="space-y-2 text-xs text-[#dfe2ef]">
+                        <div className="flex items-start gap-2 bg-[#1c1f29] p-2.5 rounded border border-[#232B45]">
+                          <span className="text-[#34D399] font-bold shrink-0 mt-0.5">✓</span>
+                          <div>
+                            <span className="font-semibold text-[#F8FAFC]">Action:</span> Finalize Q3 roadmap by Friday.
+                            <span className="text-[10px] text-[#94A3B8] block mt-0.5 font-mono">Assignee: Alex • Due: Friday</span>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2 bg-[#1c1f29] p-2.5 rounded border border-[#232B45]">
+                          <span className="text-[#ffb4ab] font-bold shrink-0 mt-0.5">⚠</span>
+                          <div>
+                            <span className="font-semibold text-[#F8FAFC]">Risk:</span> Dashboard completion delay due to API refactor.
+                            <span className="text-[10px] text-[#94A3B8] block mt-0.5 font-mono">Mitigation: Schedule dashboard MVP checkpoint</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-start gap-2 bg-zinc-900/50 p-2 rounded border border-zinc-800">
-                        <span className="text-amber-400 font-bold shrink-0 mt-0.5">⚠</span>
-                        <div>
-                          <span className="font-semibold text-zinc-200">Risk:</span> Dashboard completion delay due to API refactor.
-                          <span className="text-[10px] text-zinc-400 block mt-0.5">Mitigation: Schedule dashboard MVP checkpoint</span>
-                        </div>
-                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Arrow Down indicator */}
+        {/* Scroll Indicator */}
         <div className="flex justify-center pb-8 animate-bounce">
-          <ChevronDown className="w-6 h-6 text-zinc-600" />
+          <ChevronDown className="w-6 h-6 text-[#94A3B8]" />
         </div>
 
-        {/* Infinite Scrolling Pill Ticker */}
-        <section className="border-y border-zinc-900 bg-zinc-950/40 py-6 overflow-hidden relative">
-          {/* Gradient Overlays for smooth fading edges */}
-          <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-zinc-950 to-transparent pointer-events-none z-10" />
-          <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-zinc-950 to-transparent pointer-events-none z-10" />
-          
+        {/* Infinite Ticker */}
+        <section className="border-y border-[#232B45] bg-[#0a0e17]/60 py-6 overflow-hidden relative">
+          <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-[#0f131c] to-transparent pointer-events-none z-10" />
+          <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-[#0f131c] to-transparent pointer-events-none z-10" />
           <div className="animate-ticker gap-6">
             {tickerItems.map((item, i) => (
-              <div 
-                key={i} 
-                className="px-5 py-2 rounded-full bg-zinc-900/60 border border-zinc-800/80 text-zinc-300 text-xs font-semibold tracking-wide flex items-center gap-2 whitespace-nowrap"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+              <div key={i} className="px-5 py-2.5 rounded-full bg-[#181b25] border border-[#232B45] text-[#c7c4d7] text-xs font-semibold tracking-wide flex items-center gap-2.5 whitespace-nowrap shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#ffb0cd]" />
                 {item}
               </div>
             ))}
@@ -294,52 +348,48 @@ export default function LandingPage() {
         </section>
       </main>
 
-      {/* Ready to Upgrade CTA Section */}
-      <section className="border-t border-zinc-900 py-24 bg-zinc-950/30 relative">
+      {/* CTA Section */}
+      <section className="border-t border-[#232B45] py-24 bg-[#0a0e17]/50 relative">
         <div className="max-w-4xl mx-auto px-4 text-center space-y-8">
-          <h2 className="text-4xl font-extrabold font-display text-zinc-100 tracking-tight leading-tight">
-            Ready to upgrade your organization's memory?
+          <h2 className="text-4xl font-extrabold font-display text-[#F8FAFC] tracking-tight">
+            Ready to upgrade your organization&apos;s memory?
           </h2>
-          
-          <p className="text-zinc-400 text-base max-w-xl mx-auto leading-relaxed">
+          <p className="text-[#94A3B8] text-base max-w-xl mx-auto leading-relaxed">
             Join forward-thinking teams using Cue to turn conversations into actionable intelligence.
           </p>
-          
           <div className="pt-2">
-            <Link 
+            <Link
               href="/dashboard"
-              className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide bg-violet-600 hover:bg-violet-500 text-white cursor-pointer shadow-lg shadow-violet-600/35 hover:shadow-violet-600/50 transition-all inline-flex items-center gap-2"
+              className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide bg-[#c0c1ff] hover:bg-[#e1e0ff] text-[#1000a9] shadow-[0_0_20px_rgba(192,193,255,0.4)] transition-all inline-flex items-center gap-2"
             >
               Get Started Now
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-zinc-900 bg-zinc-950 py-12 text-sm text-zinc-500 mt-auto">
+      <footer className="border-t border-[#232B45] bg-[#0a0e17] py-12 text-sm text-[#94A3B8] mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2 text-center md:text-left">
-            <div className="flex items-center justify-center md:justify-start gap-2">
-              <div className="w-5 h-5 rounded-md bg-gradient-to-tr from-violet-600 to-fuchsia-500 flex items-center justify-center">
-                <span className="text-white font-extrabold text-[10px]">C</span>
+            <div className="flex items-center justify-center md:justify-start gap-2.5">
+              <div className="w-6 h-6 rounded bg-[#c0c1ff] flex items-center justify-center text-[#1000a9]">
+                <span className="material-symbols-outlined font-bold text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>hub</span>
               </div>
-              <span className="font-bold text-zinc-300 font-display">Cue Intelligence</span>
+              <span className="font-bold text-[#dfe2ef] font-display">Cue Intelligence</span>
             </div>
-            <p className="text-xs text-zinc-600">
+            <p className="text-xs text-[#94A3B8]/60">
               © {new Date().getFullYear()} Cue Intelligence. All rights reserved.
             </p>
           </div>
-
           <div className="flex flex-wrap items-center justify-center gap-8 text-xs font-medium">
-            <a href="#" className="hover:text-zinc-300 transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-zinc-300 transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-zinc-300 transition-colors">Security</a>
+            <a href="#" className="hover:text-[#c0c1ff] transition-colors">Privacy Policy</a>
+            <a href="#" className="hover:text-[#c0c1ff] transition-colors">Terms of Service</a>
+            <a href="#" className="hover:text-[#c0c1ff] transition-colors">Security</a>
           </div>
-
-          {/* System status tag */}
-          <div className="px-3 py-1.5 rounded-full bg-zinc-900/60 border border-zinc-800/80 flex items-center gap-2 text-xs font-semibold text-zinc-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <div className="px-3.5 py-1.5 rounded-full bg-[#181b25] border border-[#232B45] flex items-center gap-2 text-xs font-semibold text-[#94A3B8]">
+            <span className="w-2 h-2 rounded-full bg-[#34D399] animate-live-pulse" />
             System Status: Live
           </div>
         </div>
@@ -347,3 +397,4 @@ export default function LandingPage() {
     </div>
   );
 }
+
