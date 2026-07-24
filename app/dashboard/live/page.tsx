@@ -1,8 +1,6 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import gsap from 'gsap';
-import { useGSAP } from '@gsap/react';
 import {
   CheckSquare, ChevronRight, Copy, Link2, Mic, MicOff,
   PhoneOff, Sparkles, Users, Video, AlertTriangle, Lightbulb,
@@ -56,41 +54,9 @@ export default function LiveMeetingPage() {
   const containerRef   = useRef<HTMLDivElement>(null);
   const prevTranscriptCountRef = useRef(0);
 
-  // GSAP Animations with prefers-reduced-motion support
-  useGSAP(() => {
-    const mm = gsap.matchMedia();
-
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
-      // 2. LIVE STATUS DOTS Pulsing
-      const dots = containerRef.current?.querySelectorAll('.live-status-dot');
-      if (dots && dots.length > 0) {
-        gsap.to(dots, {
-          opacity: 0.4,
-          repeat: -1,
-          yoyo: true,
-          duration: 1.2,
-          ease: 'sine.inOut',
-        });
-      }
-    });
-
-    return () => mm.revert();
-  }, { scope: containerRef });
-
-  // 3. Animate newly added transcript entries
+  // Auto scroll to bottom when transcript updates
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
     if (transcript.length > prevTranscriptCountRef.current) {
-      const latestIndex = transcript.length - 1;
-      const activeLine = containerRef.current?.querySelector(`.transcript-line-${latestIndex}`);
-      if (activeLine) {
-        gsap.fromTo(
-          activeLine,
-          { y: 20, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' }
-        );
-      }
       prevTranscriptCountRef.current = transcript.length;
     }
   }, [transcript]);

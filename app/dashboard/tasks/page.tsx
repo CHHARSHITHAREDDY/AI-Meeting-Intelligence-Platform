@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import gsap from 'gsap';
-import { useGSAP } from '@gsap/react';
 import { 
   Square, 
   CheckSquare2, 
@@ -37,34 +35,6 @@ export default function TasksPage() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const statsRef = useRef<HTMLDivElement>(null);
-
-  useGSAP(() => {
-    const mm = gsap.matchMedia();
-
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
-      const counters = statsRef.current?.querySelectorAll('.task-stat-counter');
-      counters?.forEach((counter) => {
-        const targetVal = parseFloat(counter.getAttribute('data-target') || '0');
-        const obj = { val: 0 };
-
-        gsap.to(obj, {
-          val: targetVal,
-          duration: 1.5,
-          ease: 'power1.out',
-          scrollTrigger: {
-            trigger: counter,
-            start: 'top 80%',
-            once: true,
-          },
-          onUpdate: () => {
-            counter.textContent = `${Math.round(obj.val)}`;
-          },
-        });
-      });
-    });
-
-    return () => mm.revert();
-  }, { scope: statsRef, dependencies: [tasks] });
 
   const fetchTasksAndMeetings = async () => {
     try {

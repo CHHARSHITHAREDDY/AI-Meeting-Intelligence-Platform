@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import gsap from 'gsap';
-import { useGSAP } from '@gsap/react';
 import { 
   ArrowRight, 
   Play, 
@@ -32,58 +30,8 @@ export default function LandingPage() {
       .catch(() => setUser(null));
   }, []);
 
-  // GSAP Animations with prefers-reduced-motion support
-  useGSAP(() => {
-    const mm = gsap.matchMedia();
-
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
-      // 1. Hero Aurora Background Loop
-      if (auroraRef.current) {
-        gsap.to(auroraRef.current, {
-          x: 40,
-          y: -30,
-          scale: 1.15,
-          rotation: 5,
-          duration: 18,
-          repeat: -1,
-          yoyo: true,
-          ease: 'sine.inOut',
-        });
-      }
-
-      // 6. Marquee Ticker Loop
-      if (tickerRef.current) {
-        gsap.to(tickerRef.current, {
-          xPercent: -50,
-          repeat: -1,
-          ease: 'none',
-          duration: 30,
-        });
-      }
-    });
-
-    return () => mm.revert();
-  }, { scope: containerRef });
-
-  const handleCtaMouseEnter = (e: React.MouseEvent<HTMLElement>) => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    gsap.to(e.currentTarget, {
-      scale: 1.03,
-      boxShadow: '0 0 30px rgba(192, 193, 255, 0.7)',
-      duration: 0.2,
-      ease: 'power2.out',
-    });
-  };
-
-  const handleCtaMouseLeave = (e: React.MouseEvent<HTMLElement>) => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    gsap.to(e.currentTarget, {
-      scale: 1,
-      boxShadow: '0 0 20px rgba(192, 193, 255, 0.4)',
-      duration: 0.2,
-      ease: 'power2.out',
-    });
-  };
+  const handleCtaMouseEnter = (e: React.MouseEvent<HTMLElement>) => {};
+  const handleCtaMouseLeave = (e: React.MouseEvent<HTMLElement>) => {};
 
   // WebGL Shader Animation Effect (STITCH Shader ANIMATION_3)
   useEffect(() => {

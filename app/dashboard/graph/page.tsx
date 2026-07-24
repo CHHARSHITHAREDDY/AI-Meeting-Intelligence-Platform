@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import gsap from 'gsap';
-import { useGSAP } from '@gsap/react';
 import { 
   Network, 
   HelpCircle, 
@@ -42,29 +40,6 @@ export default function KnowledgeGraphPage() {
   const [links, setLinks] = useState<GraphLink[]>([]);
   const [loading, setLoading] = useState(true);
   const graphSvgRef = useRef<SVGSVGElement>(null);
-
-  useGSAP(() => {
-    if (loading || nodes.length === 0 || !graphSvgRef.current) return;
-
-    const mm = gsap.matchMedia();
-
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
-      const graphNodes = gsap.utils.toArray<SVGElement>('.graph-node');
-      if (graphNodes.length > 0) {
-        gsap.to(graphNodes, {
-          scale: 1.05,
-          repeat: -1,
-          yoyo: true,
-          duration: 1.5,
-          ease: 'sine.inOut',
-          stagger: 0.15,
-          transformOrigin: 'center center',
-        });
-      }
-    });
-
-    return () => mm.revert();
-  }, { scope: graphSvgRef, dependencies: [nodes, loading] });
 
   useEffect(() => {
     const generateGraph = async () => {

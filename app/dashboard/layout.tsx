@@ -3,8 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import gsap from 'gsap';
-import { useGSAP } from '@gsap/react';
 
 export default function DashboardLayout({
   children,
@@ -16,23 +14,6 @@ export default function DashboardLayout({
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
-
-  useGSAP(() => {
-    const mm = gsap.matchMedia();
-
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
-      const activeElement = navContainerRef.current?.querySelector('.nav-active-item');
-      if (activeElement) {
-        gsap.fromTo(
-          activeElement,
-          { backgroundColor: 'rgba(99, 102, 241, 0.02)', borderLeftWidth: '0px', opacity: 0.8 },
-          { backgroundColor: 'rgba(99, 102, 241, 0.1)', borderLeftWidth: '4px', opacity: 1, duration: 0.2, ease: 'power2.out' }
-        );
-      }
-    });
-
-    return () => mm.revert();
-  }, { scope: navContainerRef, dependencies: [pathname] });
 
   useEffect(() => {
     fetch('/api/auth/me')

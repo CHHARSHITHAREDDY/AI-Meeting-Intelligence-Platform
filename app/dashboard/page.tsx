@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import gsap from 'gsap';
-import { useGSAP } from '@gsap/react';
 import { 
   UploadCloud, 
   Search, 
@@ -31,35 +29,6 @@ export default function HomePage() {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const statsContainerRef = useRef<HTMLDivElement>(null);
-
-  useGSAP(() => {
-    const mm = gsap.matchMedia();
-
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
-      const counters = statsContainerRef.current?.querySelectorAll('.stat-counter');
-      counters?.forEach((counter) => {
-        const targetVal = parseFloat(counter.getAttribute('data-target') || '0');
-        const suffix = counter.getAttribute('data-suffix') || '';
-        const obj = { val: 0 };
-
-        gsap.to(obj, {
-          val: targetVal,
-          duration: 1.5,
-          ease: 'power1.out',
-          scrollTrigger: {
-            trigger: counter,
-            start: 'top 80%',
-            once: true,
-          },
-          onUpdate: () => {
-            counter.textContent = `${Math.round(obj.val)}${suffix}`;
-          },
-        });
-      });
-    });
-
-    return () => mm.revert();
-  }, { scope: statsContainerRef, dependencies: [meetings] });
 
   const fetchMeetings = async () => {
     try {
