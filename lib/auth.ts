@@ -36,7 +36,7 @@ export function signToken(payload: any): string {
   const body = base64urlEncode(Buffer.from(JSON.stringify({
     ...payload,
     iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60) // 7 days expiry
+    exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours expiry
   })));
   const signature = base64urlEncode(crypto.createHmac('sha256', JWT_SECRET).update(`${header}.${body}`).digest());
   return `${header}.${body}.${signature}`;

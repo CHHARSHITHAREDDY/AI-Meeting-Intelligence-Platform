@@ -22,6 +22,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [link, setLink] = useState('');
   const [title, setTitle] = useState('');
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'transcribing' | 'extracting' | 'done' | 'failed'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -77,6 +78,7 @@ export default function HomePage() {
         droppedFile.name.endsWith('.mp4')
       ) {
         setFile(droppedFile);
+        setLink(''); // Clear link
         if (!title) setTitle(droppedFile.name.replace(/\.[^/.]+$/, ""));
       } else {
         alert("Please upload an audio or video file (.mp3, .wav, .m4a, .mp4)");
@@ -88,18 +90,25 @@ export default function HomePage() {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
+      setLink(''); // Clear link
       if (!title) setTitle(selectedFile.name.replace(/\.[^/.]+$/, ""));
     }
   };
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) return;
-
+    if (!file && !link) return;
+ 
     setUploadStatus('uploading'); setErrorMessage('');
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('title', title || file.name.replace(/\.[^/.]+$/, ""));
+    if (file) {
+      formData.append('file', file);
+    }
+    if (link) {
+      formData.append('link', link);
+    }
+    formData.append('title', title || (file ? file.name.replace(/\.[^/.]+$/, "") : "Link Sync Analysis"));
+    
     let progressTimer: NodeJS.Timeout;
     const isMock = !process.env.NEXT_PUBLIC_OPENAI_API_KEY && !process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY;
     if (isMock) {
@@ -112,12 +121,12 @@ export default function HomePage() {
       const response = await fetch('/api/upload', { method: 'POST', body: formData });
       clearTimeout(progressTimer!);
       if (response.ok) {
-        setUploadStatus('done'); setFile(null); setTitle('');
+        setUploadStatus('done'); setFile(null); setLink(''); setTitle('');
         fetchMeetings();
         setTimeout(() => setUploadStatus('idle'), 2000);
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to process file');
+        throw new Error(errorData.error || 'Failed to process file or link');
       }
     } catch (error: any) {
       console.error(error);
@@ -224,7 +233,29 @@ export default function HomePage() {
                   </div>
                 )}
               </div>
-
+ 
+              {/* Separator */}
+              <div className="flex items-center text-center my-3.5">
+                <div className="flex-grow border-t border-[#232B45]"></div>
+                <span className="flex-shrink mx-3 text-[10px] uppercase tracking-wider text-[#94A3B8] font-mono">Or paste a link</span>
+                <div className="flex-grow border-t border-[#232B45]"></div>
+              </div>
+ 
+              {/* Link Input */}
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-[0.15em] text-[#94A3B8] mb-1.5 font-mono">
+                  YouTube Video or Audio/Video URL
+                </label>
+                <input
+                  type="text" value={link} onChange={(e) => {
+                    setLink(e.target.value);
+                    if (e.target.value) setFile(null); // Clear file selection if link is pasted
+                  }}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  className="w-full bg-[#0a0e17]/60 border border-[#232B45] rounded-lg px-4 py-3 text-sm text-[#dfe2ef] placeholder-[#464554] focus:outline-none focus:border-[#5de6ff]/40 transition"
+                />
+              </div>
+ 
               <div>
                 <label className="block text-[10px] font-semibold uppercase tracking-[0.15em] text-[#94A3B8] mb-1.5 font-mono">Meeting Title (Optional)</label>
                 <input
@@ -233,11 +264,11 @@ export default function HomePage() {
                   className="w-full bg-[#0a0e17]/60 border border-[#232B45] rounded-lg px-4 py-3 text-sm text-[#dfe2ef] placeholder-[#464554] focus:outline-none focus:border-[#5de6ff]/40 transition"
                 />
               </div>
-
+ 
               {uploadStatus === 'idle' ? (
-                <button type="submit" disabled={!file}
+                <button type="submit" disabled={!file && !link}
                   className={`w-full py-3 px-4 rounded-lg text-sm font-bold tracking-wide transition flex items-center justify-center gap-2 ${
-                    file ? 'bg-[#8083ff] hover:bg-[#c0c1ff] hover:text-[#0a0e17] text-white cursor-pointer shadow-lg shadow-[#8083ff]/20' : 'bg-[#1c1f29] text-[#464554] cursor-not-allowed border border-[#232B45]'
+                    file || link ? 'bg-[#8083ff] hover:bg-[#c0c1ff] hover:text-[#0a0e17] text-white cursor-pointer shadow-lg shadow-[#8083ff]/20' : 'bg-[#1c1f29] text-[#464554] cursor-not-allowed border border-[#232B45]'
                   }`}
                 >
                   Generate Intelligence

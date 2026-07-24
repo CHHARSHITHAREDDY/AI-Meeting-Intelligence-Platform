@@ -34,6 +34,10 @@ You must respond with ONLY a valid, parseable JSON object matching this schema:
       "impact": "low" | "medium" | "high",
       "mitigation": "How the risk will be mitigated or resolved."
     }
+  ],
+  "notes": [
+    "Important takeaway or callout from the meeting.",
+    "Specific deadline mentioned during the meeting."
   ]
 }
 
@@ -140,9 +144,14 @@ Ensure all JSON keys and values are properly formatted. Do not include any text 
                   },
                   required: ['risk', 'impact', 'mitigation']
                 }
+              },
+              notes: {
+                type: 'array',
+                description: 'List of important key notes, warnings, guidelines, or deadlines mentioned.',
+                items: { type: 'string' }
               }
             },
-            required: ['summary', 'decisions', 'actionItems', 'risks']
+            required: ['summary', 'decisions', 'actionItems', 'risks', 'notes']
           }
         }
       };
@@ -215,7 +224,8 @@ Ensure all JSON keys and values are properly formatted. Do not include any text 
             risk: r.risk,
             impact: r.impact || 'medium',
             mitigation: r.mitigation || 'Monitor closely.'
-          }))
+          })),
+          notes: extractResult.notes || []
         };
         return parsed;
       }
@@ -274,7 +284,13 @@ Ensure all JSON keys and values are properly formatted. Do not include any text 
       } else {
         parsed.risks = [];
       }
-
+ 
+      if (parsed.notes) {
+        parsed.notes = parsed.notes.map(n => typeof n === 'string' ? n : JSON.stringify(n));
+      } else {
+        parsed.notes = [];
+      }
+ 
       return parsed;
     } catch (err) {
       console.error('[Extract Insights] Anthropic fallback failed:', err);
@@ -350,6 +366,12 @@ function localHeuristicParser(transcript: string): MeetingAnalysis {
           impact: "high",
           mitigation: "Schedule the migration window during low-traffic periods (Sunday 2 AM) with automated rollbacks."
         }
+      ],
+      notes: [
+        "Infrastructure scaling roadmap aligned for Q4.",
+        "Security audit is actively reviewing IAM roles.",
+        "Migration to short-lived session tokens scheduled for October 10th.",
+        "Alex to setup replica by October 15th."
       ]
     };
   }
@@ -481,10 +503,26 @@ function localHeuristicParser(transcript: string): MeetingAnalysis {
     });
   }
 
+  const notes: string[] = [];
+  const noteKeywords = ['deadline', 'important', 'note', 'remind', 'remember', 'by ', 'before ', 'critical', 'milestone', 'launch', 'schedule'];
+  
+  lines.forEach((line) => {
+    const textClean = cleanLine(line);
+    const hasKeyword = noteKeywords.some(kw => textClean.toLowerCase().includes(kw));
+    if (hasKeyword && notes.length < 5) {
+      notes.push(textClean);
+    }
+  });
+
+  if (notes.length === 0) {
+    notes.push("Aligned on team deliverables and milestones.");
+  }
+
   return {
     summary,
     decisions,
     actionItems,
-    risks
+    risks,
+    notes
   };
 }
