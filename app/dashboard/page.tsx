@@ -182,12 +182,11 @@ export default function HomePage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 stagger-children">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 stagger-children">
         {[
           { label: 'Processed', value: totalMeetings, sub: 'Total sync documents', icon: <Volume2 className="w-5 h-5" />, color: '#c0c1ff', bg: 'rgba(192,193,255,0.08)' },
           { label: 'Action Completion', value: `${totalActionItems > 0 ? Math.round((completedActionItems / totalActionItems) * 100) : 0}%`, sub: `${completedActionItems} / ${totalActionItems} tasks done`, icon: <CheckSquare className="w-5 h-5" />, color: '#34D399', bg: 'rgba(52,211,153,0.08)' },
           { label: 'Critical Risks', value: highRisksCount, sub: 'Requiring direct mitigation', icon: <AlertTriangle className="w-5 h-5" />, color: '#ffb4ab', bg: 'rgba(255,180,171,0.08)' },
-          { label: 'Engine Mode', value: 'Hybrid AI', sub: 'Whisper-1 + Claude 3.5', icon: <Activity className="w-5 h-5" />, color: '#f751a1', bg: 'rgba(247,81,161,0.08)' },
         ].map((stat) => (
           <div key={stat.label} className="glass-card p-5 flex items-center justify-between">
             <div>
