@@ -64,3 +64,19 @@ npm run dev
 ```
 
 Navigate to [http://localhost:3000](http://localhost:3000) to view your new workspace. The app is pre-seeded with a sample meeting so you can test all features instantly!
+
+---
+
+## 🧩 Chrome Extension (Manifest V3) Setup
+
+Anyone who pulls this repository can load and use the included Chrome Extension locally in 3 simple steps:
+
+1. **Start the local server**: Ensure `npm run dev` is running on `http://localhost:3000`.
+2. **Open Extensions in Browser**: Go to `chrome://extensions/` (or `edge://extensions/` / `brave://extensions/`).
+3. **Load Unpacked Extension**:
+   - Turn **Developer mode** **ON** (top-right toggle).
+   - Click **Load unpacked** (top-left button).
+   - Select the `extension/` folder inside this repository (`/extension`).
+
+Click the extension icon in your browser toolbar to launch the **Side Panel Meeting Assistant** alongside any Google Meet, Zoom, or YouTube tab!
+
