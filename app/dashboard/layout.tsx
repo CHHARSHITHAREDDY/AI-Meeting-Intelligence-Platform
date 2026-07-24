@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -15,7 +15,8 @@ import {
   HelpCircle, 
   User, 
   Bell,
-  Info
+  Info,
+  X
 } from 'lucide-react';
 
 
@@ -25,6 +26,20 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authTab, setAuthTab] = useState<'signin' | 'signup'>('signin');
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+
+  const handleAuthSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setUser({
+      name: 'Sarah Chen',
+      email: 'sarah@company.com'
+    });
+    setIsAuthModalOpen(false);
+  };
 
   const navItems = [
     { name: 'Live Meeting', href: '/dashboard/live', icon: Video },
@@ -155,7 +170,15 @@ export default function DashboardLayout({
             </div>
 
             {/* Profile Icons */}
-            <div className="flex items-center space-x-4 text-zinc-400">
+            <div className="flex items-center space-x-4 text-zinc-400 relative">
+              {/* Dropdown Overlay Backdrop */}
+              {isDropdownOpen && (
+                <div 
+                  className="fixed inset-0 z-40 cursor-default" 
+                  onClick={() => setIsDropdownOpen(false)}
+                />
+              )}
+
               <button className="hover:text-violet-400 transition-all relative p-1 rounded-lg hover:bg-zinc-900">
                 <Bell className="w-4.5 h-4.5" />
                 <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-[#f751a1] rounded-full"></span>
@@ -163,9 +186,64 @@ export default function DashboardLayout({
               <button className="hover:text-violet-400 transition-all p-1 rounded-lg hover:bg-zinc-900">
                 <HelpCircle className="w-4.5 h-4.5" />
               </button>
-              <div className="w-7 h-7 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center hover:border-violet-500/40 transition cursor-pointer">
-                <User className="w-4 h-4 text-violet-400" />
+              
+              {/* Profile Avatar / Trigger */}
+              <div 
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="w-7 h-7 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center hover:border-violet-500/40 transition cursor-pointer relative z-50"
+              >
+                {user ? (
+                  <span className="text-[10px] font-bold text-violet-400">SC</span>
+                ) : (
+                  <User className="w-4 h-4 text-violet-400" />
+                )}
               </div>
+
+              {/* Dropdown Menu */}
+              {isDropdownOpen && (
+                <div className="absolute right-0 top-9 w-56 rounded-xl bg-zinc-950/95 border border-zinc-800 shadow-2xl backdrop-blur-md p-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  {user ? (
+                    <>
+                      <div className="px-3 py-2 border-b border-zinc-900 mb-2">
+                        <p className="text-xs font-bold text-white truncate">{user.name}</p>
+                        <p className="text-[10px] text-zinc-500 truncate">{user.email}</p>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setUser(null);
+                          setIsDropdownOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-xs font-semibold text-rose-450 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                      >
+                        Sign Out
+                      </button>
+                    </>
+                  ) : (
+                    <div className="space-y-1.5 p-1">
+                      <button 
+                        onClick={() => {
+                          setAuthTab('signin');
+                          setIsAuthModalOpen(true);
+                          setIsDropdownOpen(false);
+                        }}
+                        className="w-full text-center py-2 text-xs font-bold bg-violet-600 hover:bg-violet-500 text-white rounded-lg transition shadow-md shadow-violet-600/20 cursor-pointer"
+                      >
+                        Sign In
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setAuthTab('signup');
+                          setIsAuthModalOpen(true);
+                          setIsDropdownOpen(false);
+                        }}
+                        className="w-full text-center py-2 text-xs font-bold bg-zinc-900 hover:bg-zinc-850 text-zinc-300 border border-zinc-800 rounded-lg transition cursor-pointer"
+                      >
+                        Sign Up
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -175,6 +253,121 @@ export default function DashboardLayout({
           {children}
         </main>
       </div>
+
+      {/* Authentication Modal */}
+      {isAuthModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          {/* Modal Card */}
+          <div className="w-full max-w-sm glow-card border border-zinc-800 p-6 flex flex-col gap-6 relative shadow-2xl bg-zinc-950 animate-in zoom-in-95 duration-200">
+            
+            {/* Close Button */}
+            <button 
+              onClick={() => setIsAuthModalOpen(false)}
+              className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-300 transition-colors p-1 hover:bg-zinc-900 rounded-lg cursor-pointer"
+            >
+              <X className="w-4.5 h-4.5" />
+            </button>
+
+            {/* Modal Header / Tabs */}
+            <div className="flex border-b border-zinc-900 pb-1 mt-2">
+              <button 
+                onClick={() => setAuthTab('signin')}
+                className={`flex-1 pb-3 text-sm font-bold border-b-2 transition cursor-pointer ${
+                  authTab === 'signin' 
+                    ? 'border-violet-500 text-violet-400' 
+                    : 'border-transparent text-zinc-500 hover:text-zinc-350'
+                }`}
+              >
+                Sign In
+              </button>
+              <button 
+                onClick={() => setAuthTab('signup')}
+                className={`flex-1 pb-3 text-sm font-bold border-b-2 transition cursor-pointer ${
+                  authTab === 'signup' 
+                    ? 'border-violet-500 text-violet-400' 
+                    : 'border-transparent text-zinc-500 hover:text-zinc-350'
+                }`}
+              >
+                Sign Up
+              </button>
+            </div>
+
+            {/* Auth Forms */}
+            <form onSubmit={handleAuthSubmit} className="space-y-4">
+              {authTab === 'signup' && (
+                <div>
+                  <label className="block text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1.5">Full Name</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="Sarah Chen"
+                    className="w-full bg-zinc-950/60 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-100 placeholder-zinc-650 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition"
+                  />
+                </div>
+              )}
+              
+              <div>
+                <label className="block text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1.5">Email Address</label>
+                <input 
+                  type="email" 
+                  required
+                  placeholder="sarah@company.com"
+                  className="w-full bg-zinc-950/60 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-100 placeholder-zinc-650 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono uppercase tracking-wider text-zinc-550 mb-1.5">Password</label>
+                <input 
+                  type="password" 
+                  required
+                  placeholder="••••••••"
+                  className="w-full bg-zinc-950/60 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-100 placeholder-zinc-650 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition"
+                />
+              </div>
+
+              <button 
+                type="submit"
+                className="w-full py-3 px-4 rounded-xl text-xs font-bold uppercase tracking-wider bg-violet-600 hover:bg-violet-500 text-white cursor-pointer shadow-lg shadow-violet-600/25 transition flex items-center justify-center gap-2 mt-2"
+              >
+                {authTab === 'signin' ? 'Continue' : 'Create Account'}
+              </button>
+            </form>
+
+            {/* Social Sign In */}
+            <div className="space-y-3">
+              <div className="relative flex py-1 items-center">
+                <div className="flex-grow border-t border-zinc-900"></div>
+                <span className="flex-shrink mx-4 text-[9px] font-mono uppercase tracking-widest text-zinc-650">Or continue with</span>
+                <div className="flex-grow border-t border-zinc-900"></div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setUser({ name: 'Sarah Chen', email: 'sarah@company.com' });
+                    setIsAuthModalOpen(false);
+                  }}
+                  className="py-2.5 px-4 bg-zinc-950 border border-zinc-850 hover:border-zinc-700 rounded-xl text-[10px] font-semibold text-zinc-300 hover:text-white transition flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  Google
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setUser({ name: 'Sarah Chen', email: 'sarah@company.com' });
+                    setIsAuthModalOpen(false);
+                  }}
+                  className="py-2.5 px-4 bg-zinc-950 border border-zinc-850 hover:border-zinc-700 rounded-xl text-[10px] font-semibold text-zinc-300 hover:text-white transition flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  GitHub
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
