@@ -1,0 +1,71 @@
+[
+  {
+    "id": "demo-q3-product-launch",
+    "title": "Q3 Product Launch Alignment Sync",
+    "date": "2026-07-20T14:00:00.000Z",
+    "duration": "18m 42s",
+    "transcript": "[00:05] Sarah (PM): Hey everyone, let's kick off our alignment sync for the Q3 Product Launch. We've got a lot of ground to cover, especially around our launch date, pricing adjustments, and marketing strategy.\n[00:45] David (Engineering): Sounds good. On the engineering front, the core database migration is complete. However, we're currently seeing some performance latency spikes when loading the user dashboard with high concurrent users.\n[01:15] Sarah (PM): That dashboard latency is a concern. We need a smooth experience for launch day. What's the timeline to fix it?\n[01:30] David (Engineering): We can optimize the SQL queries and add a Redis caching layer. I'll need about 4 days to get that fully tested and deployed. Let's aim to have query optimization done by Friday.\n[02:10] Sarah (PM): Great. Let's make that a critical action item. Now, about the launch date. We were originally aiming for August 15th, but Marketing mentioned they need more prep time for the press releases.\n[02:40] Elena (Marketing): Yes, we need at least an extra week to sync with our external PR agency and lock in the embargo dates. I strongly propose moving the public launch date to August 22nd.\n[03:10] Sarah (PM): August 22nd works. Let's officially agree on moving the public launch to August 22nd. Elena, can you update the master go-to-market calendar with the new target date?\n[03:35] Elena (Marketing): Absolutely, I'll update it by Wednesday.\n[04:00] Sarah (PM): Perfect. Next up, pricing. We've been debating the pricing model for the Enterprise tier. Have we made a decision?\n[04:30] Sarah (PM): Yes, after looking at the competitor analysis, we will price the Enterprise tier at $499 per month, billed annually. This keeps us competitive while maximizing our margin. I will take ownership of finalizing the official pricing page copy.\n[05:15] Elena (Marketing): Sounds reasonable. I'll make sure the copy matches our collateral. Speaking of collateral, we also need to draft the landing page copy. I can take that on.\n[05:45] Sarah (PM): Awesome. Let's target next Tuesday for the landing page copy draft. One final thing—what risks are we tracking? David, you mentioned the dashboard latency. Any other security or infra concerns?\n[06:10] David (Engineering): There is a minor risk of data sync delays if the legacy API goes down during the transition period. We should set up a read-only replica fallback to mitigate this.\n[06:40] Sarah (PM): Excellent idea. Let's document that. Okay, to wrap up: launch is August 22nd, Enterprise pricing is $499/mo, SQL optimizations are underway, and PR calendar updates are scheduled. Thanks team!",
+    "status": "completed",
+    "analysis": {
+      "summary": "The team aligned on key details for the Q3 Product Launch. The public launch date was officially postponed by one week to August 22nd to allow Marketing sufficient PR preparation time. The Enterprise pricing tier was locked in at $499/month, billed annually. Engineering reported dashboard latency spikes, prompting an immediate query optimization plan. Risks identified include dashboard performance bottlenecks and legacy API instability during transition, with clear mitigation paths established.",
+      "decisions": [
+        {
+          "id": "dec-1",
+          "decision": "Shift the public launch date from August 15th to August 22nd.",
+          "decider": "Sarah (PM) & Elena (Marketing)",
+          "context": "Marketing requested an extra week to align with the PR agency and secure publication embargos."
+        },
+        {
+          "id": "dec-2",
+          "decision": "Price the Enterprise tier at $499 per month, billed annually.",
+          "decider": "Sarah (PM)",
+          "context": "Competitor analysis indicates this pricing preserves margins while remaining attractive to target clients."
+        }
+      ],
+      "actionItems": [
+        {
+          "id": "act-1",
+          "task": "Optimize SQL queries and implement Redis caching to resolve dashboard latency spikes.",
+          "assignee": "David (Engineering)",
+          "dueDate": "2026-07-24",
+          "status": "pending"
+        },
+        {
+          "id": "act-2",
+          "task": "Update the master Go-To-Market calendar with the new August 22nd launch date.",
+          "assignee": "Elena (Marketing)",
+          "dueDate": "2026-07-22",
+          "status": "completed"
+        },
+        {
+          "id": "act-3",
+          "task": "Draft initial landing page copy for the new pricing tiers.",
+          "assignee": "Elena (Marketing)",
+          "dueDate": "2026-07-28",
+          "status": "pending"
+        },
+        {
+          "id": "act-4",
+          "task": "Finalize pricing sheet documentation and website copy.",
+          "assignee": "Sarah (PM)",
+          "dueDate": "2026-07-25",
+          "status": "pending"
+        }
+      ],
+      "risks": [
+        {
+          "id": "risk-1",
+          "risk": "Dashboard latency spikes under high concurrent user load on launch day.",
+          "impact": "high",
+          "mitigation": "Optimize slow database queries and add a Redis cache layer for popular endpoints."
+        },
+        {
+          "id": "risk-2",
+          "risk": "Legacy API instability causing sync delays during migration.",
+          "impact": "medium",
+          "mitigation": "Configure a read-only database replica fallback to ensure continuous data availability."
+        }
+      ]
+    }
+  }
+]
