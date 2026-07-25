@@ -4,6 +4,7 @@ import { extractMeetingInsights, extractLectureInsights, extractCodingInsights, 
 import { classifyContentType, ContentType } from '@/lib/classify';
 import { saveMeeting, Meeting, MeetingAnalysis } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
+import { regenerateProjectIntelligence } from '@/lib/projectIntelligence';
 // @ts-ignore
 import { YoutubeTranscript } from 'youtube-transcript';
 
@@ -37,14 +38,15 @@ async function fetchYoutubeTitle(videoId: string): Promise<string> {
   return 'YouTube Video';
 }
 
-function parseRawMultipart(buffer: Buffer, contentTypeHeader: string): { fileBuffer: Buffer | null; fileName: string; title: string; link: string } {
+function parseRawMultipart(buffer: Buffer, contentTypeHeader: string): { fileBuffer: Buffer | null; fileName: string; title: string; link: string; projectId: string } {
   let fileBuffer: Buffer | null = null;
   let fileName = '';
   let title = '';
   let link = '';
+  let projectId = '';
 
   const boundaryMatch = contentTypeHeader.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
-  if (!boundaryMatch) return { fileBuffer, fileName, title, link };
+  if (!boundaryMatch) return { fileBuffer, fileName, title, link, projectId };
 
   const boundary = (boundaryMatch[1] || boundaryMatch[2]).trim();
   const boundaryBuffer = Buffer.from(`--${boundary}`);
@@ -84,11 +86,13 @@ function parseRawMultipart(buffer: Buffer, contentTypeHeader: string): { fileBuf
         title = bodyBuffer.toString('utf-8').trim();
       } else if (fieldName === 'link') {
         link = bodyBuffer.toString('utf-8').trim();
+      } else if (fieldName === 'projectId') {
+        projectId = bodyBuffer.toString('utf-8').trim();
       }
     }
   }
 
-  return { fileBuffer, fileName, title, link };
+  return { fileBuffer, fileName, title, link, projectId };
 }
 
 export async function POST(request: NextRequest) {
@@ -104,16 +108,19 @@ export async function POST(request: NextRequest) {
     let fileName = '';
     let transcript = '';
     let isLinkTranscribed = false;
+    let projectId = '';
 
     if (contentType.includes('application/octet-stream')) {
       const url = new URL(request.url);
       title = url.searchParams.get('title') || 'Local Recording';
+      projectId = url.searchParams.get('projectId') || '';
       fileName = 'audio.pcm';
       const arrayBuffer = await request.arrayBuffer();
       audioInput = new Float32Array(arrayBuffer);
     } else if (contentType.includes('application/json')) {
       const body = await request.json();
       title = body.title || '';
+      projectId = body.projectId || '';
       const link = body.link || '';
       if (link && link.trim() !== '') {
         const videoId = getYoutubeVideoId(link.trim());
@@ -153,6 +160,7 @@ export async function POST(request: NextRequest) {
         file = formData.get('file') as File | null;
         link = formData.get('link') as string | null;
         title = (formData.get('title') as string) || '';
+        projectId = (formData.get('projectId') as string) || '';
       } catch (err: any) {
         console.warn('[Upload API] Native request.formData() failed, falling back to arrayBuffer multipart parser:', err.message);
         try {
@@ -164,6 +172,7 @@ export async function POST(request: NextRequest) {
           }
           if (parsed.title) title = parsed.title;
           if (parsed.link) link = parsed.link;
+          if (parsed.projectId) projectId = parsed.projectId;
         } catch (rawErr: any) {
           console.error('[Upload API] Raw multipart parse error:', rawErr);
         }
@@ -217,6 +226,7 @@ export async function POST(request: NextRequest) {
       duration: 'Processing...',
       transcript: '',
       status: 'processing',
+      projectId: projectId || undefined,
     };
     
     await saveMeeting(newMeeting, user.userId);
@@ -264,7 +274,17 @@ export async function POST(request: NextRequest) {
 
       await saveMeeting(newMeeting, user.userId);
       console.log(`Meeting analysis & RAG indexing completed: ${newMeeting.id}`);
-      
+
+      // Every meeting added to a project should refresh that project's AI
+      // Summary/Progress/Flow automatically. This runs in the background
+      // (not awaited) so the upload response isn't held up by an extra
+      // LLM round-trip — the project view picks up the update shortly after.
+      if (newMeeting.projectId) {
+        regenerateProjectIntelligence(newMeeting.projectId, user.userId).catch((err) =>
+          console.error(`[Upload API] Failed to refresh project ${newMeeting.projectId} after upload:`, err.message)
+        );
+      }
+
       return NextResponse.json(newMeeting);
     } catch (innerError: any) {
       console.error('Processing failed for meeting:', innerError);

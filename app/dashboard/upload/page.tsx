@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { UploadCloud, ArrowRight, Sparkles, Check, FileText, AlertTriangle, Play } from 'lucide-react';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { UploadCloud, ArrowRight, Sparkles, Check, FileText, AlertTriangle, Play, FolderKanban, Plus } from 'lucide-react';
+import { Project } from '@/lib/db';
 
 function YouTubeIcon({ className = "w-4 h-4 text-rose-500" }: { className?: string }) {
   return (
@@ -12,11 +13,125 @@ function YouTubeIcon({ className = "w-4 h-4 text-rose-500" }: { className?: stri
   );
 }
 
-export default function YouTubeUploadPage() {
+// Project picker used above both the YouTube and File upload forms — every
+// meeting belongs to a project, and users can create one inline if none exist.
+function ProjectPicker({
+  projects,
+  selectedProjectId,
+  setSelectedProjectId,
+  onProjectCreated,
+}: {
+  projects: Project[];
+  selectedProjectId: string;
+  setSelectedProjectId: (id: string) => void;
+  onProjectCreated: (project: Project) => void;
+}) {
+  const [showCreate, setShowCreate] = useState(projects.length === 0);
+  const [newName, setNewName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
+
+  useEffect(() => {
+    if (projects.length === 0) setShowCreate(true);
+  }, [projects.length]);
+
+  const handleCreate = async () => {
+    if (!newName.trim()) return;
+    setCreating(true);
+    setCreateError('');
+    try {
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create project');
+      onProjectCreated(data);
+      setSelectedProjectId(data.id);
+      setNewName('');
+      setShowCreate(false);
+    } catch (err: any) {
+      setCreateError(err.message || 'Failed to create project');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <div className="max-w-xl mx-auto bg-[#121624]/90 border border-[#232B45] rounded-2xl p-4 text-left space-y-3">
+      <label className="text-[10px] font-mono uppercase tracking-wider text-[#94A3B8] flex items-center gap-1.5">
+        <FolderKanban className="w-3.5 h-3.5 text-[#6366F1]" />
+        Project (required — every meeting belongs to a project)
+      </label>
+
+      {!showCreate ? (
+        <div className="flex items-center gap-2">
+          <select
+            value={selectedProjectId}
+            onChange={(e) => setSelectedProjectId(e.target.value)}
+            className="flex-1 bg-[#0a0e17] border border-[#232B45] rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#6366F1] cursor-pointer"
+          >
+            <option value="" disabled>Select a project...</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => setShowCreate(true)}
+            className="px-3 py-2.5 rounded-xl bg-[#181b25] border border-[#232B45] hover:border-[#6366F1] text-xs font-semibold text-[#c0c1ff] hover:text-white transition flex items-center gap-1.5 cursor-pointer shrink-0"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            New
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="New project name..."
+              className="flex-1 bg-[#0a0e17] border border-[#232B45] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#94A3B8] focus:outline-none focus:border-[#6366F1]"
+            />
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={creating || !newName.trim()}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold btn-primary-cta disabled:opacity-50 cursor-pointer shrink-0"
+            >
+              {creating ? 'Creating...' : 'Create'}
+            </button>
+            {projects.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowCreate(false)}
+                className="px-3 py-2.5 rounded-xl bg-[#181b25] border border-[#232B45] text-xs text-[#94A3B8] hover:text-white transition cursor-pointer shrink-0"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+          {createError && <p className="text-[11px] text-rose-400">{createError}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function UploadPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Mode: 'youtube' | 'file'
   const [activeTab, setActiveTab] = useState<'youtube' | 'file'>('youtube');
+
+  // Project assignment state
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [projectsLoaded, setProjectsLoaded] = useState(false);
 
   // YouTube Input State
   const [youtubeUrl, setYoutubeUrl] = useState('');
@@ -31,10 +146,28 @@ export default function YouTubeUploadPage() {
   const [status, setStatus] = useState<'idle' | 'downloading' | 'transcribing' | 'summarizing' | 'done' | 'failed'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
 
+  useEffect(() => {
+    fetch('/api/projects')
+      .then((res) => res.json())
+      .then((data) => {
+        const list = Array.isArray(data) ? data : [];
+        setProjects(list);
+        const preselect = searchParams?.get('projectId');
+        if (preselect && list.some((p: Project) => p.id === preselect)) {
+          setSelectedProjectId(preselect);
+        } else if (list.length === 1) {
+          setSelectedProjectId(list[0].id);
+        }
+        setProjectsLoaded(true);
+      })
+      .catch(() => setProjectsLoaded(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Handle YouTube URL Submit
   const handleYouTubeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!youtubeUrl.trim()) return;
+    if (!youtubeUrl.trim() || !selectedProjectId) return;
 
     setStatus('downloading');
     setErrorMessage('');
@@ -58,7 +191,8 @@ export default function YouTubeUploadPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           link: youtubeUrl.trim(),
-          title: videoTitle.trim() || undefined
+          title: videoTitle.trim() || undefined,
+          projectId: selectedProjectId,
         })
       });
 
@@ -84,7 +218,7 @@ export default function YouTubeUploadPage() {
   // Handle Local File Submit
   const handleFileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) return;
+    if (!file || !selectedProjectId) return;
 
     setStatus('transcribing');
     setErrorMessage('');
@@ -92,6 +226,7 @@ export default function YouTubeUploadPage() {
     const formData = new FormData();
     formData.append('file', file);
     if (videoTitle) formData.append('title', videoTitle);
+    formData.append('projectId', selectedProjectId);
 
     try {
       const res = await fetch('/api/upload', {
@@ -135,7 +270,7 @@ export default function YouTubeUploadPage() {
 
   return (
     <div className="w-full min-h-[85vh] flex flex-col items-center justify-center p-6 text-center font-sans antialiased">
-      
+
       {/* Container Card */}
       <div className="w-full max-w-3xl space-y-8 animate-fade-in">
 
@@ -186,10 +321,20 @@ export default function YouTubeUploadPage() {
           </div>
         )}
 
+        {/* Project Picker — every meeting belongs to a project */}
+        {projectsLoaded && (
+          <ProjectPicker
+            projects={projects}
+            selectedProjectId={selectedProjectId}
+            setSelectedProjectId={setSelectedProjectId}
+            onProjectCreated={(p) => setProjects((prev) => [p, ...prev])}
+          />
+        )}
+
         {/* Main Interactive Form Card */}
         {activeTab === 'youtube' ? (
           <form onSubmit={handleYouTubeSubmit} className="space-y-6">
-            
+
             {/* Input Box & Button (Matching User Screenshot Layout) */}
             <div className="flex flex-col sm:flex-row items-center gap-3 bg-[#121624]/90 p-2 border border-[#232B45] rounded-full shadow-2xl focus-within:border-[#6366F1] transition-all max-w-2xl mx-auto backdrop-blur-md">
               <div className="relative flex-1 w-full pl-4">
@@ -205,7 +350,7 @@ export default function YouTubeUploadPage() {
 
               <button
                 type="submit"
-                disabled={!youtubeUrl.trim() || status !== 'idle'}
+                disabled={!youtubeUrl.trim() || !selectedProjectId || status !== 'idle'}
                 className="w-full sm:w-auto px-6 py-3 rounded-full text-xs font-bold text-white bg-gradient-to-r from-indigo-600 via-fuchsia-600 to-rose-600 hover:from-indigo-500 hover:to-rose-500 transition shadow-lg shadow-indigo-600/30 border border-white/20 disabled:opacity-40 cursor-pointer shrink-0 flex items-center justify-center gap-2"
               >
                 <Sparkles className="w-4 h-4 text-cyan-300" />
@@ -215,13 +360,13 @@ export default function YouTubeUploadPage() {
 
             {/* Subtext */}
             <p className="text-xs text-[#94A3B8] font-mono">
-              Quick and simple. No catch.
+              {selectedProjectId ? 'Quick and simple. No catch.' : 'Select or create a project above to continue.'}
             </p>
 
           </form>
         ) : (
           <form onSubmit={handleFileSubmit} className="space-y-6 max-w-xl mx-auto">
-            
+
             {/* File Drag and Drop Box */}
             <div
               onDragEnter={handleDrag}
@@ -257,10 +402,10 @@ export default function YouTubeUploadPage() {
 
             <button
               type="submit"
-              disabled={!file || status !== 'idle'}
+              disabled={!file || !selectedProjectId || status !== 'idle'}
               className="w-full py-3.5 rounded-2xl text-xs font-bold text-white bg-[#6366F1] hover:bg-[#4F46E5] transition shadow-lg shadow-[#6366F1]/30 disabled:opacity-40 cursor-pointer"
             >
-              Start Processing Audio File
+              {selectedProjectId ? 'Start Processing Audio File' : 'Select or create a project above to continue'}
             </button>
 
           </form>
@@ -296,5 +441,13 @@ export default function YouTubeUploadPage() {
       </div>
 
     </div>
+  );
+}
+
+export default function YouTubeUploadPage() {
+  return (
+    <Suspense fallback={<div className="w-full h-[60vh]" />}>
+      <UploadPageInner />
+    </Suspense>
   );
 }

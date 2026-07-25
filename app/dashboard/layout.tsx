@@ -14,6 +14,7 @@ export default function DashboardLayout({
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const [activeProjectName, setActiveProjectName] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -30,6 +31,20 @@ export default function DashboardLayout({
         setUser(null);
       });
   }, []);
+
+  // Breadcrumb shows the real active project name when inside a project
+  // workspace, instead of a fixed placeholder.
+  useEffect(() => {
+    const match = pathname?.match(/^\/dashboard\/projects\/([^/]+)/);
+    if (!match) {
+      setActiveProjectName(null);
+      return;
+    }
+    fetch(`/api/projects/${match[1]}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setActiveProjectName(data?.project?.name || null))
+      .catch(() => setActiveProjectName(null));
+  }, [pathname]);
 
   const handleLogout = async () => {
     try {
@@ -53,6 +68,7 @@ export default function DashboardLayout({
   // Sidebar Items: "Meetings" directly navigates to /dashboard/live (Start/Join LiveKit Meeting Room)
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', exact: true, icon: 'dashboard' },
+    { name: 'Projects', href: '/dashboard/projects', exact: false, icon: 'folder_special' },
     { name: 'Meetings', href: '/dashboard/live', exact: false, icon: 'videocam' },
     { name: 'Upload Meeting', href: '/dashboard/upload', exact: true, icon: 'cloud_upload' },
     { name: 'Analytics & Memory', href: '/dashboard/graph', exact: true, icon: 'analytics' },
@@ -62,7 +78,9 @@ export default function DashboardLayout({
 
   const getPageTitle = () => {
     if (pathname?.startsWith('/dashboard/meeting/')) return 'Meeting Detail';
+    if (pathname?.startsWith('/dashboard/projects/')) return 'Project Workspace';
     switch (pathname) {
+      case '/dashboard/projects': return 'Projects';
       case '/dashboard/live': return 'Live Meeting';
       case '/dashboard/decisions': return 'Decisions Register';
       case '/dashboard/tasks': return 'Tasks Register';
@@ -182,10 +200,14 @@ export default function DashboardLayout({
               <span className="material-symbols-outlined text-[18px]">home</span>
             </Link>
 
-            <span className="text-[#232B45] mx-0.5">/</span>
-            <span className="uppercase tracking-wider text-[11px] bg-[#262a34] px-2.5 py-1 rounded border border-[#232B45] text-[#c0c1ff] font-mono font-semibold">
-              Project: Project Apollo
-            </span>
+            {activeProjectName && (
+              <>
+                <span className="text-[#232B45] mx-0.5">/</span>
+                <span className="uppercase tracking-wider text-[11px] bg-[#262a34] px-2.5 py-1 rounded border border-[#232B45] text-[#c0c1ff] font-mono font-semibold">
+                  Project: {activeProjectName}
+                </span>
+              </>
+            )}
             <span className="text-[#232B45] mx-0.5">/</span>
             <span className="text-[#94A3B8] font-mono text-[12px]">{getPageTitle()}</span>
           </div>

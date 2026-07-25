@@ -14,7 +14,7 @@ export default function MeetingsPage() {
     fetch('/api/meetings')
       .then((res) => res.json())
       .then((data) => {
-        setMeetings(data.meetings || []);
+        setMeetings(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch((err) => {
