@@ -118,6 +118,55 @@
       flex-shrink: 0;
     }
 
+    /* Audio Source Selector Bar */
+    .audio-source-bar {
+      padding: 6px 12px;
+      background: #11131c;
+      border-bottom: 1px solid #1c1f29;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .source-label {
+      font-size: 9px;
+      font-weight: 700;
+      font-family: monospace;
+      color: #94A3B8;
+      letter-spacing: 0.5px;
+    }
+
+    .source-toggle-group {
+      display: flex;
+      gap: 3px;
+      background: #181b25;
+      padding: 2px;
+      border-radius: 6px;
+      border: 1px solid #232B45;
+    }
+
+    .source-btn {
+      padding: 3px 8px;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      color: #94A3B8;
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .source-btn:hover { color: #f8fafc; }
+
+    .source-btn.active {
+      background: linear-gradient(135deg, #6366F1, #818CF8);
+      color: #ffffff;
+      font-weight: 700;
+      box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+    }
+
     .timer-display {
       font-family: monospace;
       font-size: 16px;
@@ -280,6 +329,16 @@
       </div>
     </div>
 
+    <!-- Audio Source Selector Bar -->
+    <div class="audio-source-bar">
+      <span class="source-label">AUDIO SOURCE:</span>
+      <div class="source-toggle-group">
+        <button id="srcMicBtn" class="source-btn active" title="Microphone Audio (Live Voice)">🎙️ Mic</button>
+        <button id="srcCompBtn" class="source-btn" title="Computer / Video Audio (System / Tab)">💻 Computer</button>
+        <button id="srcBothBtn" class="source-btn" title="Both Mic & Computer Audio">🎙️+💻 Both</button>
+      </div>
+    </div>
+
     <!-- Transcript Stream Section -->
     <div class="transcript-section">
       <div class="section-header">
@@ -322,6 +381,24 @@
   const transcriptFeed = shadow.getElementById('transcriptFeed');
   const insightList = shadow.getElementById('insightList');
   const livePulse = shadow.getElementById('livePulse');
+
+  const srcMicBtn = shadow.getElementById('srcMicBtn');
+  const srcCompBtn = shadow.getElementById('srcCompBtn');
+  const srcBothBtn = shadow.getElementById('srcBothBtn');
+
+  let selectedAudioSource = 'mic'; // 'mic' | 'comp' | 'both'
+
+  function updateAudioSourceUI(source) {
+    if (statusText.textContent === 'REC' || statusText.textContent === 'PAUSED') return;
+    selectedAudioSource = source;
+    srcMicBtn.classList.toggle('active', source === 'mic');
+    srcCompBtn.classList.toggle('active', source === 'comp');
+    srcBothBtn.classList.toggle('active', source === 'both');
+  }
+
+  srcMicBtn.addEventListener('click', () => updateAudioSourceUI('mic'));
+  srcCompBtn.addEventListener('click', () => updateAudioSourceUI('comp'));
+  srcBothBtn.addEventListener('click', () => updateAudioSourceUI('both'));
 
   // 5. Drag & Drop Implementation
   let isDragging = false;
@@ -593,21 +670,38 @@
     transcriptFeed.innerHTML = '';
 
     seconds = 0;
-    // Prompt microphone access if needed and start engines
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(() => {
-          recognitionInstance = startRealSpeechRecognition();
-        })
-        .catch((err) => {
-          console.warn('[Cue Extension] Microphone access error:', err);
-          recognitionInstance = startRealSpeechRecognition();
-        });
-    } else {
-      recognitionInstance = startRealSpeechRecognition();
+
+    const sourceName = selectedAudioSource === 'mic' ? '🎙️ Microphone' : selectedAudioSource === 'comp' ? '💻 Computer Audio' : '🎙️+💻 Both (Mic & Computer)';
+    appendTranscriptLine('System', `Recording active [Source: ${sourceName}]`, false);
+
+    // 1. Microphone Audio Capture (Mic or Both)
+    if (selectedAudioSource === 'mic' || selectedAudioSource === 'both') {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(() => {
+            recognitionInstance = startRealSpeechRecognition();
+          })
+          .catch((err) => {
+            console.warn('[Cue Extension] Microphone access error:', err);
+            recognitionInstance = startRealSpeechRecognition();
+          });
+      } else {
+        recognitionInstance = startRealSpeechRecognition();
+      }
     }
 
-    captionObserver = startVideoAudioSyncEngine();
+    // 2. Computer / Video Audio Capture (Comp or Both)
+    if (selectedAudioSource === 'comp' || selectedAudioSource === 'both') {
+      captionObserver = startVideoAudioSyncEngine();
+      if (selectedAudioSource === 'comp' && navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+        navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+          .then((stream) => {
+            console.log('[Cue Extension] System/Tab Audio stream active');
+            stream.getVideoTracks().forEach(t => t.stop());
+          })
+          .catch(() => { /* User dismissed tab share picker - fallbacks active */ });
+      }
+    }
 
     timerInterval = setInterval(() => {
       if (!isPaused) {
