@@ -47,7 +47,8 @@ export default function LiveMeetingPage() {
 
   /* camera & webcam state */
   const [camOn, setCamOn] = useState(true);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
 
   /* transcript + insights */
