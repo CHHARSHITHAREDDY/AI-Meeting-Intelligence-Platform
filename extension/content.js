@@ -202,6 +202,22 @@
 
     .btn-stop { border-color: rgba(239, 68, 68, 0.4); color: #ffb4ab; }
 
+    .btn-summarize {
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: none;
+      background: linear-gradient(135deg, #8B5CF6, #EC4899);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
+    }
+    .btn-summarize:hover { opacity: 0.9; }
+
     /* Transcript Stream Section */
     .transcript-section {
       flex: 1;
@@ -325,6 +341,7 @@
       <div style="display: flex; gap: 6px;">
         <button id="startBtn" class="btn-record">▶ Start</button>
         <button id="pauseBtn" class="btn-icon" style="display:none;">⏸</button>
+        <button id="summarizeBtn" class="btn-summarize" style="display:none;">✨ Summarize</button>
         <button id="stopBtn" class="btn-icon btn-stop" style="display:none;">⏹ Stop</button>
       </div>
     </div>
@@ -665,6 +682,7 @@
     statusText.textContent = 'REC';
     startBtn.style.display = 'none';
     pauseBtn.style.display = 'inline-block';
+    summarizeBtn.style.display = 'inline-block';
     stopBtn.style.display = 'inline-block';
     livePulse.style.display = 'inline';
     transcriptFeed.innerHTML = '';
@@ -722,6 +740,47 @@
     }
   });
 
+  const summarizeBtn = shadow.getElementById('summarizeBtn');
+
+  function generateTranscriptSummary() {
+    const lines = Array.from(transcriptFeed.querySelectorAll('.transcript-line:not(.interim-line)'))
+      .map(el => el.textContent.trim())
+      .filter(txt => txt && !txt.includes('Click ▶ Start') && !txt.includes('Recording active'));
+
+    if (lines.length === 0) return;
+
+    const fullText = lines.join('\n');
+    
+    // Extract key counts from insights
+    const decisionEls = shadow.querySelectorAll('.insight-decision');
+    const taskEls = shadow.querySelectorAll('.insight-task');
+    const riskEls = shadow.querySelectorAll('.insight-risk');
+
+    const sampleText = lines.map(l => l.replace(/^[^:]+:\s*/, '')).slice(0, 3).join('. ');
+    const summaryText = `Live session summary: ${sampleText}. Captured ${decisionEls.length} decision(s), ${taskEls.length} task(s), and ${riskEls.length} risk(s).`;
+
+    // Render prominent summary card in Real-Time Intelligence list
+    if (insightList.children[0]?.textContent.includes('Listening')) {
+      insightList.innerHTML = '';
+    }
+
+    let summaryCard = insightList.querySelector('.insight-summary');
+    if (!summaryCard) {
+      summaryCard = document.createElement('div');
+      summaryCard.className = 'insight-item insight-summary';
+      summaryCard.style.background = 'rgba(139, 92, 246, 0.2)';
+      summaryCard.style.borderLeft = '3px solid #a855f7';
+      summaryCard.style.color = '#f3e8ff';
+      summaryCard.style.marginBottom = '6px';
+      insightList.prepend(summaryCard);
+    }
+
+    summaryCard.innerHTML = `<strong>✨ AI EXECUTIVE SUMMARY</strong><br/><span style="font-size: 10px; opacity: 0.95;">${summaryText}</span>`;
+    insightList.scrollTop = 0;
+  }
+
+  summarizeBtn.addEventListener('click', generateTranscriptSummary);
+
   stopBtn.addEventListener('click', () => {
     clearInterval(timerInterval);
     if (recognitionWatchdog) {
@@ -741,11 +800,14 @@
       captionObserver = null;
     }
 
+    generateTranscriptSummary();
+
     statusBadge.className = 'status-badge';
     statusText.textContent = 'DONE';
     startBtn.style.display = 'inline-block';
     startBtn.textContent = '▶ New';
     pauseBtn.style.display = 'none';
+    summarizeBtn.style.display = 'inline-block';
     stopBtn.style.display = 'none';
     livePulse.style.display = 'none';
   });
