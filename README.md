@@ -1,185 +1,358 @@
-# 🚀 AI Meeting Intelligence Platform | Enterprise B2B SaaS
+# Weave | Enterprise AI Meeting Intelligence Platform
 
-> **Transforming raw meeting recordings into structured business intelligence, automated action items, and conversational RAG analytics — built with minimal infrastructure unit cost and maximum profit margins (~90% Gross Margin).**
+> Enterprise B2B SaaS platform transforming post-meeting recordings, YouTube videos, and live WebRTC calls into structured business intelligence, automated action items, and conversational RAG analytics.
+
+[![Next.js](https://img.shields.io/badge/Next.js-16.2.11-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.2.4-61DAFB?style=flat-square&logo=react)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![PostgreSQL](https://img.shields.io/badge/Database-Neon%20PostgreSQL-4169E1?style=flat-square&logo=postgresql)](https://neon.tech/)
+[![Tailwind CSS](https://img.shields.io/badge/Styling-Tailwind%20CSS%204-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
 
 ---
 
-## 💡 Executive Summary & Startup Pitch
+## Table of Contents
 
-Meetings account for **over 35% of an executive's work week**, leading to an estimated **$37 Billion in lost productivity annually** due to uncaptured decisions, missed action items, and manual note-taking.
-
-**AI Meeting Intelligence Platform** is an enterprise-ready, 3-panel SaaS application that automates the entire post-meeting workflow. Users simply upload any meeting recording (`.mp4`, `.mov`, `.m4a`, `.mp3`, `.wav`), and our multi-stage pipeline ingests, transcribes, analyzes, indexes, and surfaces grounded conversational insights in seconds.
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Screenshots and Demo](#screenshots-and-demo)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Prerequisites](#prerequisites)
+- [Installation and Setup](#installation-and-setup)
+- [Environment Variables](#environment-variables)
+- [Usage Instructions](#usage-instructions)
+- [API Documentation](#api-documentation)
+- [Testing and Verification](#testing-and-verification)
+- [Chrome Extension Setup](#chrome-extension-setup)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
+- [Author and Contact](#author-and-contact)
 
 ---
 
-## 📈 Business Model & Unit Economics (Minimal Cost $\rightarrow$ Maximum Profit)
+## Overview
 
-Designed specifically for **high SaaS profit margins** and **low operational overhead**:
+Meetings generate vast amounts of unstructured dialogue, leading to lost decisions, forgotten action items, and manual administrative overhead. 
+
+**Weave** is a multi-tenant SaaS application that automates the entire meeting lifecycle. Users can upload raw meeting media (`.mp4`, `.mov`, `.m4a`, `.mp3`, `.wav`), submit YouTube video URLs, or host real-time video calls directly inside built-in WebRTC rooms. 
+
+The underlying pipeline processes audio into 16kHz PCM WAV format via static FFmpeg binaries, transcribes dialogue using local ONNX Whisper models or cloud APIs, auto-classifies content types, extracts structured intelligence, indexes transcript chunks into an in-memory TF-IDF vector RAG engine, and persists records in serverless Neon PostgreSQL.
+
+---
+
+## Key Features
+
+- **3-Panel SaaS Workspace:** Left navigation sidebar, dual-tab center content panel (Summary and Full Transcript), and right AI Copilot widget with timestamp citations (`Source: [MM:SS]`).
+- **Multi-Source Media Ingestion:** Ingests local media containers (`.mp4`, `.mov`, `.m4a`, `.mp3`, `.wav`) and YouTube video URLs with caption extraction and Whisper audio fallback.
+- **High-Precision Speech-to-Text:** Converts audio into 16kHz 16-bit mono PCM WAV using static FFmpeg binaries, producing formatted dialogue with exact timestamps (`[MM:SS]`) and speaker labels (`Speaker 1`, `Speaker 2`).
+- **Multi-Language Support:** Supports English (`en`), Hindi (`hi`), Telugu (`te`), and automatic language detection.
+- **Content-Type Auto-Classification:** Automatically categorizes audio into Business Meetings, Lectures or Study Sessions, Coding Syncs, Podcasts, or General discussions.
+- **Specialized Artifact Generation:**
+  - *Lectures:* Generates Flashcards, Interactive Quizzes, and Mindmaps.
+  - *Coding Syncs:* Generates Technical Code Guides, API lists, Library mentions, and Shell Commands.
+  - *Podcasts:* Extracts Key Insights, Timeline breakdowns, and Resource links.
+- **Automated Executive Intelligence:** Extracts high-level summaries, key discussion themes, formal decision logs, action item matrices with assignees and due dates, and severity-rated risk warnings.
+- **Speaker Analytics and Efficiency Metrics:** Calculates speaker talk-time percentages, word counts, overall meeting efficiency scores (0 to 100), and unresolved question logs.
+- **Dual-Layer Vector RAG Engine:** Supports single-meeting RAG chat and organization-wide cross-meeting memory chat grounded in stored TF-IDF vector embeddings.
+- **Built-in WebRTC Live Meeting Rooms:** Real-time video conferencing powered by LiveKit with live microphone and camera capture, chunk transcription, streaming insights, and live AI assistance.
+- **Project Intelligence Workspaces:** Group related meetings into projects to automatically aggregate project objectives, completion percentages, active blockers, and priority timeline flows.
+- **Interactive Knowledge Graph Explorer:** Visualizes relationships between projects, meetings, decisions, risks, and task dependencies in an interactive network graph.
+- **Scheduled Meeting Calendar:** Month, Week, and Day calendar views for scheduling upcoming meetings with agendas, duration, attendees, priority tags, and automated status syncing.
+- **Global Task Execution Board:** Centralized Kanban and list management board for cross-meeting action items with status toggles, assignee filters, due dates, and direct timestamp citations back to exact transcript lines.
+- **Centralized Decisions Log:** Unified repository aggregating all historical decisions made across all meetings with decision-maker attributions and background context.
+- **Chrome Manifest V3 Extension:** Side-panel browser assistant for live recording, real-time transcription, and live chat alongside Google Meet or Zoom calls.
+
+---
+
+## Screenshots and Demo
+
+### 1. 3-Panel SaaS Workspace
+![3-Panel SaaS Workspace](docs/screenshots/dashboard_3panel.png)
+*Centralized 3-panel workspace displaying executive summary, interactive action item matrix, decisions log, and grounded AI copilot chat.*
+
+---
+
+### 2. Global Task Management Board
+![Global Task Execution Board](docs/screenshots/task_management_board.png)
+*Centralized cross-meeting task execution board with status filters, assignee tags, priority badges, and direct transcript citations.*
+
+---
+
+### 3. Interactive Knowledge Graph Explorer
+![Interactive Knowledge Graph](docs/screenshots/knowledge_graph.png)
+*Interactive network graph mapping relationships between projects, meetings, decisions, and action items.*
+
+---
+
+### 4. Built-in WebRTC Live Meeting Room
+![WebRTC Live Meeting Room](docs/screenshots/live_meeting_webrtc.png)
+*Real-time LiveKit video conferencing room featuring active speaker grid, live speech transcription stream, and streaming AI assistant.*
+
+---
+
+### 5. Scheduled Meeting Calendar
+![Scheduled Meeting Calendar](docs/screenshots/meeting_calendar.png)
+*Executive calendar scheduler providing Month, Week, and Day views with priority badges and agenda tracking.*
+
+---
+
+## Tech Stack
+
+| Category | Technologies / Libraries |
+| :--- | :--- |
+| **Framework** | Next.js 16.2.11 (App Router, Turbopack), React 19.2.4, TypeScript 5.0 |
+| **Styling** | Vanilla CSS, Tailwind CSS 4.0, PostCSS, Lucide React Icons |
+| **Audio Converter** | `ffmpeg-static` (16kHz PCM WAV extraction), `fluent-ffmpeg` |
+| **Speech Recognition** | ONNX Local Whisper (`@xenova/transformers`), OpenAI Whisper API, Groq API |
+| **AI Analytics** | NVIDIA Nemotron / NIM API (`NVIDIA_API_KEY`), LlamaCloud API (`LLAMA_API_KEY`), Anthropic Claude 3.5 Sonnet, OpenAI SDK |
+| **Database** | Serverless Neon PostgreSQL (`pg` connection pooler with SSL) |
+| **Vector Engine** | Custom In-Memory TF-IDF Vector Index & Cosine Similarity Search |
+| **Real-time WebRTC** | LiveKit WebRTC (`@livekit/components-react`, `livekit-client`, `livekit-server-sdk`) |
+| **Media Ingestion** | `youtube-transcript`, `yt-dlp-exec` |
+| **Chrome Extension** | Manifest V3 (Side Panel, Content Scripts, Background Worker) |
+
+---
+
+## Project Structure
 
 ```
- ┌─────────────────────────────────────────────────────────────────────────────┐
- │                           SaaS UNIT ECONOMICS                               │
- ├───────────────────────────────┬─────────────────────────────────────────────┤
- │ Compute & Storage Cost        │ ~$0.015 per 30-minute meeting               │
- │ Proposed Pro Subscription     │ $29 / user / month                          │
- │ Proposed Enterprise Tier      │ $199 / team seat / month                    │
- │ Estimated Gross Margin        │ 88% - 92%                                   │
- └───────────────────────────────┴─────────────────────────────────────────────┘
-```
-
-### Why Infrastructure Costs Stay Low:
-1. **Serverless Database Architecture:** Powered by **Neon PostgreSQL Cloud**, scaling down to 0 compute units during idle hours.
-2. **Local Hybrid Speech Engine:** Utilizes **FFmpeg static binaries** + ONNX local Whisper execution for zero per-minute audio API fees when running on local nodes.
-3. **Optimized RAG Vector Engine:** Native TF-IDF vector embeddings and cosine similarity search run directly in memory without requiring expensive third-party vector database subscriptions.
-
----
-
-## 🎯 Target Business Use Cases
-
-| Industry / Use Case | Core Problem Solved | Value Delivered & ROI |
-| :--- | :--- | :--- |
-| **Executive Operations** | Manual preparation of Minutes of Meeting (MOM). | **80% reduction in meeting admin time.** Auto-generates MOM with decisions, owners, and risks. |
-| **Sales & Revenue Operations** | Deal friction and untracked buyer objections in sales calls. | **25% faster deal cycle.** Identifies key risks, customer requirements, and follow-ups. |
-| **Engineering & Product Syncs** | Technical trade-offs and tasks getting lost in long recordings. | **Zero missed deliverables.** Auto-extracts action items with assignees, due dates, and status checkboxes. |
-| **Legal & Compliance** | Auditability of verbal agreements and policy discussions. | **Full compliance record.** Clickable timestamp citations (`Source: [MM:SS]`) linked directly to exact audio lines. |
-
----
-
-## 🛠️ End-to-End Technical Architecture
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User
-    participant UI as 3-Panel SaaS UI (Next.js 16)
-    participant API as Upload REST API (/api/upload)
-    participant FFmpeg as FFmpeg Audio Converter
-    participant Whisper as Whisper Speech Engine
-    participant LLM as LlamaCloud / Claude LLM
-    participant RAG as Vector RAG Engine
-    participant DB as Neon PostgreSQL DB
-
-    User->>UI: Upload Video (.mp4 / .mov / .mp3)
-    UI->>API: POST /api/upload (FormData)
-    API->>FFmpeg: Convert to 16kHz 16-bit Mono PCM WAV
-    FFmpeg-->>API: Processed Audio Buffer
-    API->>Whisper: Transcribe PCM Audio
-    Whisper-->>API: Timestamped Dialogue Transcript [MM:SS]
-    API->>LLM: Extract Structured Intelligence JSON
-    LLM-->>API: Summary, Decisions, Actions, Risks
-    API->>RAG: Index Semantic Chunks & Compute Vectors
-    API->>DB: Save Meeting Record & Analysis
-    API-->>UI: Return Completed Meeting Payload
-    User->>UI: Ask Question in AI Copilot Chat
-    UI->>RAG: POST /api/meetings/[id]/chat { message }
-    RAG-->>UI: Grounded Answer with Timestamp Citations [MM:SS]
+AI-Meeting-Intelligence-Platform/
+├── app/                        # Next.js App Router root directory
+│   ├── api/                    # Serverless REST API endpoints
+│   │   ├── auth/               # User authentication (register, login, logout, me)
+│   │   ├── chat/global/        # Organization-wide cross-meeting RAG chat
+│   │   ├── live-meetings/      # Live meeting state management
+│   │   ├── livekit/token/      # WebRTC room token generation
+│   │   ├── meetings/           # Single meeting CRUD and RAG chat
+│   │   ├── projects/           # Project workspace endpoints
+│   │   ├── tasks/              # Global task management endpoints
+│   │   ├── transcribe-chunk/   # Real-time live audio chunk STT
+│   │   └── upload/             # Media file and YouTube URL ingestion API
+│   ├── components/             # Reusable UI components (LanguageSelect)
+│   ├── dashboard/              # 3-Panel SaaS Workspace pages
+│   │   ├── calendar/           # Scheduled meeting calendar
+│   │   ├── chat/               # Organization-wide AI copilot
+│   │   ├── decisions/          # Cross-meeting decision log
+│   │   ├── graph/              # Interactive knowledge graph explorer
+│   │   ├── live/               # WebRTC Live Meeting video room
+│   │   ├── meeting/            # Meeting detail view (insights and transcript)
+│   │   ├── meetings/           # Meeting list view
+│   │   ├── projects/           # Project workspace management
+│   │   ├── settings/           # User settings
+│   │   ├── tasks/              # Global task execution board
+│   │   └── upload/             # Media file and YouTube URL uploader
+│   ├── join/                   # Guest live meeting join page
+│   ├── login/                  # User authentication login and register page
+│   ├── globals.css             # Global Tailwind CSS and SaaS styling
+│   ├── layout.tsx              # Root HTML layout wrapper
+│   └── page.tsx                # SaaS dashboard landing page
+├── docs/                       # Documentation assets
+│   └── screenshots/            # UI screenshots referenced in README
+├── extension/                  # Chrome Manifest V3 extension directory
+├── lib/                        # Core backend engines and utility services
+│   ├── auth.ts                 # JWT session validation and password hashing
+│   ├── classify.ts             # Content-type auto-classification engine
+│   ├── db.ts                   # Neon PostgreSQL connection pool and migrations
+│   ├── extract.ts              # Structured intelligence LLM extraction pipeline
+│   ├── liveChat.ts             # Real-time live meeting AI assistant
+│   ├── liveMeetingStore.ts     # In-memory live meeting state store
+│   ├── llamaCloud.ts           # LlamaCloud API extraction client
+│   ├── projectIntelligence.ts  # Multi-meeting project aggregator engine
+│   ├── rag.ts                  # In-memory TF-IDF vector RAG engine
+│   ├── whisper.ts              # Local ONNX and cloud Whisper STT pipeline
+│   └── youtube.ts              # YouTube caption fetch and fallback pipeline
+├── .env.example                # Template for environment configuration
+├── next.config.ts              # Next.js framework configuration
+├── package.json                # Project dependencies and npm scripts
+└── tsconfig.json               # TypeScript compiler configuration
 ```
 
 ---
 
-## 🔥 Key Product Features
+## Prerequisites
 
-### 1. 3-Panel Modern SaaS Dashboard
-- **Left Navigation Sidebar:** Sleek SaaS navigation (Dashboard, Meetings, Upload, Analytics, Settings).
-- **Center Content Panel:** Dual-tab workspace switching between **Summary & Insights** and **Full Transcript**.
-- **Right AI Copilot Panel:** Contextual RAG chat widget grounded in the meeting context.
+Before setting up the project locally, ensure you have installed:
 
-### 2. High-Precision Speech-to-Text Pipeline
-- Converts raw media containers into **16kHz 16-bit mono PCM WAV** format using FFmpeg.
-- Generates formatted dialogue text with exact timestamps (`[MM:SS]`) and speaker labels (`Speaker 1`, `Speaker 2`).
-
-### 3. Automated Executive Intelligence Extraction
-- **Executive Summary:** High-level overview of meeting discussions.
-- **Key Discussion Themes:** Major topics covered.
-- **Decisions Log:** Formal decisions paired with context and decision-makers.
-- **Action Items Matrix:** Task descriptions with assignees, due dates, and interactive status checkboxes.
-- **Risk Radar:** Severity-coded risk warnings (`High`, `Medium`, `Low`) paired with concrete mitigation plans.
-
-### 4. Single-Source Vector RAG Engine & AI Copilot
-- Dynamically indexes semantic transcript chunks.
-- Computes vector embeddings and performs cosine similarity search.
-- Answers user queries with grounded, complete responses featuring clickable **timestamp citations** (`Source: [MM:SS]`).
-
-### 5. Chrome Extension (Live Meeting Assistant)
-- Manifest V3 extension featuring side-panel support for live recording, real-time transcription, and live meeting chat alongside Google Meet or Zoom calls.
-
----
-
-## 💻 Technology Stack
-
-- **Framework:** Next.js 16 (App Router + React + TypeScript)
-- **Styling:** Vanilla CSS & Tailwind CSS (Custom Dark Mode & Glassmorphic SaaS Aesthetics)
-- **Audio Processing:** `ffmpeg-static` (16kHz PCM WAV Extraction)
-- **Speech Recognition:** OpenAI Whisper API / ONNX `@xenova/transformers`
-- **AI Analytics & Intelligence:** LlamaCloud API / Anthropic Claude 3.5 Sonnet
-- **Database & Storage:** Neon Serverless PostgreSQL (`pg` Connection Pooling)
-- **Vector Search:** Custom In-Memory TF-IDF Vector Engine & Cosine Similarity
-
----
-
-## ⚡ Getting Started (Local Development)
-
-### 1. Prerequisites
 - **Node.js:** `v18.x` or higher
 - **npm:** `v9.x` or higher
+- **Git:** Version control CLI
 
-### 2. Installation
+---
+
+## Installation and Setup
+
+### 1. Clone the Repository
+
 ```bash
-# Clone the repository
 git clone https://github.com/CHHARSHITHAREDDY/AI-Meeting-Intelligence-Platform.git
-
-# Navigate to directory
 cd AI-Meeting-Intelligence-Platform
+```
 
-# Install dependencies
+### 2. Install Dependencies
+
+On Windows operating systems, execute the installation with postinstall script bypass to avoid native compiler dependencies:
+
+```bash
+cmd /c npm install --ignore-scripts
+```
+
+On Linux or macOS systems, standard installation can be executed:
+
+```bash
 npm install
 ```
 
-### 3. Environment Configuration
-Create a `.env` file in the root directory:
+### 3. Configure Environment Variables
 
-```env
-DATABASE_URL="postgresql://neondb_owner:YOUR_NEON_DB_PASSWORD@ep-rough-union-a1axi18m-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
-JWT_SECRET="your-secure-jwt-secret-key"
-LLAMA_API_KEY="your-llamacloud-api-key"
-OPENAI_API_KEY="your-openai-api-key"        # Optional
-ANTHROPIC_API_KEY="your-anthropic-api-key"  # Optional
-PORT=3000
-```
+Create a `.env.local` file in the project root directory using `.env.example` as a template:
 
-### 4. Run Development Server
 ```bash
-npm run dev
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to launch the platform.
+Fill in your database credentials and API keys inside `.env.local`.
 
-### 5. Production Build Verification
-To compile and test the production bundle:
+---
+
+## Environment Variables
+
+| Variable Name | Required / Optional | Description |
+| :--- | :--- | :--- |
+| `DATABASE_URL` | **Required** | Neon Serverless PostgreSQL connection URL string with SSL enabled. |
+| `JWT_SECRET` | **Required** | Secret key string used for signing user authentication JWT tokens. |
+| `NVIDIA_API_KEY` | Recommended | NVIDIA Nemotron API key for structured intelligence extraction. |
+| `LLAMA_API_KEY` | Recommended | LlamaCloud API key for structured intelligence extraction. |
+| `ANTHROPIC_API_KEY` | Optional | Anthropic API key for Claude 3.5 Sonnet extraction fallback. |
+| `OPENAI_API_KEY` | Optional | OpenAI API key for cloud Whisper transcription fallback. |
+| `GROQ_API_KEY` | Optional | Groq API key for fast cloud Whisper transcription fallback. |
+| `WHISPER_MODEL` | Optional | ONNX model identifier (defaults to `Xenova/whisper-base`). |
+| `LIVEKIT_URL` | Optional | WebRTC LiveKit server WebSocket URL for live video calls. |
+| `LIVEKIT_API_KEY` | Optional | WebRTC LiveKit API key for live video room token generation. |
+| `LIVEKIT_API_SECRET` | Optional | WebRTC LiveKit API secret key. |
+| `PORT` | Optional | Server port number (defaults to `3000`). |
+
+---
+
+## Usage Instructions
+
+### Run Development Server
+
+Start the local Next.js development server with Turbopack enabled:
+
 ```bash
-npm run build
+cmd /c npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your web browser to access the application.
+
+### Build Production Bundle
+
+To compile and verify the production bundle:
+
+```bash
+cmd /c npm run build
+```
+
+### Start Production Server
+
+To start the production server after building:
+
+```bash
+cmd /c npm start
+```
+
+### Run Linter
+
+To run ESLint code analysis across the codebase:
+
+```bash
+cmd /c npm run lint
 ```
 
 ---
 
-## 🧩 Chrome Extension Setup
+## API Documentation
 
-1. Open Chrome and navigate to `chrome://extensions/`.
-2. Enable **Developer Mode** (top-right toggle).
-3. Click **Load Unpacked** and select the `/extension` directory in this project.
-4. Launch the side panel assistant alongside any Google Meet or Zoom tab!
+The platform provides a serverless REST API structured across key resource modules:
+
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/auth/register` | `POST` | Registers a new user account with hashed password credentials. |
+| `/api/auth/login` | `POST` | Authenticates user credentials and issues a signed JWT session cookie. |
+| `/api/auth/logout` | `POST` | Invalidates the active JWT user session cookie. |
+| `/api/auth/me` | `GET` | Retrieves authenticated profile data for the current session user. |
+| `/api/upload` | `POST` | Ingests raw audio files, video files, or YouTube URLs for transcription and extraction. |
+| `/api/meetings` | `GET` | Fetches meeting lists filtered by user session, date range, or project ID. |
+| `/api/meetings/[id]` | `GET`, `DELETE` | Retrieves complete meeting payload or deletes a meeting record. |
+| `/api/meetings/[id]/chat` | `POST` | Contextual RAG vector search query against a specific meeting transcript. |
+| `/api/projects` | `GET`, `POST` | Lists all projects or creates a new project workspace. |
+| `/api/projects/[id]` | `GET`, `DELETE` | Retrieves project metrics and intelligence aggregation or deletes a project. |
+| `/api/tasks` | `GET`, `POST` | Lists global tasks with status/due date filters or creates a manual task. |
+| `/api/tasks/[id]` | `PATCH`, `DELETE` | Updates task status, assignee, priority, due date, or deletes a task. |
+| `/api/chat/global` | `POST` | Organization-wide vector RAG search across all stored meeting transcripts. |
+| `/api/live-meetings` | `GET`, `POST` | Lists active live meetings or creates a new live meeting session room. |
+| `/api/live-meetings/[id]` | `GET`, `PATCH` | Fetches live meeting state or streams live transcript and insights updates. |
+| `/api/transcribe-chunk` | `POST` | Transcribes real-time audio PCM chunks for live meeting rooms. |
+| `/api/livekit/token` | `POST` | Issues WebRTC room authentication tokens for LiveKit video calls. |
 
 ---
 
-## 🏆 Hackathon Pitch Summary
+## Testing and Verification
 
-| Criteria | Strategy |
-| :--- | :--- |
-| **Market Opportunity** | B2B Productivity & Executive Meeting Management ($12B TAM) |
-| **Technical Innovation** | Single-Source Meeting Context Store pairing Whisper STT with TF-IDF Vector RAG |
-| **User Experience** | Instant 3-panel SaaS workflow requiring zero manual note-taking |
-| **Unit Margins** | ~90% Gross Margin through hybrid serverless execution |
+While no automated test runner (such as Jest or Vitest) is configured in package dependencies, verification is conducted using empirical runtime validation:
+
+1. **Database Schema Verification:** On startup, `initDb()` in [lib/db.ts](lib/db.ts) connects to Neon PostgreSQL and verifies that required tables (`users`, `projects`, `meetings`, `tasks`) and columns exist.
+2. **Build Compilation Check:** Executing `npm run build` verifies TypeScript static typing and Next.js bundle compilation.
+3. **Runtime Server Verification:** Accessing `http://localhost:3000` verifies that API endpoints return proper status codes (200 OK for valid sessions, 401 for unauthenticated requests).
 
 ---
 
-*Developed for the Startup Hackathon — AI Meeting Intelligence SaaS.*
+## Chrome Extension Setup
+
+The repository includes a standalone Manifest V3 Chrome Extension located in the `/extension` directory for side-panel assistant integration during live Google Meet or Zoom calls.
+
+### Installation Steps
+
+1. Open Google Chrome and navigate to `chrome://extensions/`.
+2. Enable **Developer Mode** using the toggle in the top-right corner.
+3. Click **Load Unpacked** in the top-left navigation menu.
+4. Select the `extension/` folder located in this repository.
+5. Open any Google Meet or Zoom tab, click the extension icon, and launch the Live Side-Panel Assistant.
+
+---
+
+## Roadmap
+
+- [ ] **Multi-Speaker Diarization:** Enhanced speaker identification using voice embedding models.
+- [ ] **Automated Integration Connectors:** Direct sync plugins for Jira, Linear, Trello, and Slack.
+- [ ] **Export Options:** One-click export of MOM documents to PDF, Notion, and Markdown formats.
+- [ ] **Offline Transcription Worker:** Local GPU accelerated Whisper inference backend option.
+
+---
+
+## Contributing
+
+Contributions are welcome! Please follow these steps to contribute:
+
+1. Fork the repository on GitHub.
+2. Create a new topic branch (`git checkout -b feature/amazing-feature`).
+3. Commit your changes with descriptive commit messages (`git commit -m 'Add amazing feature'`).
+4. Push your branch to GitHub (`git push origin feature/amazing-feature`).
+5. Open a Pull Request for review.
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## Author and Contact
+
+Developed for the AI Meeting Intelligence SaaS Hackathon.
+
+- **GitHub Repository:** [CHHARSHITHAREDDY/AI-Meeting-Intelligence-Platform](https://github.com/CHHARSHITHAREDDY/AI-Meeting-Intelligence-Platform)
+- **Issue Tracker:** [GitHub Issues](https://github.com/CHHARSHITHAREDDY/AI-Meeting-Intelligence-Platform/issues)
