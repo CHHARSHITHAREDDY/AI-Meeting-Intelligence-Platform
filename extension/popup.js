@@ -8,19 +8,15 @@ document.getElementById('toggleOverlay')?.addEventListener('click', async () => 
       return;
     }
 
-    chrome.tabs.sendMessage(tab.id, { action: 'TOGGLE_WIDGET' }, async (response) => {
-      if (chrome.runtime.lastError || !response) {
-        try {
-          await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            files: ['content.js']
-          });
-        } catch (err) {
-          console.log('[Popup] Script injection notice:', err?.message || err);
-        }
-      }
-      window.close();
-    });
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['content.js']
+      });
+    } catch (err) {
+      console.log('[Popup] Script injection notice:', err?.message || err);
+    }
+    window.close();
   } catch (err) {
     console.log('[Popup] Toggle overlay error:', err?.message || err);
   }

@@ -1,30 +1,48 @@
 (function () {
-  const existingHost = document.getElementById('cue-widget-host');
+  const existingHost = document.getElementById('weave-widget-host');
   if (existingHost) {
-    existingHost.style.display = 'block';
+    existingHost.style.display = existingHost.style.display === 'none' ? 'block' : 'none';
     return;
   }
 
   const BACKEND_URL = 'http://localhost:3000';
 
-  // 1. Create Host Element & Shadow DOM
+  // 1. Create Host Element & Shadow DOM (STRICTLY ON DEMAND)
   const host = document.createElement('div');
-  host.id = 'cue-widget-host';
+  host.id = 'weave-widget-host';
   host.style.position = 'fixed';
   host.style.top = '20px';
   host.style.right = '20px';
   host.style.zIndex = '2147483647';
-  host.style.width = '380px';
-  host.style.height = '500px';
-  host.style.minWidth = '190px';
-  host.style.minHeight = '65px';
+  host.style.width = '420px';
+  host.style.height = '540px';
+  host.style.minWidth = '220px';
+  host.style.minHeight = '70px';
   host.style.resize = 'both';
   host.style.overflow = 'hidden';
-  host.style.borderRadius = '14px';
-  host.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(99, 102, 241, 0.3)';
+  host.style.borderRadius = '16px';
+  host.style.display = 'block'; // VISIBLE UPON EXPLICIT USER INJECTION FROM POPUP
+  host.style.boxShadow = '0 16px 48px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(99, 102, 241, 0.3)';
 
   document.body.appendChild(host);
   const shadow = host.attachShadow({ mode: 'open' });
+
+  // Listen for toggle/show/hide messages from popup.js
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+    chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+      if (msg.action === 'TOGGLE_WIDGET') {
+        host.style.display = host.style.display === 'none' ? 'block' : 'none';
+        sendResponse({ status: 'ok', visible: host.style.display !== 'none' });
+      } else if (msg.action === 'SHOW_WIDGET') {
+        host.style.display = 'block';
+        sendResponse({ status: 'ok', visible: true });
+      } else if (msg.action === 'HIDE_WIDGET') {
+        host.style.display = 'none';
+        sendResponse({ status: 'ok', visible: false });
+      }
+      return true;
+    });
+  }
 
   // 2. Inject Encapsulated Styles
   const style = document.createElement('style');
@@ -686,7 +704,13 @@
     }).then((res) => {
       if (res.ok && res.data && res.data.meeting) {
         meetingId = res.data.meeting.id;
-        callApi(`/api/live-meetings/${meetingId}`, 'PATCH', { action: 'start' }).catch(() => { });
+        try {
+          if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+            chrome.storage.local.set({ activeLiveMeetingId: meetingId });
+          }
+          localStorage.setItem('active_live_meeting_id', meetingId);
+        } catch (_) {}
+        callApi(`/api/live-meetings/${meetingId}`, 'PATCH', { action: 'start' }).catch(() => {});
       }
       return meetingId;
     }).catch(() => null);
@@ -1140,10 +1164,12 @@
   // own recordings; the server has no ffmpeg/webm decoder), and sent to the
   // real Whisper pipeline in small rolling chunks for genuine transcription.
   let tabAudioStream = null;
+  let micAudioStream = null;
   let chunkAudioCtx = null;
   let chunkActive = false;
-  const CHUNK_DURATION_MS = 7000;
-  const SILENCE_RMS_THRESHOLD = 0.008;
+  let micChunkActive = false;
+  const CHUNK_DURATION_MS = 5000;
+  const SILENCE_RMS_THRESHOLD = 0.005;
 
   async function startTabAudioTranscription() {
     try {
@@ -1158,28 +1184,41 @@
       }
 
       tabAudioStream = new MediaStream(audioTracks);
-      chunkAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (!chunkAudioCtx) chunkAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
       chunkActive = true;
       runChunkLoop();
     } catch (err) {
-      console.log('[Cue Extension] getDisplayMedia notice:', err?.message || err);
+      console.log('[Weave Extension] getDisplayMedia notice:', err?.message || err);
       appendTranscriptLine('System', 'Computer audio capture was not started (permission dismissed or unsupported).', false);
     }
   }
 
-  function recordOneChunk(durationMs) {
+  async function startMicAudioChunking() {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micAudioStream = stream;
+      if (!chunkAudioCtx) chunkAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      micChunkActive = true;
+      runMicChunkLoop();
+    } catch (err) {
+      console.log('[Weave Extension] Mic chunking notice:', err?.message || err);
+    }
+  }
+
+  function recordOneStreamChunk(stream, durationMs) {
     return new Promise((resolve) => {
-      if (!tabAudioStream) { resolve(null); return; }
+      if (!stream) { resolve(null); return; }
       const chunks = [];
       let recorder;
       try {
-        recorder = new MediaRecorder(tabAudioStream, { mimeType: 'audio/webm' });
+        recorder = new MediaRecorder(stream);
       } catch (e) {
         resolve(null);
         return;
       }
       recorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunks.push(e.data); };
-      recorder.onstop = () => resolve(new Blob(chunks, { type: 'audio/webm' }));
+      recorder.onstop = () => resolve(new Blob(chunks, { type: recorder.mimeType || 'audio/webm' }));
       recorder.onerror = () => resolve(null);
       try { recorder.start(); } catch (_) { resolve(null); return; }
       setTimeout(() => {
@@ -1188,6 +1227,10 @@
         }
       }, durationMs);
     });
+  }
+
+  function recordOneChunk(durationMs) {
+    return recordOneStreamChunk(tabAudioStream, durationMs);
   }
 
   function downsampleTo16kMono(audioBuffer) {
@@ -1246,26 +1289,24 @@
     return buffer;
   }
 
-  async function transcribeChunkAndAppend(blob) {
-    if (!blob || blob.size < 2000 || !chunkAudioCtx) return;
+  async function transcribeChunkAndAppend(blob, speaker = 'Computer Audio') {
+    if (!blob || blob.size < 1500 || !chunkAudioCtx) return;
     try {
       const arrayBuf = await blob.arrayBuffer();
       const decoded = await chunkAudioCtx.decodeAudioData(arrayBuf.slice(0));
       const mono16k = downsampleTo16kMono(decoded);
-      if (mono16k.length < 1600) return;
+      if (mono16k.length < 1200) return;
 
-      // Skip near-silence: avoids needless AI processing and Whisper's known
-      // tendency to hallucinate captions from silent/low-energy audio.
       if (computeRms(mono16k) < SILENCE_RMS_THRESHOLD) return;
 
       const wavBuffer = encodeWavPcm16(mono16k, 16000);
       const res = await callApiBinary('/api/transcribe-chunk', wavBuffer);
       const text = res && res.ok && res.data && typeof res.data.text === 'string' ? res.data.text.trim() : '';
       if (text) {
-        appendTranscriptLine('Computer Audio', text, false);
+        appendTranscriptLine(speaker, text, false);
       }
     } catch (err) {
-      console.log('[Cue Extension] Chunk transcription notice:', err?.message || err);
+      console.log('[Weave Extension] Chunk transcription notice:', err?.message || err);
     }
   }
 
@@ -1277,7 +1318,20 @@
       }
       const blob = await recordOneChunk(CHUNK_DURATION_MS);
       if (!chunkActive) break;
-      await transcribeChunkAndAppend(blob);
+      await transcribeChunkAndAppend(blob, 'Computer Audio');
+    }
+  }
+
+  async function runMicChunkLoop() {
+    while (micChunkActive) {
+      if (isPaused) {
+        await new Promise((r) => setTimeout(r, 500));
+        continue;
+      }
+      const blob = await recordOneStreamChunk(micAudioStream, CHUNK_DURATION_MS);
+      if (!micChunkActive) break;
+      const speakerName = (speakerNameInput.value || 'You').trim() || 'You';
+      await transcribeChunkAndAppend(blob, speakerName);
     }
   }
 
@@ -1287,8 +1341,20 @@
       tabAudioStream.getTracks().forEach((t) => t.stop());
       tabAudioStream = null;
     }
-    if (chunkAudioCtx) {
-      try { chunkAudioCtx.close(); } catch (_) { }
+    if (!micChunkActive && chunkAudioCtx) {
+      try { chunkAudioCtx.close(); } catch (_) {}
+      chunkAudioCtx = null;
+    }
+  }
+
+  function stopMicAudioChunking() {
+    micChunkActive = false;
+    if (micAudioStream) {
+      micAudioStream.getTracks().forEach((t) => t.stop());
+      micAudioStream = null;
+    }
+    if (!chunkActive && chunkAudioCtx) {
+      try { chunkAudioCtx.close(); } catch (_) {}
       chunkAudioCtx = null;
     }
   }
@@ -1319,19 +1385,8 @@
 
     // 1. Microphone Audio Capture (Mic or Both)
     if (selectedAudioSource === 'mic' || selectedAudioSource === 'both') {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices.getUserMedia({ audio: true })
-          .then(() => {
-            recognitionInstance = startRealSpeechRecognition();
-          })
-          .catch((err) => {
-            const errName = err?.name || err?.message || String(err);
-            console.log('[Cue Extension] Microphone access notice:', errName);
-            recognitionInstance = startRealSpeechRecognition();
-          });
-      } else {
-        recognitionInstance = startRealSpeechRecognition();
-      }
+      recognitionInstance = startRealSpeechRecognition();
+      startMicAudioChunking();
     }
 
     // 2. Computer / Video Audio Capture (Comp or Both)
@@ -1397,6 +1452,7 @@
       captionObserver = null;
     }
     stopTabAudioTranscription();
+    stopMicAudioChunking();
 
     statusBadge.className = 'status-badge';
     statusText.textContent = 'PROCESSING...';

@@ -117,16 +117,34 @@ export default function LiveMeetingPage() {
     else startCamera();
   };
 
-  // Read guest_display_name or query params on load
+  // Read guest_display_name or query params on load, fallback to active live meeting
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const searchParams = new URLSearchParams(window.location.search);
       const mId = searchParams.get('meetingId');
+      const storedId = localStorage.getItem('active_live_meeting_id');
       const guest = sessionStorage.getItem('guest_display_name');
       if (guest) setHostName(guest);
+
       if (mId) {
         setMeetingId(mId);
         setMeetingStatus('live');
+      } else if (storedId) {
+        setMeetingId(storedId);
+        setMeetingStatus('live');
+      } else {
+        fetch('/api/live-meetings')
+          .then(res => res.json())
+          .then(data => {
+            if (Array.isArray(data.meetings) && data.meetings.length > 0) {
+              const active = data.meetings.find((m: any) => m.status === 'live') || data.meetings[data.meetings.length - 1];
+              if (active && active.id) {
+                setMeetingId(active.id);
+                setMeetingStatus(active.status || 'live');
+              }
+            }
+          })
+          .catch(() => {});
       }
     }
   }, []);
@@ -149,6 +167,47 @@ export default function LiveMeetingPage() {
         .catch(err => console.warn('[LiveKit] Token fetch error:', err));
     }
   }, [meetingId, meetingStatus, hostName]);
+
+  // Real-time live meeting sync: poll backend every 1.2s to sync extension transcripts & insights
+  useEffect(() => {
+    if (!meetingId) return;
+
+    let isMounted = true;
+    const syncLiveMeeting = async () => {
+      try {
+        const res = await fetch(`/api/live-meetings/${meetingId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!isMounted || !data) return;
+
+        if (Array.isArray(data.transcriptEntries) && data.transcriptEntries.length > 0) {
+          setTranscript(data.transcriptEntries);
+        }
+        if (data.insights) {
+          setInsights(data.insights);
+        }
+        if (Array.isArray(data.participants) && data.participants.length > 0) {
+          setParticipants(data.participants);
+        }
+        if (data.title && data.title !== 'Live AI Meeting') {
+          setTitle(data.title);
+        }
+        if (data.status === 'live' || data.status === 'ended') {
+          setMeetingStatus(data.status);
+        }
+      } catch (err) {
+        /* ignore polling errors */
+      }
+    };
+
+    syncLiveMeeting();
+    const interval = setInterval(syncLiveMeeting, 1200);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [meetingId]);
 
   // Auto scroll to bottom when transcript updates
   useEffect(() => {
