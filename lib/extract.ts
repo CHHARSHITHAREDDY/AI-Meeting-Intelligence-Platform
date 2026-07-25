@@ -73,7 +73,7 @@ async function runStructuredExtraction(transcript: string, systemPrompt: string,
       });
 
       const response = await nvidiaClient.chat.completions.create({
-        model: 'meta/llama-3.1-70b-instruct',
+        model: 'nvidia/nemotron-3-ultra-550b-a55b',
         temperature: 0.2,
         max_tokens: 3000,
         messages: [
