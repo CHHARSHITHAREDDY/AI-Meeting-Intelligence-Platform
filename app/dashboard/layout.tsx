@@ -56,7 +56,7 @@ export default function DashboardLayout({
     { name: 'Live Meeting', href: '/dashboard/live', exact: true, icon: 'graphic_eq' },
     { name: 'Meetings', href: '/dashboard/meetings', exact: true, icon: 'videocam' },
     { name: 'Upload Meeting', href: '/dashboard/upload', exact: true, icon: 'cloud_upload' },
-    { name: 'Company Memory', href: '/dashboard/graph', exact: true, icon: 'database' },
+    { name: 'Analytics & Memory', href: '/dashboard/graph', exact: true, icon: 'analytics' },
     { name: 'Decisions', href: '/dashboard/decisions', exact: false, icon: 'fact_check' },
     { name: 'Tasks', href: '/dashboard/tasks', exact: false, icon: 'assignment' },
   ];
@@ -67,7 +67,7 @@ export default function DashboardLayout({
       case '/dashboard/live': return 'Live Meeting';
       case '/dashboard/decisions': return 'Decisions Register';
       case '/dashboard/tasks': return 'Tasks Register';
-      case '/dashboard/graph': return 'Knowledge Graph';
+      case '/dashboard/graph': return 'Analytics & Knowledge Graph';
       case '/dashboard/settings': return 'System Settings';
       case '/dashboard/meetings': return 'Meetings';
       case '/dashboard/upload': return 'Upload Meeting';
