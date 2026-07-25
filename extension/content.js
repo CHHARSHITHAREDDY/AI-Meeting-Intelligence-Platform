@@ -486,7 +486,7 @@
       <span class="source-label">AUDIO SOURCE:</span>
       <div class="source-toggle-group">
         <button id="srcMicBtn" class="source-btn active" title="Microphone Audio (Live Voice)">🎙️ Mic</button>
-        <button id="srcCompBtn" class="source-btn" title="Computer / Tab Audio (System / Video)">💻 Computer</button>
+        <button id="srcCompBtn" class="source-btn" title="Computer / Tab Audio. In the share picker, choose a DIFFERENT tab than this one for best results — capturing this same tab's own audio is unreliable in Chrome. For this tab specifically, use the Weave side panel instead.">💻 Computer</button>
         <button id="srcBothBtn" class="source-btn" title="Both Mic & Computer Audio">🎙️+💻 Both</button>
       </div>
     </div>
@@ -1196,8 +1196,23 @@
   let chunkAudioCtx = null;
   let chunkActive = false;
   let micChunkActive = false;
+  let consecutiveSilentTabChunks = 0;
+  let sameTabWarningShown = false;
   const CHUNK_DURATION_MS = 5000;
   const SILENCE_RMS_THRESHOLD = 0.005;
+  // If picked-tab audio is silent for this many chunks in a row (~25s), it's
+  // very likely the known Chrome limitation below rather than genuine silence.
+  const SILENT_STREAK_WARNING_THRESHOLD = 5;
+
+  // Chrome has a well-known limitation where a tab capturing its OWN audio via
+  // getDisplayMedia's "Share this tab" option can come back with zero audio
+  // tracks, or a track that exists but only ever produces silence — this is a
+  // browser-level self-capture restriction (to avoid audio feedback loops),
+  // not something this code can force around. Capturing a DIFFERENT tab from
+  // the picker works reliably; so does the extension's side panel, which
+  // uses chrome.tabCapture (a privileged API not available to content
+  // scripts) instead of getDisplayMedia and doesn't hit this restriction.
+  const SAME_TAB_HINT = 'Chrome can be unreliable when a tab tries to capture its OWN audio this way. Two options: (1) open the Weave side panel instead (toolbar icon → side panel) — it captures this tab directly without this limitation, or (2) keep the floating widget, but when the picker opens choose a DIFFERENT tab that has the audio playing.';
 
   async function startTabAudioTranscription() {
     try {
@@ -1206,7 +1221,7 @@
       stream.getVideoTracks().forEach((t) => t.stop());
 
       if (audioTracks.length === 0) {
-        appendTranscriptLine('System', '⚠️ No tab/system audio was shared. Re-select "Computer" and check "Share tab audio" in the picker.', false);
+        appendTranscriptLine('System', `⚠️ No audio track came back from the share picker. ${SAME_TAB_HINT}`, false);
         stream.getTracks().forEach((t) => t.stop());
         return;
       }
@@ -1214,6 +1229,8 @@
       tabAudioStream = new MediaStream(audioTracks);
       if (!chunkAudioCtx) chunkAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
       chunkActive = true;
+      consecutiveSilentTabChunks = 0;
+      sameTabWarningShown = false;
       runChunkLoop();
     } catch (err) {
       console.log('[Weave Extension] getDisplayMedia notice:', err?.message || err);
@@ -1325,7 +1342,20 @@
       const mono16k = downsampleTo16kMono(decoded);
       if (mono16k.length < 1200) return;
 
-      if (computeRms(mono16k) < SILENCE_RMS_THRESHOLD) return;
+      if (computeRms(mono16k) < SILENCE_RMS_THRESHOLD) {
+        if (speaker === 'Computer Audio') {
+          consecutiveSilentTabChunks++;
+          // Several silent chunks in a row on the tab-audio source, while the
+          // page is presumably making sound, points at the same-tab
+          // self-capture limitation rather than genuine silence.
+          if (consecutiveSilentTabChunks === SILENT_STREAK_WARNING_THRESHOLD && !sameTabWarningShown) {
+            sameTabWarningShown = true;
+            appendTranscriptLine('System', `⚠️ Computer audio has been silent for a while. ${SAME_TAB_HINT}`, false);
+          }
+        }
+        return;
+      }
+      if (speaker === 'Computer Audio') consecutiveSilentTabChunks = 0;
 
       const wavBuffer = encodeWavPcm16(mono16k, 16000);
       const res = await callApiBinary('/api/transcribe-chunk', wavBuffer);
