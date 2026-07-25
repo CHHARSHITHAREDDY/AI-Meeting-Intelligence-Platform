@@ -373,21 +373,13 @@
 
   resizeObserver.observe(wrapper);
 
-  // 7. Recorder & Live Simulation Engine
+  // 7. Recorder Engine
   let timerInterval = null;
   let seconds = 0;
   let isPaused = false;
-  let mockIdx = 0;
   let recognitionInstance = null;
   let captionObserver = null;
   const seenCaptions = new Set();
-
-  const mockLines = [
-    { speaker: 'Sarah (PM)', text: 'Welcome. Let\'s finalize the Q3 product roadmap today.' },
-    { speaker: 'Marcus (Eng)', text: 'Decision made: We will cap initial ad spend at $150k.' },
-    { speaker: 'Alex (Dev)', text: 'Action item: I will update the Redis caching layer by Friday.' },
-    { speaker: 'Elena (Sec)', text: 'Risk flagged: API rate limits might increase latency.' }
-  ];
 
   function formatTime(s) {
     const m = Math.floor(s / 60).toString().padStart(2, '0');
@@ -557,33 +549,26 @@
     transcriptFeed.innerHTML = '';
 
     seconds = 0;
-    timerDisplay.textContent = formatTime(seconds);
+    // Prompt microphone access if needed and start engines
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(() => {
+          recognitionInstance = startRealSpeechRecognition();
+        })
+        .catch((err) => {
+          console.warn('[Cue Extension] Microphone access error:', err);
+          recognitionInstance = startRealSpeechRecognition();
+        });
+    } else {
+      recognitionInstance = startRealSpeechRecognition();
+    }
 
-    // Start Web Speech & Video Audio Sync Engine
-    recognitionInstance = startRealSpeechRecognition();
     captionObserver = startVideoAudioSyncEngine();
 
     timerInterval = setInterval(() => {
       if (!isPaused) {
         seconds++;
         timerDisplay.textContent = formatTime(seconds);
-
-        if (seconds % 4 === 0 && mockIdx < mockLines.length) {
-          const item = mockLines[mockIdx++];
-          const div = document.createElement('div');
-          div.className = 'transcript-line';
-          div.innerHTML = `<span class="speaker">${item.speaker}:</span> ${item.text}`;
-          transcriptFeed.appendChild(div);
-          transcriptFeed.scrollTop = transcriptFeed.scrollHeight;
-
-          if (item.text.includes('Decision')) {
-            addInsight('insight-decision', 'DECISION', item.text);
-          } else if (item.text.includes('Action')) {
-            addInsight('insight-task', 'TASK', item.text);
-          } else if (item.text.includes('Risk')) {
-            addInsight('insight-risk', 'RISK', item.text);
-          }
-        }
       }
     }, 1000);
   });
