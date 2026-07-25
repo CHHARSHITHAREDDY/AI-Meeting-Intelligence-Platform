@@ -622,7 +622,9 @@
     const rect = host.getBoundingClientRect();
     initialLeft = rect.left;
     initialTop = rect.top;
-    host.style.right = 'auto'; // release right constraint
+    host.style.left = `${initialLeft}px`;
+    host.style.top = `${initialTop}px`;
+    host.style.right = 'auto'; // release right constraint cleanly without jumping to left
   });
 
   window.addEventListener('mousemove', (e) => {
@@ -864,10 +866,19 @@
   // structured decisions/actions/risks/summary the moment the response lands.
   function pushTranscriptToBackend(speaker, text) {
     enqueue(async () => {
-      const id = await ensureLiveMeeting();
+      let id = await ensureLiveMeeting();
       if (!id) return;
-      const res = await callApi(`/api/live-meetings/${id}`, 'POST', { text, speaker, timestamp: nowClock() });
-      if (res.ok && res.data && res.data.meeting) {
+      let res = await callApi(`/api/live-meetings/${id}`, 'POST', { text, speaker, timestamp: nowClock() });
+      if (!res.ok && res.error && (res.error.includes('not found') || res.status === 404)) {
+        // Stale meeting session ID — clear and re-create meeting ID for active recording
+        meetingId = null;
+        meetingCreationPromise = null;
+        id = await ensureLiveMeeting();
+        if (id) {
+          res = await callApi(`/api/live-meetings/${id}`, 'POST', { text, speaker, timestamp: nowClock() });
+        }
+      }
+      if (res && res.ok && res.data && res.data.meeting) {
         renderInsights(res.data.meeting.insights);
       }
     });
@@ -1418,7 +1429,14 @@
   }
 
   // ─── Start / Pause / Stop ──────────────────────────────────────────────────
+  // ─── Start / Pause / Stop ──────────────────────────────────────────────────
   startBtn.addEventListener('click', async () => {
+    // If previous meeting session ended, force a fresh meeting ID creation
+    if (statusText.textContent === 'DONE') {
+      meetingId = null;
+      meetingCreationPromise = null;
+    }
+
     statusBadge.className = 'status-badge recording';
     statusText.textContent = 'REC';
     startBtn.style.display = 'none';
@@ -1430,6 +1448,8 @@
     lastBlockEl = null;
     lastBlockSpeaker = null;
     lastFinalKey = '';
+    isPaused = false;
+    pauseBtn.textContent = '⏸';
     insightList.innerHTML = `<div style="font-size: 10px; color: #9f8f99; text-align: center; margin: auto;">Listening for key decisions & tasks...</div>`;
     latestInsights = { summary: '', decisions: [], actionItems: [], risks: [] };
 
@@ -1439,17 +1459,12 @@
     const sourceName = selectedAudioSource === 'mic' ? '🎙️ Microphone' : selectedAudioSource === 'comp' ? '💻 Computer Audio' : '🎙️+💻 Both (Mic & Computer)';
     appendTranscriptLine('System', `Recording active [Source: ${sourceName}]`, false);
 
-    ensureLiveMeeting();
+    await ensureLiveMeeting();
 
     // 1. Microphone Audio Capture (Mic or Both)
     if (selectedAudioSource === 'mic' || selectedAudioSource === 'both') {
       const hasSpeechRecognition = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
       recognitionInstance = startRealSpeechRecognition();
-      // Only fall back to the Whisper-chunk pipeline for mic audio when this
-      // browser has no Web Speech API at all (e.g. Firefox). Running both on
-      // the SAME mic stream would transcribe every utterance twice — once
-      // instantly via Web Speech API, once again ~5s later via Whisper —
-      // producing duplicate transcript lines and double the AI processing.
       if (!hasSpeechRecognition) {
         startMicAudioChunking();
       }
@@ -1461,6 +1476,7 @@
       startTabAudioTranscription();
     }
 
+    if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {
       if (!isPaused) {
         seconds++;
@@ -1501,6 +1517,8 @@
 
   stopBtn.addEventListener('click', async () => {
     clearInterval(timerInterval);
+    timerInterval = null;
+
     if (recognitionWatchdog) {
       clearInterval(recognitionWatchdog);
       recognitionWatchdog = null;
@@ -1523,14 +1541,19 @@
     statusBadge.className = 'status-badge';
     statusText.textContent = 'PROCESSING...';
 
-    const id = await ensureLiveMeeting();
-    if (id) {
-      const res = await callApi(`/api/live-meetings/${id}`, 'PATCH', { action: 'end' });
+    const currentId = meetingId;
+    if (currentId) {
+      const res = await callApi(`/api/live-meetings/${currentId}`, 'PATCH', { action: 'end' });
       if (res.ok && res.data && res.data.meeting) {
         renderInsights(res.data.meeting.insights);
         renderFinalSummaries(res.data.meeting.finalSummaries);
       }
     }
+
+    // Officially end current session so subsequent Start click creates a new meeting
+    meetingId = null;
+    meetingCreationPromise = null;
+    isPaused = false;
 
     statusText.textContent = 'DONE';
     startBtn.style.display = 'inline-block';
