@@ -378,6 +378,9 @@
   let seconds = 0;
   let isPaused = false;
   let mockIdx = 0;
+  let recognitionInstance = null;
+  let captionObserver = null;
+  const seenCaptions = new Set();
 
   const mockLines = [
     { speaker: 'Sarah (PM)', text: 'Welcome. Let\'s finalize the Q3 product roadmap today.' },
@@ -392,6 +395,158 @@
     return `${m}:${sec}`;
   }
 
+  function appendTranscriptLine(speaker, text, isInterim = false) {
+    if (!text.trim()) return;
+    
+    // Remove placeholder message if present
+    if (transcriptFeed.querySelector('div')?.textContent.includes('Click ▶ Start')) {
+      transcriptFeed.innerHTML = '';
+    }
+
+    let interimEl = transcriptFeed.querySelector('.interim-line');
+    if (isInterim) {
+      if (!interimEl) {
+        interimEl = document.createElement('div');
+        interimEl.className = 'transcript-line interim-line';
+        interimEl.style.opacity = '0.7';
+        interimEl.style.fontStyle = 'italic';
+        interimEl.style.borderLeftColor = '#a5b4fc';
+        transcriptFeed.appendChild(interimEl);
+      }
+      interimEl.innerHTML = `<span class="speaker">${speaker} (speaking...):</span> ${text}`;
+      transcriptFeed.scrollTop = transcriptFeed.scrollHeight;
+      return;
+    }
+
+    if (interimEl) interimEl.remove();
+
+    const div = document.createElement('div');
+    div.className = 'transcript-line';
+    div.innerHTML = `<span class="speaker">${speaker}:</span> ${text}`;
+    transcriptFeed.appendChild(div);
+    transcriptFeed.scrollTop = transcriptFeed.scrollHeight;
+
+    // Real-time keyword intelligence detector
+    const lower = text.toLowerCase();
+    if (lower.includes('decid') || lower.includes('agree') || lower.includes('will cap') || lower.includes('approved')) {
+      addInsight('insight-decision', 'DECISION', text);
+    } else if (lower.includes('action') || lower.includes('todo') || lower.includes('will update') || lower.includes('assigned')) {
+      addInsight('insight-task', 'TASK', text);
+    } else if (lower.includes('risk') || lower.includes('worry') || lower.includes('latency') || lower.includes('issue')) {
+      addInsight('insight-risk', 'RISK', text);
+    }
+  }
+
+  function startRealSpeechRecognition() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return null;
+
+    try {
+      const instance = new SR();
+      instance.continuous = true;
+      instance.interimResults = true;
+      instance.lang = 'en-US';
+
+      instance.onresult = (event) => {
+        if (isPaused) return;
+        let interimText = '';
+        let finalText = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const t = event.results[i][0]?.transcript || '';
+          if (event.results[i].isFinal) finalText += t + ' ';
+          else interimText += t;
+        }
+
+        if (interimText.trim()) {
+          appendTranscriptLine('Audio Input', interimText.trim(), true);
+        }
+        if (finalText.trim()) {
+          appendTranscriptLine('Audio Input', finalText.trim(), false);
+        }
+      };
+
+      instance.onerror = (e) => {
+        console.warn('[Cue Extension] Speech recognition notice:', e.error);
+        if (e.error === 'not-allowed') {
+          appendTranscriptLine('System', '⚠️ Mic permission needed for live voice. Capturing video subtitles directly...', false);
+        }
+      };
+
+      instance.onend = () => {
+        if (recognitionInstance && !isPaused) {
+          try { recognitionInstance.start(); } catch (_) {}
+        }
+      };
+
+      instance.start();
+      return instance;
+    } catch (err) {
+      console.warn('[Cue Extension] Web Speech API initialization notice:', err);
+      return null;
+    }
+  }
+
+  // YouTube & HTML5 Video Subtitle / Spoken Text Sync Engine
+  let videoSyncInterval = null;
+
+  function startVideoAudioSyncEngine() {
+    seenCaptions.clear();
+    const video = document.querySelector('video');
+
+    // 1. YouTube Subtitle Track Fetching (if on YouTube)
+    if (window.location.hostname.includes('youtube.com')) {
+      const videoId = new URLSearchParams(window.location.search).get('v');
+      if (videoId) {
+        fetch(`https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&fmt=json3`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.events) {
+              const cues = data.events
+                .filter(e => e.segs && e.segs.length > 0)
+                .map(e => ({
+                  start: e.tStartMs / 1000,
+                  text: e.segs.map(s => s.utf8).join('').trim()
+                }))
+                .filter(c => c.text && c.text !== '\n');
+
+              if (videoSyncInterval) clearInterval(videoSyncInterval);
+              videoSyncInterval = setInterval(() => {
+                if (isPaused || !video) return;
+                const currentTime = video.currentTime;
+                cues.forEach(c => {
+                  if (Math.abs(c.start - currentTime) < 1.2 && !seenCaptions.has(c.text)) {
+                    seenCaptions.add(c.text);
+                    appendTranscriptLine('YouTube Video Spoken', c.text, false);
+                  }
+                });
+              }, 500);
+            }
+          })
+          .catch(() => { /* silent fallback to DOM observer */ });
+      }
+    }
+
+    // 2. DOM Subtitle & TextTrack Observer
+    const captionContainer = document.querySelector('.ytp-caption-window-container') || document.querySelector('.captions-text') || document.body;
+    if (!captionContainer) return null;
+
+    const observer = new MutationObserver(() => {
+      if (isPaused) return;
+      const segments = document.querySelectorAll('.ytp-caption-segment, .caption-visual-line, .ytp-caption-window-bottom');
+      segments.forEach((seg) => {
+        const text = seg.textContent.trim();
+        if (text && text.length > 2 && !seenCaptions.has(text)) {
+          seenCaptions.add(text);
+          appendTranscriptLine('Video Spoken', text, false);
+        }
+      });
+    });
+
+    observer.observe(captionContainer, { childList: true, subtree: true, characterData: true });
+    return observer;
+  }
+
   startBtn.addEventListener('click', () => {
     statusBadge.className = 'status-badge recording';
     statusText.textContent = 'REC';
@@ -403,6 +558,11 @@
 
     seconds = 0;
     timerDisplay.textContent = formatTime(seconds);
+
+    // Start Web Speech & Video Audio Sync Engine
+    recognitionInstance = startRealSpeechRecognition();
+    captionObserver = startVideoAudioSyncEngine();
+
     timerInterval = setInterval(() => {
       if (!isPaused) {
         seconds++;
@@ -441,6 +601,19 @@
 
   stopBtn.addEventListener('click', () => {
     clearInterval(timerInterval);
+    if (videoSyncInterval) {
+      clearInterval(videoSyncInterval);
+      videoSyncInterval = null;
+    }
+    if (recognitionInstance) {
+      try { recognitionInstance.stop(); } catch (_) {}
+      recognitionInstance = null;
+    }
+    if (captionObserver) {
+      try { captionObserver.disconnect(); } catch (_) {}
+      captionObserver = null;
+    }
+
     statusBadge.className = 'status-badge';
     statusText.textContent = 'DONE';
     startBtn.style.display = 'inline-block';

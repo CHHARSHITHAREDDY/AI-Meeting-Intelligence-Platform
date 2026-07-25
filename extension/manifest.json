@@ -5,6 +5,7 @@
   "description": "Floating draggable & resizable real-time audio recorder, transcript stream & meeting intelligence assistant.",
   "permissions": [
     "activeTab",
+    "tabCapture",
     "storage",
     "scripting"
   ],
