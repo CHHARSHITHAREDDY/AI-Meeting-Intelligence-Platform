@@ -8,26 +8,21 @@ document.getElementById('toggleOverlay')?.addEventListener('click', async () => 
       return;
     }
 
-    chrome.tabs.sendMessage(tab.id, { action: 'TOGGLE_WIDGET' }, async (response) => {
-      if (chrome.runtime.lastError || !response) {
-        // content.js wasn't already running on this tab (e.g. it was open
-        // before the extension loaded) — inject it fresh, then explicitly
-        // show it, since a freshly-injected widget starts hidden and no
-        // TOGGLE_WIDGET message reached it to flip that.
-        try {
-          await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            files: ['content.js']
-          });
-          chrome.tabs.sendMessage(tab.id, { action: 'SHOW_WIDGET' }, () => void chrome.runtime.lastError);
-        } catch (err) {
-          console.log('[Popup] Script injection notice:', err?.message || err);
-        }
-      }
-      window.close();
-    });
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['content.js']
+      });
+    } catch (err) {
+      console.log('[Popup] Script execution notice:', err?.message || err);
+      try {
+        await chrome.tabs.sendMessage(tab.id, { action: 'TOGGLE_WIDGET' });
+      } catch (_) {}
+    }
   } catch (err) {
     console.log('[Popup] Toggle overlay error:', err?.message || err);
+  } finally {
+    window.close();
   }
 });
 

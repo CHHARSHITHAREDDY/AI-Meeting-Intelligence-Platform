@@ -20,7 +20,28 @@ chrome.runtime.onInstalled.addListener(() => {
 // calls to our own backend are relayed through this single message handler.
 const CUE_BACKEND_URL = 'http://localhost:3000';
 
-chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request && request.type === 'GET_TAB_AUDIO_STREAM_ID') {
+    const targetTabId = sender?.tab?.id || request.tabId;
+    if (chrome.tabCapture && typeof chrome.tabCapture.getMediaStreamId === 'function') {
+      try {
+        const options = targetTabId ? { targetTabId } : {};
+        chrome.tabCapture.getMediaStreamId(options, (streamId) => {
+          if (chrome.runtime.lastError || !streamId) {
+            sendResponse({ ok: false, error: chrome.runtime.lastError?.message || 'No stream ID' });
+          } else {
+            sendResponse({ ok: true, streamId });
+          }
+        });
+      } catch (err) {
+        sendResponse({ ok: false, error: err?.message || String(err) });
+      }
+    } else {
+      sendResponse({ ok: false, error: 'tabCapture API not available' });
+    }
+    return true;
+  }
+
   if (!request || (request.type !== 'CUE_API' && request.type !== 'CUE_API_BINARY')) {
     return undefined;
   }

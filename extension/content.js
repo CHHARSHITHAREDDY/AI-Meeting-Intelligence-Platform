@@ -1,7 +1,8 @@
 (function () {
   const existingHost = document.getElementById('weave-widget-host');
   if (existingHost) {
-    existingHost.style.display = existingHost.style.display === 'none' ? 'block' : 'none';
+    const isHidden = existingHost.style.display === 'none' || getComputedStyle(existingHost).display === 'none';
+    existingHost.style.display = isHidden ? 'block' : 'none';
     return;
   }
 
@@ -21,12 +22,7 @@
   host.style.resize = 'both';
   host.style.overflow = 'hidden';
   host.style.borderRadius = '16px';
-  // Hidden by default: manifest.json auto-injects this script on every page
-  // load (content_scripts, matches: <all_urls>), so if this were 'block' the
-  // widget would appear uninvited on every site the user visits. It only
-  // becomes visible when the user clicks the toolbar icon, which sends a
-  // TOGGLE_WIDGET message to the listener registered below.
-  host.style.display = 'none';
+  host.style.display = 'block';
   host.style.boxShadow = '0 16px 48px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(99, 102, 241, 0.3)';
 
   document.body.appendChild(host);
@@ -36,7 +32,8 @@
   if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
     chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       if (msg.action === 'TOGGLE_WIDGET') {
-        host.style.display = host.style.display === 'none' ? 'block' : 'none';
+        const isHidden = host.style.display === 'none' || getComputedStyle(host).display === 'none';
+        host.style.display = isHidden ? 'block' : 'none';
         sendResponse({ status: 'ok', visible: host.style.display !== 'none' });
       } else if (msg.action === 'SHOW_WIDGET') {
         host.style.display = 'block';
@@ -799,10 +796,10 @@
 
     if (interimEl) interimEl.remove();
 
-    // Prevent duplicate transcript entries (e.g. speech-recognition restarts
-    // occasionally re-emitting the same final result).
+    // Deduplicate rapid duplicate utterances (within 1 second)
     const dedupeKey = `${speaker}::${text.toLowerCase()}`;
-    if (dedupeKey === lastFinalKey) return;
+    const now = Date.now();
+    if (dedupeKey === lastFinalKey && (now - lastBlockTime) < 1500) return;
     lastFinalKey = dedupeKey;
 
     const now = Date.now();
@@ -1227,12 +1224,48 @@
 
   async function startTabAudioTranscription() {
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      let stream = null;
+
+      // 1. Try privileged chrome.tabCapture API first via background service worker
+      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+        const res = await new Promise((resolve) => {
+          try {
+            chrome.runtime.sendMessage({ type: 'GET_TAB_AUDIO_STREAM_ID' }, (r) => {
+              if (chrome.runtime.lastError) resolve(null);
+              else resolve(r);
+            });
+          } catch (_) {
+            resolve(null);
+          }
+        });
+
+        if (res && res.ok && res.streamId) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                mandatory: {
+                  chromeMediaSource: 'tab',
+                  chromeMediaSourceId: res.streamId
+                }
+              },
+              video: false
+            });
+          } catch (e) {
+            console.log('[Weave Extension] tabCapture getUserMedia notice:', e?.message || e);
+          }
+        }
+      }
+
+      // 2. Fallback to getDisplayMedia if tabCapture was not granted
+      if (!stream) {
+        stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      }
+
       const audioTracks = stream.getAudioTracks();
       stream.getVideoTracks().forEach((t) => t.stop());
 
       if (audioTracks.length === 0) {
-        appendTranscriptLine('System', `⚠️ No audio track came back from the share picker. ${SAME_TAB_HINT}`, false);
+        appendTranscriptLine('System', '⚠️ No tab audio track was found. Ensure audio is actively playing in the tab.', false);
         stream.getTracks().forEach((t) => t.stop());
         return;
       }
@@ -1245,7 +1278,7 @@
       runChunkLoop();
     } catch (err) {
       console.log('[Weave Extension] getDisplayMedia notice:', err?.message || err);
-      appendTranscriptLine('System', 'Computer audio capture was not started (permission dismissed or unsupported).', false);
+      appendTranscriptLine('System', 'Computer audio capture notice: ' + (err?.message || err), false);
     }
   }
 
@@ -1463,9 +1496,20 @@
 
     // 1. Microphone Audio Capture (Mic or Both)
     if (selectedAudioSource === 'mic' || selectedAudioSource === 'both') {
-      const hasSpeechRecognition = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-      recognitionInstance = startRealSpeechRecognition();
-      if (!hasSpeechRecognition) {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then((stream) => {
+            micAudioStream = stream;
+            recognitionInstance = startRealSpeechRecognition();
+            startMicAudioChunking();
+          })
+          .catch((err) => {
+            console.log('[Weave Extension] getUserMedia notice:', err?.message || err);
+            recognitionInstance = startRealSpeechRecognition();
+            startMicAudioChunking();
+          });
+      } else {
+        recognitionInstance = startRealSpeechRecognition();
         startMicAudioChunking();
       }
     }
