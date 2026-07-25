@@ -25,7 +25,7 @@ function initials(name: string) {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 }
 function avatarColor(name: string) {
-  const colors = ['#6366F1', '#8B5CF6', '#EC4899', '#14B8A6', '#F59E0B', '#3B82F6', '#10B981'];
+  const colors = ['#6a2153', '#8B5CF6', '#EC4899', '#14B8A6', '#6a2153', '#3B82F6', '#10B981'];
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % colors.length;
   return colors[h];
@@ -583,7 +583,7 @@ export default function LiveMeetingPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-widest ${isLive ? 'bg-red-500/20 text-red-400 border border-red-500/40' : 'bg-[#6366F1]/10 text-[#a5b4fc] border border-[#6366F1]/30'
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-widest ${isLive ? 'bg-red-500/20 text-red-400 border border-red-500/40' : 'bg-[#6a2153]/10 text-[#a5b4fc] border border-[#6a2153]/30'
               }`}>
               {isLive && (
                 <span className="relative flex h-2 w-2">
@@ -605,7 +605,7 @@ export default function LiveMeetingPage() {
           <div className="flex items-center gap-2">
             {meetingStatus === 'scheduled' && (
               <button onClick={startMeeting}
-                className="flex items-center gap-2 rounded-full bg-[#6366F1] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#5254cc] transition-colors shadow-lg shadow-indigo-500/20 cursor-pointer">
+                className="flex items-center gap-2 rounded-full bg-[#6a2153] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#5254cc] transition-colors shadow-lg shadow-indigo-500/20 cursor-pointer">
                 <Video className="h-4 w-4" /> Start Live Call
               </button>
             )}

@@ -89,9 +89,9 @@ export default function DecisionsPage() {
                 const dText = decisionText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // escape regex
                 const regex = new RegExp(`(${dText})`, 'gi');
                 if (regex.test(contextHtml)) {
-                  contextHtml = contextHtml.replace(regex, '<span class="highlight-text font-semibold text-[#5de6ff]">$1</span>');
+                  contextHtml = contextHtml.replace(regex, '<span class="highlight-text font-semibold text-[#9f8f99]">$1</span>');
                 } else {
-                  contextHtml = `<span class="highlight-text font-semibold text-[#5de6ff]">${decisionText}</span>. ${contextHtml}`;
+                  contextHtml = `<span class="highlight-text font-semibold text-[#9f8f99]">${decisionText}</span>. ${contextHtml}`;
                 }
 
                 extracted.push({
@@ -172,8 +172,8 @@ export default function DecisionsPage() {
       </header>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 text-[#94A3B8]">
-          <div className="w-8 h-8 rounded-full border-2 border-[#8083ff]/20 border-t-[#8083ff] animate-spin" />
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-[#9f8f99]">
+          <div className="w-8 h-8 rounded-full border-2 border-[#6a2153]/20 border-t-[#6a2153] animate-spin" />
           <p className="text-sm font-medium font-mono">Loading decisions...</p>
         </div>
       ) : activeTab === 'table' ? (

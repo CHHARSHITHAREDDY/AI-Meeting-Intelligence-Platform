@@ -54,13 +54,13 @@
       height: 100%;
       background: rgba(11, 15, 25, 0.96);
       backdrop-filter: blur(20px);
-      color: #F8FAFC;
+      color: #f5e2de;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       display: flex;
       flex-direction: column;
       overflow: hidden;
       border-radius: 16px;
-      border: 1px solid #232B45;
+      border: 1px solid #2a4a5e;
       position: relative;
     }
 
@@ -68,7 +68,7 @@
     .drag-handle {
       padding: 10px 14px;
       background: #0B0F19;
-      border-bottom: 1px solid #232B45;
+      border-bottom: 1px solid #2a4a5e;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -84,7 +84,7 @@
       width: 24px;
       height: 24px;
       border-radius: 6px;
-      background: linear-gradient(135deg, #6366F1, #5DE6FF);
+      background: linear-gradient(135deg, #6a2153, #5DE6FF);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -109,16 +109,16 @@
       font-family: monospace;
       padding: 3px 8px;
       border-radius: 9999px;
-      background: #12172A;
-      color: #94A3B8;
-      border: 1px solid #232B45;
+      background: #1d3a4d;
+      color: #9f8f99;
+      border: 1px solid #2a4a5e;
     }
 
     .status-dot {
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background: #94A3B8;
+      background: #9f8f99;
     }
 
     .status-badge.recording .status-dot {
@@ -138,8 +138,8 @@
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      background: #12172A;
-      border-bottom: 1px solid #232B45;
+      background: #1d3a4d;
+      border-bottom: 1px solid #2a4a5e;
       flex-shrink: 0;
     }
 
@@ -148,7 +148,7 @@
     #speakerNameInput {
       width: 56px;
       background: #0B0F19;
-      border: 1px solid #232B45;
+      border: 1px solid #2a4a5e;
       color: #5DE6FF;
       font-size: 10px;
       font-weight: 700;
@@ -157,13 +157,13 @@
       outline: none;
       font-family: inherit;
     }
-    #speakerNameInput:focus { border-color: #6366F1; }
+    #speakerNameInput:focus { border-color: #6a2153; }
 
     /* Audio Source Selector Bar */
     .audio-source-bar {
       padding: 6px 14px;
       background: #0B0F19;
-      border-bottom: 1px solid #232B45;
+      border-bottom: 1px solid #2a4a5e;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -174,17 +174,17 @@
       font-size: 9px;
       font-weight: 700;
       font-family: monospace;
-      color: #94A3B8;
+      color: #9f8f99;
       letter-spacing: 0.5px;
     }
 
     .source-toggle-group {
       display: flex;
       gap: 3px;
-      background: #12172A;
+      background: #1d3a4d;
       padding: 2px;
       border-radius: 6px;
-      border: 1px solid #232B45;
+      border: 1px solid #2a4a5e;
     }
 
     .source-btn {
@@ -192,7 +192,7 @@
       border: none;
       border-radius: 4px;
       background: transparent;
-      color: #94A3B8;
+      color: #9f8f99;
       font-size: 10px;
       font-weight: 600;
       cursor: pointer;
@@ -202,7 +202,7 @@
     .source-btn:hover { color: #f8fafc; }
 
     .source-btn.active {
-      background: linear-gradient(135deg, #6366F1, #5DE6FF);
+      background: linear-gradient(135deg, #6a2153, #5DE6FF);
       color: #0B0F19;
       font-weight: 800;
       box-shadow: 0 0 8px rgba(93, 230, 255, 0.4);
@@ -219,7 +219,7 @@
       padding: 6px 14px;
       border: none;
       border-radius: 8px;
-      background: linear-gradient(135deg, #6366F1, #5DE6FF);
+      background: linear-gradient(135deg, #6a2153, #5DE6FF);
       color: #0B0F19;
       font-weight: 800;
       font-size: 11px;
@@ -236,9 +236,9 @@
     .btn-icon {
       padding: 6px 10px;
       border-radius: 6px;
-      border: 1px solid #232B45;
-      background: #12172A;
-      color: #c7c4d7;
+      border: 1px solid #2a4a5e;
+      background: #1d3a4d;
+      color: #dfccc5;
       font-size: 11px;
       font-weight: 600;
       cursor: pointer;
@@ -250,7 +250,7 @@
       padding: 6px 10px;
       border-radius: 6px;
       border: none;
-      background: linear-gradient(135deg, #6366F1, #06B6D4);
+      background: linear-gradient(135deg, #6a2153, #06B6D4);
       color: #ffffff;
       font-size: 11px;
       font-weight: 700;
@@ -270,7 +270,7 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      border-bottom: 1px solid #232B45;
+      border-bottom: 1px solid #2a4a5e;
       background: #0B0F19;
     }
 
@@ -278,7 +278,7 @@
       font-size: 10px;
       font-weight: 700;
       font-family: monospace;
-      color: #94A3B8;
+      color: #9f8f99;
       text-transform: uppercase;
       margin-bottom: 6px;
       display: flex;
@@ -298,15 +298,15 @@
     .transcript-block {
       font-size: 11px;
       line-height: 1.4;
-      color: #dfe2ef;
-      background: #12172A;
+      color: #eaeaea;
+      background: #1d3a4d;
       padding: 6px 10px;
       border-radius: 8px;
-      border-left: 3px solid #6366F1;
+      border-left: 3px solid #6a2153;
       border-top: 1px solid rgba(255,255,255,0.03);
     }
 
-    .transcript-block.speaker-System { border-left-color: #94A3B8; opacity: 0.85; font-style: italic; }
+    .transcript-block.speaker-System { border-left-color: #9f8f99; opacity: 0.85; font-style: italic; }
     .transcript-block.speaker-Computer-Audio { border-left-color: #5DE6FF; }
     .transcript-block.interim-line { opacity: 0.65; font-style: italic; border-left-color: #a5b4fc; }
 
@@ -328,9 +328,9 @@
 
     .insight-tabs { display: flex; gap: 4px; }
     .insight-tab-btn {
-      border: 1px solid #232B45;
-      background: #12172A;
-      color: #94A3B8;
+      border: 1px solid #2a4a5e;
+      background: #1d3a4d;
+      color: #9f8f99;
       font-size: 9.5px;
       font-weight: 700;
       font-family: monospace;
@@ -340,7 +340,7 @@
       transition: all 0.2s ease;
     }
     .insight-tab-btn.active {
-      background: linear-gradient(135deg, #6366F1, #06B6D4);
+      background: linear-gradient(135deg, #6a2153, #06B6D4);
       color: #ffffff;
       border-color: transparent;
       box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
@@ -361,14 +361,14 @@
       font-size: 10.5px;
       line-height: 1.35;
     }
-    .insight-item .insight-field { color: #94A3B8; font-size: 9.5px; }
-    .insight-item .insight-field b { color: #dfe2ef; font-weight: 600; }
+    .insight-item .insight-field { color: #9f8f99; font-size: 9.5px; }
+    .insight-item .insight-field b { color: #eaeaea; font-weight: 600; }
 
     .insight-decision { background: rgba(52, 211, 153, 0.08); border-left: 3px solid #34D399; color: #a7f3d0; }
     .insight-task { background: rgba(93, 230, 255, 0.08); border-left: 3px solid #5DE6FF; color: #e0e7ff; }
     .insight-risk { background: rgba(255, 180, 171, 0.08); border-left: 3px solid #ffb4ab; color: #fecdd3; }
     .insight-question { background: rgba(245, 158, 11, 0.08); border-left: 3px solid #f59e0b; color: #fef3c7; }
-    .insight-summary { background: rgba(99, 102, 241, 0.15); border-left: 3px solid #6366F1; color: #f3e8ff; }
+    .insight-summary { background: rgba(99, 102, 241, 0.15); border-left: 3px solid #6a2153; color: #f3e8ff; }
 
     /* Chat Panel */
     .chat-panel { flex: 1; display: none; flex-direction: column; margin-top: 4px; overflow: hidden; }
@@ -376,15 +376,15 @@
     .chat-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 2px; }
     .chat-msg { font-size: 10.5px; line-height: 1.35; padding: 6px 8px; border-radius: 8px; max-width: 92%; }
     .chat-msg-user { align-self: flex-end; background: rgba(99, 102, 241, 0.25); color: #e0e7ff; border: 1px solid rgba(99,102,241,0.4); }
-    .chat-msg-ai { align-self: flex-start; background: #12172A; color: #dfe2ef; border: 1px solid #232B45; white-space: pre-wrap; }
+    .chat-msg-ai { align-self: flex-start; background: #1d3a4d; color: #eaeaea; border: 1px solid #2a4a5e; white-space: pre-wrap; }
     .chat-input-row { display: flex; gap: 4px; margin-top: 6px; flex-shrink: 0; }
     .chat-input {
-      flex: 1; background: #0B0F19; border: 1px solid #232B45; color: #f8fafc;
+      flex: 1; background: #0B0F19; border: 1px solid #2a4a5e; color: #f8fafc;
       font-size: 10.5px; padding: 5px 8px; border-radius: 6px; outline: none; font-family: inherit;
     }
-    .chat-input:focus { border-color: #6366F1; }
+    .chat-input:focus { border-color: #6a2153; }
     .chat-send-btn {
-      background: linear-gradient(135deg, #6366F1, #06B6D4); border: none; color: #fff; font-size: 10px; font-weight: 700;
+      background: linear-gradient(135deg, #6a2153, #06B6D4); border: none; color: #fff; font-size: 10px; font-weight: 700;
       padding: 5px 10px; border-radius: 6px; cursor: pointer;
     }
     .chat-send-btn:disabled { opacity: 0.5; cursor: default; }
@@ -393,7 +393,7 @@
     .export-toolbar {
       padding: 8px 14px;
       background: #0B0F19;
-      border-top: 1px solid #232B45;
+      border-top: 1px solid #2a4a5e;
       display: flex;
       gap: 6px;
       overflow-x: auto;
@@ -401,9 +401,9 @@
     }
     .export-btn {
       padding: 3px 7px;
-      border: 1px solid #232B45;
+      border: 1px solid #2a4a5e;
       border-radius: 4px;
-      background: #181b25;
+      background: #1a3345;
       color: #cbd5e1;
       font-size: 9.5px;
       font-weight: 600;
@@ -412,9 +412,9 @@
       transition: all 0.2s ease;
     }
     .export-btn:hover {
-      background: #232B45;
+      background: #2a4a5e;
       color: #ffffff;
-      border-color: #6366F1;
+      border-color: #6a2153;
     }
 
     /* Resize Handle Watermark */
@@ -423,7 +423,7 @@
       bottom: 2px;
       right: 4px;
       font-size: 9px;
-      color: #94A3B8;
+      color: #9f8f99;
       pointer-events: none;
     }
 
@@ -459,7 +459,7 @@
         <span class="status-dot"></span>
         <span id="statusText">IDLE</span>
       </div>
-      <button id="closeBtn" style="background:none; border:none; color:#94A3B8; cursor:pointer; font-size:12px; font-weight:bold;">✕</button>
+      <button id="closeBtn" style="background:none; border:none; color:#9f8f99; cursor:pointer; font-size:12px; font-weight:bold;">✕</button>
     </div>
 
     <!-- Controls Bar -->
@@ -493,7 +493,7 @@
         <span id="livePulse" style="color:#34D399; display:none;">● STREAMING</span>
       </div>
       <div id="transcriptFeed" class="transcript-feed">
-        <div style="font-size: 10px; color: #94A3B8; text-align: center; margin: auto;">
+        <div style="font-size: 10px; color: #9f8f99; text-align: center; margin: auto;">
           Click ▶ Start to begin live audio recording.
         </div>
       </div>
@@ -513,13 +513,13 @@
         </div>
       </div>
       <div id="insightList" class="insight-list">
-        <div style="font-size: 10px; color: #94A3B8; text-align: center; margin: auto;">
+        <div style="font-size: 10px; color: #9f8f99; text-align: center; margin: auto;">
           Listening for key decisions & tasks...
         </div>
       </div>
       <div id="chatPanel" class="chat-panel">
         <div id="chatMessages" class="chat-messages">
-          <div style="font-size: 10px; color: #94A3B8; text-align: center; margin: auto;">
+          <div style="font-size: 10px; color: #9f8f99; text-align: center; margin: auto;">
             Ask about decisions, tasks, risks, or anything said so far.
           </div>
         </div>
@@ -910,7 +910,7 @@
     });
 
     if (!insights.summary && (!insights.decisions || !insights.decisions.length) && (!insights.actionItems || !insights.actionItems.length) && (!insights.risks || !insights.risks.length)) {
-      insightList.innerHTML = `<div style="font-size: 10px; color: #94A3B8; text-align: center; margin: auto;">Listening for key decisions & tasks...</div>`;
+      insightList.innerHTML = `<div style="font-size: 10px; color: #9f8f99; text-align: center; margin: auto;">Listening for key decisions & tasks...</div>`;
     }
   }
 
@@ -1395,7 +1395,7 @@
     lastBlockEl = null;
     lastBlockSpeaker = null;
     lastFinalKey = '';
-    insightList.innerHTML = `<div style="font-size: 10px; color: #94A3B8; text-align: center; margin: auto;">Listening for key decisions & tasks...</div>`;
+    insightList.innerHTML = `<div style="font-size: 10px; color: #9f8f99; text-align: center; margin: auto;">Listening for key decisions & tasks...</div>`;
     latestInsights = { summary: '', decisions: [], actionItems: [], risks: [] };
 
     seconds = 0;
@@ -1600,7 +1600,7 @@ ${risks.map((r) => `> • ${r.title}`).join('\n') || '> _None_'}`;
     const statsCard = document.createElement('div');
     statsCard.className = 'insight-item';
     statsCard.style.background = 'rgba(99, 102, 241, 0.15)';
-    statsCard.style.borderLeft = '3px solid #6366F1';
+    statsCard.style.borderLeft = '3px solid #6a2153';
     statsCard.style.color = '#e0e7ff';
     const breakdownHtml = stats.map((s) => `<div>${escapeHtml(s.name)}: ${s.pct}% talk time</div>`).join('');
     statsCard.innerHTML = `<strong>📊 SPEAKER TALK-TIME & EFFICIENCY SCORE (${score}/100)</strong><br/>${breakdownHtml}`;

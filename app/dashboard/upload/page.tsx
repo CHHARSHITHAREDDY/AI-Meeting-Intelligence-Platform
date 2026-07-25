@@ -275,13 +275,13 @@ function UploadPageInner() {
       <div className="w-full max-w-3xl space-y-8 animate-fade-in">
 
         {/* Tab Switcher: YouTube URL vs Local File */}
-        <div className="inline-flex p-1.5 bg-[#121624] border border-[#232B45] rounded-full shadow-lg">
+        <div className="inline-flex p-1.5 bg-[#121624] border border-[#2a4a5e] rounded-full shadow-lg">
           <button
             onClick={() => setActiveTab('youtube')}
             className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-bold transition cursor-pointer ${
               activeTab === 'youtube'
-                ? 'bg-[#6366F1] text-white shadow-md shadow-[#6366F1]/30'
-                : 'text-[#94A3B8] hover:text-white'
+                ? 'bg-[#6a2153] text-white shadow-md shadow-[#6a2153]/30'
+                : 'text-[#9f8f99] hover:text-white'
             }`}
           >
             <YouTubeIcon className="w-4 h-4 text-rose-400" />
@@ -291,8 +291,8 @@ function UploadPageInner() {
             onClick={() => setActiveTab('file')}
             className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-bold transition cursor-pointer ${
               activeTab === 'file'
-                ? 'bg-[#6366F1] text-white shadow-md shadow-[#6366F1]/30'
-                : 'text-[#94A3B8] hover:text-white'
+                ? 'bg-[#6a2153] text-white shadow-md shadow-[#6a2153]/30'
+                : 'text-[#9f8f99] hover:text-white'
             }`}
           >
             <UploadCloud className="w-4 h-4 text-[#5DE6FF]" />
@@ -306,7 +306,7 @@ function UploadPageInner() {
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white">
               Free <span className="bg-gradient-to-r from-rose-400 via-fuchsia-400 to-indigo-400 bg-clip-text text-transparent">YouTube Transcript</span> Generator
             </h1>
-            <p className="text-sm md:text-base text-[#94A3B8] font-medium">
+            <p className="text-sm md:text-base text-[#9f8f99] font-medium">
               Instantly, without uploading video files.
             </p>
           </div>
@@ -315,7 +315,7 @@ function UploadPageInner() {
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white">
               Upload <span className="bg-gradient-to-r from-indigo-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">Audio or Video</span> File
             </h1>
-            <p className="text-sm md:text-base text-[#94A3B8] font-medium">
+            <p className="text-sm md:text-base text-[#9f8f99] font-medium">
               Extract transcript, summary, key decisions, and chat with AI copilot.
             </p>
           </div>
@@ -336,7 +336,7 @@ function UploadPageInner() {
           <form onSubmit={handleYouTubeSubmit} className="space-y-6">
 
             {/* Input Box & Button (Matching User Screenshot Layout) */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 bg-[#121624]/90 p-2 border border-[#232B45] rounded-full shadow-2xl focus-within:border-[#6366F1] transition-all max-w-2xl mx-auto backdrop-blur-md">
+            <div className="flex flex-col sm:flex-row items-center gap-3 bg-[#121624]/90 p-2 border border-[#2a4a5e] rounded-full shadow-2xl focus-within:border-[#6a2153] transition-all max-w-2xl mx-auto backdrop-blur-md">
               <div className="relative flex-1 w-full pl-4">
                 <input
                   type="url"
@@ -344,7 +344,7 @@ function UploadPageInner() {
                   value={youtubeUrl}
                   onChange={(e) => setYoutubeUrl(e.target.value)}
                   placeholder="Enter YouTube URL.. https://www.youtube.com/watch?v=Mcm3CDM..."
-                  className="w-full bg-transparent text-xs md:text-sm text-white placeholder-[#94A3B8]/60 outline-none py-2.5 pr-2"
+                  className="w-full bg-transparent text-xs md:text-sm text-white placeholder-[#9f8f99]/60 outline-none py-2.5 pr-2"
                 />
               </div>
 
@@ -359,7 +359,7 @@ function UploadPageInner() {
             </div>
 
             {/* Subtext */}
-            <p className="text-xs text-[#94A3B8] font-mono">
+            <p className="text-xs text-[#9f8f99] font-mono">
               {selectedProjectId ? 'Quick and simple. No catch.' : 'Select or create a project above to continue.'}
             </p>
 
@@ -377,7 +377,7 @@ function UploadPageInner() {
               className={`border-2 border-dashed rounded-3xl p-10 transition cursor-pointer flex flex-col items-center justify-center space-y-4 ${
                 dragActive
                   ? 'border-[#5DE6FF] bg-[#5DE6FF]/10'
-                  : 'border-[#232B45] hover:border-[#6366F1] bg-[#121624]/90'
+                  : 'border-[#2a4a5e] hover:border-[#6a2153] bg-[#121624]/90'
               }`}
             >
               <input
@@ -387,7 +387,7 @@ function UploadPageInner() {
                 onChange={(e) => e.target.files?.[0] && setFile(e.target.files[0])}
                 className="hidden"
               />
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#6366F1] to-[#5DE6FF] p-0.5 shadow-lg shadow-[#6366F1]/20">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#6a2153] to-[#5DE6FF] p-0.5 shadow-lg shadow-[#6a2153]/20">
                 <div className="w-full h-full bg-[#0A0E17] rounded-[14px] flex items-center justify-center">
                   <UploadCloud className="w-8 h-8 text-[#5DE6FF]" />
                 </div>
@@ -396,14 +396,14 @@ function UploadPageInner() {
                 <p className="text-sm font-bold text-white">
                   {file ? file.name : 'Click to upload or drag & drop video/audio file'}
                 </p>
-                <p className="text-xs text-[#94A3B8] mt-1">Supports MP4, MOV, MP3, WAV or M4A</p>
+                <p className="text-xs text-[#9f8f99] mt-1">Supports MP4, MOV, MP3, WAV or M4A</p>
               </div>
             </div>
 
             <button
               type="submit"
               disabled={!file || !selectedProjectId || status !== 'idle'}
-              className="w-full py-3.5 rounded-2xl text-xs font-bold text-white bg-[#6366F1] hover:bg-[#4F46E5] transition shadow-lg shadow-[#6366F1]/30 disabled:opacity-40 cursor-pointer"
+              className="w-full py-3.5 rounded-2xl text-xs font-bold text-white bg-[#6a2153] hover:bg-[#7d2d66] transition shadow-lg shadow-[#6a2153]/30 disabled:opacity-40 cursor-pointer"
             >
               {selectedProjectId ? 'Start Processing Audio File' : 'Select or create a project above to continue'}
             </button>
@@ -413,18 +413,18 @@ function UploadPageInner() {
 
         {/* Pipeline Processing Indicator */}
         {status !== 'idle' && (
-          <div className="max-w-md mx-auto bg-[#121624] border border-[#232B45] p-5 rounded-2xl shadow-2xl space-y-3">
+          <div className="max-w-md mx-auto bg-[#121624] border border-[#2a4a5e] p-5 rounded-2xl shadow-2xl space-y-3">
             <div className="flex items-center justify-between text-xs font-bold text-[#5DE6FF]">
               <span className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#6366F1] animate-spin" />
+                <Sparkles className="w-4 h-4 text-[#6a2153] animate-spin" />
                 Processing YouTube Transcript Pipeline...
               </span>
               <span className="capitalize text-white font-mono">{status}</span>
             </div>
             <div className="w-full bg-[#0A0E17] h-2 rounded-full overflow-hidden">
-              <div className="bg-gradient-to-r from-[#6366F1] via-fuchsia-500 to-[#5DE6FF] h-full transition-all duration-500 w-3/4 animate-pulse" />
+              <div className="bg-gradient-to-r from-[#6a2153] via-fuchsia-500 to-[#5DE6FF] h-full transition-all duration-500 w-3/4 animate-pulse" />
             </div>
-            <p className="text-[11px] text-[#94A3B8]">
+            <p className="text-[11px] text-[#9f8f99]">
               Extracting dialogue speech, classifying content, generating summary, action items, and indexing for RAG chat...
             </p>
           </div>
