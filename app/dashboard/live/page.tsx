@@ -186,7 +186,101 @@ export default function LiveMeetingPage() {
     return () => clearInterval(interval);
   }, [meetingId, meetingStatus, hostName]);
 
-  const isLive = meetingStatus === 'live';
+  /* Remote Video Streams Map: participantName -> MediaStream */
+  const [remoteStreams, setRemoteStreams] = useState<Record<string, MediaStream>>({});
+  const peerConnectionsRef = useRef<Record<string, RTCPeerConnection>>({});
+
+  // Establish real WebRTC PeerConnections across tabs using BroadcastChannel signaling
+  useEffect(() => {
+    if (!meetingId || meetingStatus !== 'live' || typeof window === 'undefined') return;
+
+    const channelName = `cue-webrtc-signaling-${meetingId}`;
+    const channel = new BroadcastChannel(channelName);
+
+    const createPeer = (peerName: string, isInitiator: boolean) => {
+      if (peerConnectionsRef.current[peerName]) return peerConnectionsRef.current[peerName];
+
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+      });
+
+      // Add local media tracks (video & audio) to PeerConnection
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => {
+          pc.addTrack(track, mediaStreamRef.current!);
+        });
+      }
+
+      // Receive remote audio & video streams
+      pc.ontrack = (event) => {
+        if (event.streams && event.streams[0]) {
+          setRemoteStreams((prev) => ({ ...prev, [peerName]: event.streams[0] }));
+        }
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          channel.postMessage({ type: 'candidate', sender: hostName, target: peerName, candidate: event.candidate });
+        }
+      };
+
+      peerConnectionsRef.current[peerName] = pc;
+
+      if (isInitiator) {
+        pc.createOffer().then((offer) => {
+          pc.setLocalDescription(offer);
+          channel.postMessage({ type: 'offer', sender: hostName, target: peerName, offer });
+        });
+      }
+
+      return pc;
+    };
+
+    // Announce presence to other tabs/windows
+    channel.postMessage({ type: 'join', sender: hostName });
+
+    channel.onmessage = async (event) => {
+      const { type, sender, target, offer, answer, candidate } = event.data;
+      if (sender === hostName) return;
+
+      if (type === 'join') {
+        createPeer(sender, true);
+      } else if (type === 'offer' && (target === hostName || !target)) {
+        const pc = createPeer(sender, false);
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        const ans = await pc.createAnswer();
+        await pc.setLocalDescription(ans);
+        channel.postMessage({ type: 'answer', sender: hostName, target: sender, answer: ans });
+      } else if (type === 'answer' && target === hostName) {
+        const pc = peerConnectionsRef.current[sender];
+        if (pc) {
+          await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        }
+      } else if (type === 'candidate' && target === hostName) {
+        const pc = peerConnectionsRef.current[sender];
+        if (pc && candidate) {
+          try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (_) {}
+        }
+      } else if (type === 'leave') {
+        if (peerConnectionsRef.current[sender]) {
+          peerConnectionsRef.current[sender].close();
+          delete peerConnectionsRef.current[sender];
+        }
+        setRemoteStreams((prev) => {
+          const next = { ...prev };
+          delete next[sender];
+          return next;
+        });
+      }
+    };
+
+    return () => {
+      channel.postMessage({ type: 'leave', sender: hostName });
+      channel.close();
+      Object.values(peerConnectionsRef.current).forEach((pc) => pc.close());
+      peerConnectionsRef.current = {};
+    };
+  }, [meetingId, meetingStatus, hostName]);
 
   useEffect(() => {
     if (isLive) {
@@ -584,6 +678,18 @@ export default function LiveMeetingPage() {
                           muted
                           className="w-full h-full object-cover rounded-xl"
                         />
+                      ) : remoteStreams[pName] ? (
+                        <video
+                          ref={(node) => {
+                            if (node && remoteStreams[pName]) {
+                              node.srcObject = remoteStreams[pName];
+                              node.play().catch(() => {});
+                            }
+                          }}
+                          autoPlay
+                          playsInline
+                          className="w-full h-full object-cover rounded-xl"
+                        />
                       ) : (
                         <div className="flex flex-col items-center justify-center space-y-2 text-center p-4">
                           <div
@@ -594,7 +700,7 @@ export default function LiveMeetingPage() {
                           </div>
                           <h4 className="text-xs font-semibold text-zinc-200">{pName}</h4>
                           <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                            WebRTC Active
+                            WebRTC Stream Connected
                           </span>
                         </div>
                       )}
