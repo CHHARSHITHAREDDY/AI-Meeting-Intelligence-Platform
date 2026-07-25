@@ -45,23 +45,23 @@
     .widget-container {
       width: 100%;
       height: 100%;
-      background: rgba(13, 14, 21, 0.95);
-      backdrop-filter: blur(16px);
+      background: rgba(11, 15, 25, 0.96);
+      backdrop-filter: blur(20px);
       color: #F8FAFC;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      border-radius: 14px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      border: 1px solid #232B45;
       position: relative;
     }
 
     /* Drag Handle Header */
     .drag-handle {
-      padding: 10px 12px;
-      background: #0d0e15;
-      border-bottom: 1px solid #1c1f29;
+      padding: 10px 14px;
+      background: #0B0F19;
+      border-bottom: 1px solid #232B45;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -77,13 +77,14 @@
       width: 24px;
       height: 24px;
       border-radius: 6px;
-      background: linear-gradient(135deg, #6366F1, #EC4899);
+      background: linear-gradient(135deg, #6366F1, #5DE6FF);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #ffffff;
-      font-size: 12px;
-      font-weight: bold;
+      color: #0B0F19;
+      font-size: 13px;
+      font-weight: 800;
+      box-shadow: 0 0 10px rgba(93, 230, 255, 0.4);
     }
 
     .brand-name {
@@ -101,7 +102,7 @@
       font-family: monospace;
       padding: 3px 8px;
       border-radius: 9999px;
-      background: #181b25;
+      background: #12172A;
       color: #94A3B8;
       border: 1px solid #232B45;
     }
@@ -125,13 +126,13 @@
 
     /* Controls Bar */
     .controls-bar {
-      padding: 10px 12px;
+      padding: 10px 14px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      background: rgba(18, 20, 29, 0.8);
-      border-bottom: 1px solid #1c1f29;
+      background: #12172A;
+      border-bottom: 1px solid #232B45;
       flex-shrink: 0;
     }
 
@@ -139,9 +140,9 @@
 
     #speakerNameInput {
       width: 56px;
-      background: #0d0e15;
+      background: #0B0F19;
       border: 1px solid #232B45;
-      color: #c0c1ff;
+      color: #5DE6FF;
       font-size: 10px;
       font-weight: 700;
       padding: 3px 5px;
@@ -153,9 +154,9 @@
 
     /* Audio Source Selector Bar */
     .audio-source-bar {
-      padding: 6px 12px;
-      background: #11131c;
-      border-bottom: 1px solid #1c1f29;
+      padding: 6px 14px;
+      background: #0B0F19;
+      border-bottom: 1px solid #232B45;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -173,7 +174,7 @@
     .source-toggle-group {
       display: flex;
       gap: 3px;
-      background: #181b25;
+      background: #12172A;
       padding: 2px;
       border-radius: 6px;
       border: 1px solid #232B45;
@@ -194,39 +195,42 @@
     .source-btn:hover { color: #f8fafc; }
 
     .source-btn.active {
-      background: linear-gradient(135deg, #6366F1, #818CF8);
-      color: #ffffff;
-      font-weight: 700;
-      box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+      background: linear-gradient(135deg, #6366F1, #5DE6FF);
+      color: #0B0F19;
+      font-weight: 800;
+      box-shadow: 0 0 8px rgba(93, 230, 255, 0.4);
     }
 
     .timer-display {
       font-family: monospace;
       font-size: 16px;
       font-weight: 700;
-      color: #c0c1ff;
+      color: #5DE6FF;
     }
 
     .btn-record {
-      padding: 6px 12px;
+      padding: 6px 14px;
       border: none;
-      border-radius: 6px;
-      background: linear-gradient(135deg, #6366F1, #EC4899);
-      color: #fff;
-      font-weight: 700;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #6366F1, #5DE6FF);
+      color: #0B0F19;
+      font-weight: 800;
       font-size: 11px;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 4px;
-      box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+      box-shadow: 0 0 12px rgba(93, 230, 255, 0.4);
+      transition: transform 0.2s ease;
     }
+
+    .btn-record:hover { transform: scale(1.02); }
 
     .btn-icon {
       padding: 6px 10px;
       border-radius: 6px;
       border: 1px solid #232B45;
-      background: #181b25;
+      background: #12172A;
       color: #c7c4d7;
       font-size: 11px;
       font-weight: 600;
@@ -239,7 +243,7 @@
       padding: 6px 10px;
       border-radius: 6px;
       border: none;
-      background: linear-gradient(135deg, #8B5CF6, #EC4899);
+      background: linear-gradient(135deg, #6366F1, #06B6D4);
       color: #ffffff;
       font-size: 11px;
       font-weight: 700;
@@ -247,7 +251,7 @@
       display: flex;
       align-items: center;
       gap: 4px;
-      box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
+      box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
     }
     .btn-summarize:hover { opacity: 0.9; }
     .btn-summarize:disabled { opacity: 0.5; cursor: default; }
@@ -255,11 +259,12 @@
     /* Transcript Stream Section */
     .transcript-section {
       flex: 1;
-      padding: 10px 12px;
+      padding: 10px 14px;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      border-bottom: 1px solid #1c1f29;
+      border-bottom: 1px solid #232B45;
+      background: #0B0F19;
     }
 
     .section-header {
@@ -287,44 +292,52 @@
       font-size: 11px;
       line-height: 1.4;
       color: #dfe2ef;
-      background: rgba(24, 27, 37, 0.7);
-      padding: 6px 8px;
-      border-radius: 6px;
+      background: #12172A;
+      padding: 6px 10px;
+      border-radius: 8px;
       border-left: 3px solid #6366F1;
+      border-top: 1px solid rgba(255,255,255,0.03);
     }
 
     .transcript-block.speaker-System { border-left-color: #94A3B8; opacity: 0.85; font-style: italic; }
-    .transcript-block.speaker-Computer-Audio { border-left-color: #34D399; }
+    .transcript-block.speaker-Computer-Audio { border-left-color: #5DE6FF; }
     .transcript-block.interim-line { opacity: 0.65; font-style: italic; border-left-color: #a5b4fc; }
 
-    .transcript-speaker { font-weight: 700; color: #c0c1ff; font-size: 11px; margin-bottom: 2px; }
+    .transcript-speaker { font-weight: 700; color: #5DE6FF; font-size: 11px; margin-bottom: 2px; }
     .transcript-utterance { display: flex; gap: 6px; align-items: baseline; }
     .utterance-time { font-size: 9px; color: #6b7280; font-family: monospace; flex-shrink: 0; }
     .utterance-text { flex: 1; }
 
     /* Insights Section */
     .insights-section {
-      padding: 10px 12px;
+      padding: 10px 14px;
       height: 168px;
       display: flex;
       flex-direction: column;
       flex-shrink: 0;
       overflow: hidden;
+      background: #0B0F19;
     }
 
     .insight-tabs { display: flex; gap: 4px; }
     .insight-tab-btn {
-      border: none;
-      background: transparent;
+      border: 1px solid #232B45;
+      background: #12172A;
       color: #94A3B8;
       font-size: 9.5px;
       font-weight: 700;
       font-family: monospace;
-      padding: 2px 6px;
-      border-radius: 4px;
+      padding: 3px 8px;
+      border-radius: 6px;
       cursor: pointer;
+      transition: all 0.2s ease;
     }
-    .insight-tab-btn.active { background: #6366F1; color: #fff; }
+    .insight-tab-btn.active {
+      background: linear-gradient(135deg, #6366F1, #06B6D4);
+      color: #ffffff;
+      border-color: transparent;
+      box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+    }
 
     .insight-list {
       flex: 1;
@@ -345,37 +358,37 @@
     .insight-item .insight-field b { color: #dfe2ef; font-weight: 600; }
 
     .insight-decision { background: rgba(52, 211, 153, 0.08); border-left: 3px solid #34D399; color: #a7f3d0; }
-    .insight-task { background: rgba(192, 193, 255, 0.08); border-left: 3px solid #c0c1ff; color: #e0e7ff; }
+    .insight-task { background: rgba(93, 230, 255, 0.08); border-left: 3px solid #5DE6FF; color: #e0e7ff; }
     .insight-risk { background: rgba(255, 180, 171, 0.08); border-left: 3px solid #ffb4ab; color: #fecdd3; }
     .insight-question { background: rgba(245, 158, 11, 0.08); border-left: 3px solid #f59e0b; color: #fef3c7; }
-    .insight-summary { background: rgba(139, 92, 246, 0.15); border-left: 3px solid #a855f7; color: #f3e8ff; }
+    .insight-summary { background: rgba(99, 102, 241, 0.15); border-left: 3px solid #6366F1; color: #f3e8ff; }
 
     /* Chat Panel */
     .chat-panel { flex: 1; display: none; flex-direction: column; margin-top: 4px; overflow: hidden; }
     .chat-panel.active { display: flex; }
     .chat-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 2px; }
     .chat-msg { font-size: 10.5px; line-height: 1.35; padding: 6px 8px; border-radius: 8px; max-width: 92%; }
-    .chat-msg-user { align-self: flex-end; background: rgba(99, 102, 241, 0.25); color: #e0e7ff; }
-    .chat-msg-ai { align-self: flex-start; background: rgba(255, 255, 255, 0.06); color: #dfe2ef; white-space: pre-wrap; }
+    .chat-msg-user { align-self: flex-end; background: rgba(99, 102, 241, 0.25); color: #e0e7ff; border: 1px solid rgba(99,102,241,0.4); }
+    .chat-msg-ai { align-self: flex-start; background: #12172A; color: #dfe2ef; border: 1px solid #232B45; white-space: pre-wrap; }
     .chat-input-row { display: flex; gap: 4px; margin-top: 6px; flex-shrink: 0; }
     .chat-input {
-      flex: 1; background: #0d0e15; border: 1px solid #232B45; color: #f8fafc;
+      flex: 1; background: #0B0F19; border: 1px solid #232B45; color: #f8fafc;
       font-size: 10.5px; padding: 5px 8px; border-radius: 6px; outline: none; font-family: inherit;
     }
     .chat-input:focus { border-color: #6366F1; }
     .chat-send-btn {
-      background: #6366F1; border: none; color: #fff; font-size: 10px; font-weight: 700;
+      background: linear-gradient(135deg, #6366F1, #06B6D4); border: none; color: #fff; font-size: 10px; font-weight: 700;
       padding: 5px 10px; border-radius: 6px; cursor: pointer;
     }
     .chat-send-btn:disabled { opacity: 0.5; cursor: default; }
 
     /* Export & Workflow Toolbar */
     .export-toolbar {
-      padding: 6px 12px;
-      background: #0f1118;
-      border-top: 1px solid #1c1f29;
+      padding: 8px 14px;
+      background: #0B0F19;
+      border-top: 1px solid #232B45;
       display: flex;
-      gap: 4px;
+      gap: 6px;
       overflow-x: auto;
       flex-shrink: 0;
     }
