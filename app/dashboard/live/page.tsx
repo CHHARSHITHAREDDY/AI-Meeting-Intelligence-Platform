@@ -494,7 +494,11 @@ export default function LiveMeetingPage() {
 
       rec.onend = () => {
         if (listeningRef.current) {
-          try { rec.start(); } catch { /* ignore */ }
+          setTimeout(() => {
+            if (listeningRef.current) {
+              try { rec.start(); } catch (_) {}
+            }
+          }, 300);
         }
       };
 
