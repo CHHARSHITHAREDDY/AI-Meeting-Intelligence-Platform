@@ -240,12 +240,12 @@ startBtn.addEventListener('click', () => {
           mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
           mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) audioChunks.push(e.data); };
           mediaRecorder.start(1000);
-          console.log('[Extension] Tab audio capture active.');
+          console.log('[Extension] Tab MediaRecorder active.');
         } catch (e) {
-          console.warn('[Extension] Tab MediaRecorder error:', e);
+          console.log('[Extension] Tab MediaRecorder notice:', e?.message || e);
         }
       } else {
-        console.warn('[Extension] tabCapture stream unavailable, falling back to getUserMedia.');
+        console.log('[Extension] tabCapture stream unavailable, falling back to getUserMedia.');
         requestUserMediaAudio();
       }
     });
@@ -269,11 +269,11 @@ function requestUserMediaAudio() {
           mediaRecorder.start(1000);
           console.log('[Extension] Microphone MediaRecorder active.');
         } catch (e) {
-          console.warn('[Extension] Microphone MediaRecorder error:', e);
+          console.log('[Extension] Microphone MediaRecorder notice:', e?.message || e);
         }
       })
       .catch((err) => {
-        console.warn('[Extension] getUserMedia note:', err);
+        console.log('[Extension] getUserMedia notice:', err?.name || err?.message || err);
       });
   }
 }
@@ -406,7 +406,7 @@ stopBtn.addEventListener('click', async () => {
     }
 
   } catch (err) {
-    console.error('Audio processing note:', err);
+    console.log('Audio processing notice:', err?.message || err);
     if (procEl) procEl.remove();
 
     const errBanner = document.createElement('div');

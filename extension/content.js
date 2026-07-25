@@ -1,5 +1,9 @@
 (function () {
-  if (document.getElementById('cue-widget-host')) return;
+  const existingHost = document.getElementById('cue-widget-host');
+  if (existingHost) {
+    existingHost.style.display = 'block';
+    return;
+  }
 
   // 1. Create Host Element & Shadow DOM
   const host = document.createElement('div');
@@ -524,8 +528,10 @@
   }
 
   let recognitionWatchdog = null;
+  let micPermissionDenied = false;
 
   function startRealSpeechRecognition() {
+    if (micPermissionDenied) return null;
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return null;
 
@@ -555,33 +561,52 @@
       };
 
       instance.onerror = (e) => {
-        console.warn('[Cue Extension] Speech recognition notice:', e.error);
-        if (e.error === 'not-allowed') {
-          appendTranscriptLine('System', '⚠️ Mic permission needed for live voice. Capturing video subtitles directly...', false);
+        const errorType = e.error || e.message;
+        if (errorType === 'no-speech' || errorType === 'aborted') {
+          return; // Expected operational status during silence or restart
         }
+
+        if (errorType === 'not-allowed') {
+          micPermissionDenied = true;
+          if (recognitionWatchdog) {
+            clearInterval(recognitionWatchdog);
+            recognitionWatchdog = null;
+          }
+          appendTranscriptLine('System', '⚠️ Mic permission required for live speech. Capturing video subtitles directly...', false);
+          console.log('[Cue Extension] Speech recognition permission denied or unavailable for this origin.');
+          return;
+        }
+
+        console.log('[Cue Extension] Speech recognition notice:', errorType);
       };
 
       instance.onend = () => {
-        if (recognitionInstance && !isPaused) {
+        if (recognitionInstance && !isPaused && !micPermissionDenied) {
           setTimeout(() => {
-            try { recognitionInstance.start(); } catch (_) {}
-          }, 100);
+            try {
+              if (recognitionInstance) recognitionInstance.start();
+            } catch (_) {}
+          }, 200);
         }
       };
 
-      instance.start();
+      try {
+        instance.start();
+      } catch (startErr) {
+        console.log('[Cue Extension] SpeechRecognition start notice:', startErr?.message || startErr);
+      }
 
       // Watchdog timer: automatically restarts recognition if browser stops it silently
       if (recognitionWatchdog) clearInterval(recognitionWatchdog);
       recognitionWatchdog = setInterval(() => {
-        if (recognitionInstance && !isPaused) {
-          try { instance.start(); } catch (_) {} // safe no-op if already running
+        if (recognitionInstance && !isPaused && !micPermissionDenied) {
+          try { instance.start(); } catch (_) {}
         }
-      }, 3000);
+      }, 5000);
 
       return instance;
     } catch (err) {
-      console.warn('[Cue Extension] Web Speech API initialization notice:', err);
+      console.log('[Cue Extension] Web Speech API initialization notice:', err?.message || err);
       return null;
     }
   }
@@ -688,6 +713,7 @@
     transcriptFeed.innerHTML = '';
 
     seconds = 0;
+    micPermissionDenied = false;
 
     const sourceName = selectedAudioSource === 'mic' ? '🎙️ Microphone' : selectedAudioSource === 'comp' ? '💻 Computer Audio' : '🎙️+💻 Both (Mic & Computer)';
     appendTranscriptLine('System', `Recording active [Source: ${sourceName}]`, false);
@@ -700,7 +726,8 @@
             recognitionInstance = startRealSpeechRecognition();
           })
           .catch((err) => {
-            console.warn('[Cue Extension] Microphone access error:', err);
+            const errName = err?.name || err?.message || String(err);
+            console.log('[Cue Extension] Microphone access notice:', errName);
             recognitionInstance = startRealSpeechRecognition();
           });
       } else {
@@ -810,7 +837,26 @@
     summarizeBtn.style.display = 'inline-block';
     stopBtn.style.display = 'none';
     livePulse.style.display = 'none';
-  });
+  const closeBtn = shadow.getElementById('closeBtn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      host.style.display = 'none';
+    });
+  }
+
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      if (request.action === 'TOGGLE_WIDGET') {
+        if (host.style.display === 'none') {
+          host.style.display = 'block';
+        } else {
+          host.style.display = 'none';
+        }
+        sendResponse({ status: 'ok', visible: host.style.display !== 'none' });
+      }
+      return true;
+    });
+  }
 
   function addInsight(cls, tag, txt) {
     if (insightList.children[0]?.textContent.includes('Listening')) {
@@ -823,3 +869,4 @@
   }
 
 })();
+
