@@ -282,6 +282,8 @@ export default function LiveMeetingPage() {
     };
   }, [meetingId, meetingStatus, hostName]);
 
+  const isLive = meetingStatus === 'live';
+
   useEffect(() => {
     if (isLive) {
       startCamera();
