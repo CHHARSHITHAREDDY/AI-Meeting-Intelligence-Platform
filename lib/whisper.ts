@@ -26,7 +26,13 @@ export interface TranscriptionResult {
 }
 
 let transcriber: any = null;
-const WHISPER_MODEL_NAME = process.env.WHISPER_MODEL || 'Xenova/whisper-small';
+// 'small' is noticeably more accurate on Hindi/Telugu but decodes slowly
+// enough on CPU-only inference to peg every core for the whole request,
+// which starves the rest of the Next.js dev process (hence the whole site
+// feeling frozen during a transcription). 'base' is ~4-5x faster per chunk
+// and still multilingual (no .en suffix) — set WHISPER_MODEL=Xenova/whisper-small
+// in .env to switch back once you've confirmed the demo machine keeps up.
+const WHISPER_MODEL_NAME = process.env.WHISPER_MODEL || 'Xenova/whisper-base';
 
 export async function initWhisperModel(): Promise<any> {
   if (!transcriber) {

@@ -291,14 +291,13 @@ export async function generateGroundedRAGAnswer(
   const memoryText = chatHistory.slice(-4).map(h => `${h.sender === 'user' ? 'User' : 'Assistant'}: ${h.text}`).join('\n');
 
   const systemPrompt = `You are the AI Copilot for the recording "${meeting.title}".
-Your sole objective is to answer the user's specific question using ONLY the provided transcript dialogue and meeting facts.
 
 STRICT GUIDELINES:
 1. Answer ONLY the specific question asked: "${query}".
 2. DO NOT provide a general meeting summary unless explicitly asked to summarize.
-3. Reference specific speakers and include timestamp citations in your response (e.g. "[02:15] Speaker 1 stated...").
-4. Use the Structured Facts and Relevant Transcript Chunks below to provide accurate, specific details.
-5. If the requested information is not mentioned in the transcript or structured facts, state: "I couldn't find specific discussion details about this in the recording."
+3. If the question is about this meeting, reference specific speakers and include timestamp citations (e.g. "[02:15] Speaker 1 stated...") and use ONLY the Structured Facts and Relevant Transcript Chunks below.
+4. If the question is unrelated to this meeting (general knowledge, casual conversation, coding help, etc.), ignore the transcript context and just answer it directly and helpfully, like a normal chatbot would.
+5. Only if the question is clearly ABOUT the meeting but the answer isn't covered by the transcript or facts below, say so plainly: "I couldn't find specific discussion details about this in the recording."
 
 Structured Meeting Facts:
 ${structuredContext || 'None'}
@@ -312,8 +311,16 @@ ${memoryText || 'None'}`;
   console.log('[RAG TRACE] Prompt Construction complete. Sending request to LLM...');
 
   const nvidiaApiKey = process.env.NVIDIA_API_KEY;
-  const llamaApiKey = process.env.LLAMA_API_KEY;
   const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+
+  // NOTE: there used to be a "Llama API" tier here pointed at
+  // https://api.llama-api.com. It's been removed — the configured
+  // LLAMA_API_KEY is an LlamaCloud (LlamaIndex) key, valid only against
+  // api.cloud.llamaindex.ai for document-extraction jobs (see
+  // lib/llamaCloud.ts), not a chat-completions endpoint. That tier always
+  // 404'd, silently wasted a network round trip on every single chat
+  // message, and fell straight through to the fallback below regardless —
+  // which is why every question looked like it got the same canned answer.
 
   // 1. Try NVIDIA Nemotron / NIM API
   if (nvidiaApiKey && nvidiaApiKey.trim() !== '') {
@@ -338,31 +345,7 @@ ${memoryText || 'None'}`;
     }
   }
 
-  // 2. Try Llama API
-  if (llamaApiKey && llamaApiKey !== 'YOUR_LLAMA_API_KEY' && llamaApiKey.trim() !== '') {
-    try {
-      const client = new OpenAI({ apiKey: llamaApiKey, baseURL: 'https://api.llama-api.com' });
-      const completion = await client.chat.completions.create({
-        model: 'llama3.1-70b-instruct',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: query }
-        ],
-        max_tokens: 800,
-      });
-      const responseText = completion.choices[0].message.content || '';
-      if (responseText.trim() !== '') {
-        console.log('[RAG TRACE] LLM Response received from Llama API.');
-        return responseText;
-      }
-    } catch (err: any) {
-      if (!err.message?.includes('404')) {
-        console.warn('[RAG Engine] Llama API notice:', err.message);
-      }
-    }
-  }
-
-  // 3. Try Anthropic Claude API
+  // 2. Try Anthropic Claude API
   if (anthropicApiKey && anthropicApiKey !== 'YOUR_ANTHROPIC_API_KEY' && anthropicApiKey.trim() !== '') {
     try {
       const anthropic = new Anthropic({ apiKey: anthropicApiKey });
@@ -391,51 +374,65 @@ ${memoryText || 'None'}`;
 // DYNAMIC GROUNDED RAG FALLBACK GENERATOR (SPECIFIC QUERY ANSWERING)
 // ---------------------------------------------------------------------------
 function fallbackGroundedRAG(
-  query: string, 
-  meeting: Meeting, 
-  index: ContextualMeetingIndex, 
+  query: string,
+  meeting: Meeting,
+  index: ContextualMeetingIndex,
   retrievedChunks: SemanticChunk[]
 ): string {
   const queryLower = query.toLowerCase();
 
-  // 1. Handle Decisions Questions
-  if (queryLower.includes('decision') || queryLower.includes('decided') || queryLower.includes('agreed')) {
+  // These category branches dump the FULL list from meeting.analysis, so
+  // they must only fire when the question is clearly asking for an overview
+  // of that category — not merely mentioning a related word. ("who", "task",
+  // "issue" etc. show up in almost every question, so using them alone as
+  // triggers made most distinct questions collapse onto the same canned
+  // list — that was the "same answer for any question" bug.)
+  const asksForOverview = /\b(list|all|every|what are|show me|give me)\b/.test(queryLower);
+
+  // 1. Decisions overview
+  if (asksForOverview && /decision/.test(queryLower)) {
     if (meeting.analysis?.decisions && meeting.analysis.decisions.length > 0) {
       const decList = meeting.analysis.decisions.map(d => `• **${d.decision}** (Decided by: ${d.decider} — ${d.context})`).join('\n');
       return `Based on the recording "${meeting.title}", here are the decisions recorded:\n\n${decList}`;
     }
   }
 
-  // 2. Handle Action Items / Tasks Questions
-  if (queryLower.includes('assigned') || queryLower.includes('task') || queryLower.includes('action item') || queryLower.includes('pending') || queryLower.includes('who')) {
+  // 2. Action items / tasks overview
+  if (asksForOverview && /(action item|\btask)/.test(queryLower)) {
     if (meeting.analysis?.actionItems && meeting.analysis.actionItems.length > 0) {
       const actList = meeting.analysis.actionItems.map(x => `• **${x.task}** — Assigned to: **${x.assignee}** (Due: ${x.dueDate}, Status: ${x.status})`).join('\n');
       return `Based on the recording "${meeting.title}", here are the action item assignments:\n\n${actList}`;
     }
   }
 
-  // 3. Handle Risks / Blockers Questions
-  if (queryLower.includes('risk') || queryLower.includes('blocker') || queryLower.includes('concern') || queryLower.includes('issue')) {
+  // 3. Risks / blockers overview
+  if (asksForOverview && /(risk|blocker)/.test(queryLower)) {
     if (meeting.analysis?.risks && meeting.analysis.risks.length > 0) {
       const riskList = meeting.analysis.risks.map(r => `• **${r.risk}** — Impact: **${r.impact}** (Mitigation: ${r.mitigation})`).join('\n');
       return `Based on the recording "${meeting.title}", here are the identified risks:\n\n${riskList}`;
     }
   }
 
-  // 4. Handle Speaker List Questions
-  if (queryLower.includes('speaker') || queryLower.includes('who spoke') || queryLower.includes('participants')) {
+  // 4. Speaker / participant list — a narrower, unambiguous phrase match
+  if (/\b(speakers?|participants?|who (was|is|were) (in|on|part of|attending))\b/.test(queryLower)) {
     if (index.speakers.length > 0) {
       const speakerList = index.speakers.map(s => `• **${s}**`).join('\n');
       return `There were **${index.speakers.length} speaker(s)** active in "${meeting.title}":\n\n${speakerList}`;
     }
   }
 
-  // 5. Answer using specific dialogue chunks
+  // 5. Primary path — answer from the transcript chunks retrieved
+  // specifically for THIS question (TF-IDF + keyword overlap against the
+  // query), so different questions actually get different answers.
   if (retrievedChunks.length > 0) {
     const dialogueLines = retrievedChunks.map(c => `• [${c.timestamp}] **${c.speaker}**: "${c.text}"`).join('\n\n');
-    return `Here are the specific statements from "${meeting.title}" regarding "${query}":\n\n${dialogueLines}`;
+    return `Here's what the transcript of "${meeting.title}" says relevant to "${query}":\n\n${dialogueLines}`;
   }
 
-  // 6. Honest "Information Not Found" Answer
-  return `I couldn't find specific discussion details about "${query}" in this meeting recording.`;
+  // 6. Nothing in the transcript matches this question at all. Say so
+  // honestly instead of a generic non-answer, and point at how to unlock
+  // real general-purpose chat (this fallback can only ever answer from the
+  // transcript — it can't improvise a general-knowledge answer the way an
+  // actual LLM tier above can).
+  return `I couldn't find anything in this meeting's transcript about "${query}". This assistant is currently running in transcript-only fallback mode (no NVIDIA_API_KEY or ANTHROPIC_API_KEY configured) — add one of those to also get general-purpose chatbot answers for questions unrelated to the recording.`;
 }
