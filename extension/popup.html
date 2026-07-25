@@ -3,65 +3,108 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cue Intelligence</title>
+  <title>Weave AI Assistant</title>
   <style>
-    body {
-      width: 320px;
-      margin: 0;
-      padding: 16px;
-      background-color: #0d0e15;
-      color: #f8fafc;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    * {
       box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      width: 340px;
+      padding: 20px;
+      background: #0B0F19;
+      color: #F8FAFC;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
     .header {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 14px;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
     .logo {
-      width: 30px;
-      height: 30px;
-      background: linear-gradient(135deg, #6366F1, #EC4899);
-      border-radius: 8px;
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #6366F1, #5DE6FF);
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: white;
+      color: #ffffff;
+      font-size: 20px;
       font-weight: bold;
-      box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+      box-shadow: 0 0 16px rgba(99, 102, 241, 0.4);
     }
     .title {
-      font-size: 15px;
-      font-weight: 700;
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      color: #F8FAFC;
     }
     .subtitle {
-      font-size: 10px;
-      color: #94a3b8;
+      font-size: 11px;
+      color: #5DE6FF;
+      font-family: monospace;
+      margin-top: 1px;
+    }
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
     .btn {
       width: 100%;
-      padding: 11px;
+      padding: 13px 16px;
       border: none;
-      border-radius: 8px;
-      background: linear-gradient(135deg, #6366F1, #EC4899);
+      border-radius: 12px;
+      background: linear-gradient(135deg, #6366F1, #8083ff);
       color: #ffffff;
       font-weight: 700;
-      font-size: 12px;
+      font-size: 13px;
       cursor: pointer;
-      margin-top: 10px;
-      box-shadow: 0 0 15px rgba(99, 102, 241, 0.35);
-      transition: transform 0.15s ease;
+      box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
     .btn:hover {
-      transform: scale(1.02);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
     }
     .btn-secondary {
-      background: #181b25;
-      color: #c7c4d7;
-      border: 1px solid #232b45;
+      background: #12172A;
+      color: #C7C4D7;
+      border: 1px solid #232B45;
       box-shadow: none;
+    }
+    .btn-secondary:hover {
+      background: #181b25;
+      color: #F8FAFC;
+    }
+    .status-badge {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: rgba(18, 23, 42, 0.8);
+      border: 1px solid #232B45;
+      border-radius: 10px;
+      font-size: 11px;
+      font-family: monospace;
+      color: #94A3B8;
+      margin-bottom: 14px;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #34D399;
+      box-shadow: 0 0 8px #34D399;
     }
   </style>
 </head>
@@ -69,18 +112,27 @@
   <div class="header">
     <div class="logo">✦</div>
     <div>
-      <div class="title">Cue Intelligence</div>
-      <div class="subtitle">Floating Meeting Assistant</div>
+      <div class="title">Weave</div>
+      <div class="subtitle">AI Meeting Assistant</div>
     </div>
   </div>
 
-  <button id="toggleOverlay" class="btn">
-    ✦ Inject Floating Widget on Tab
-  </button>
-  
-  <button id="openDashboard" class="btn btn-secondary">
-    Open Web Dashboard ↗
-  </button>
+  <div class="status-badge">
+    <span style="display:flex; align-items:center; gap:6px;">
+      <span class="dot"></span> Stream Status
+    </span>
+    <span style="color:#34D399; font-weight:bold;">Ready</span>
+  </div>
+
+  <div class="actions">
+    <button id="toggleOverlay" class="btn">
+      <span>✦ Inject Floating Widget on Tab</span>
+    </button>
+    
+    <button id="openDashboard" class="btn btn-secondary">
+      <span>Open Weave Dashboard ↗</span>
+    </button>
+  </div>
 
   <script src="popup.js"></script>
 </body>

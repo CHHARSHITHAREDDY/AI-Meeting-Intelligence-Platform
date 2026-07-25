@@ -225,8 +225,8 @@ void main() {
               <span className="material-symbols-outlined font-bold text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>hub</span>
             </div>
             <div>
-              <span className="text-lg font-bold font-display tracking-tight text-[#F8FAFC]">Cue Intelligence</span>
-              <p className="text-[9px] text-[#94A3B8] uppercase tracking-widest font-mono -mt-1">Enterprise Suite</p>
+              <span className="text-lg font-bold font-display tracking-tight text-[#F8FAFC]">Weave</span>
+              <p className="text-[9px] text-[#94A3B8] uppercase tracking-widest font-mono -mt-1">Intelligence Platform</p>
             </div>
           </Link>
 
@@ -244,7 +244,7 @@ void main() {
                   Logged in as <strong className="text-[#F8FAFC]">{user.name}</strong>
                 </span>
                 <Link
-                  href="/dashboard/live"
+                  href="/dashboard"
                   onMouseEnter={handleCtaMouseEnter}
                   onMouseLeave={handleCtaMouseLeave}
                   className="px-5 py-2.5 rounded-lg text-[12px] btn-primary-cta uppercase tracking-wider flex items-center gap-2"
@@ -296,12 +296,12 @@ void main() {
               </h1>
 
               <p className="text-[#c7c4d7] text-lg sm:text-xl font-normal leading-relaxed max-w-2xl">
-                Beyond transcripts. Cue captures decisions, predicts risks, and builds your organization&apos;s memory in real-time.
+                Weave turns raw meeting recordings and live conversations into structured business intelligence: decisions, action items, risks, and a searchable AI copilot.
               </p>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
                 <Link
-                  href={user ? "/dashboard/live" : "/login"}
+                  href={user ? "/dashboard" : "/login"}
                   onMouseEnter={handleCtaMouseEnter}
                   onMouseLeave={handleCtaMouseLeave}
                   className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide btn-primary-cta text-center flex items-center justify-center gap-2 group cursor-pointer"
@@ -310,7 +310,7 @@ void main() {
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </Link>
                 <Link
-                  href={user ? "/dashboard/live" : "/login"}
+                  href={user ? "/dashboard" : "/login"}
                   className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide text-[#F8FAFC] bg-[#181b25] border border-[#232B45] hover:bg-[#262a34] transition-all text-center flex items-center justify-center gap-2 backdrop-blur-md"
                 >
                   <Play className="w-4 h-4 text-[#5de6ff] fill-[#5de6ff]" />
@@ -518,11 +518,11 @@ void main() {
             Ready to upgrade your organization&apos;s memory?
           </h2>
           <p className="text-[#94A3B8] text-base max-w-xl mx-auto leading-relaxed">
-            Join forward-thinking teams using Cue to turn conversations into actionable intelligence.
+            Join forward-thinking teams using Weave to turn conversations into actionable intelligence.
           </p>
           <div className="pt-2">
             <Link
-              href={user ? "/dashboard/live" : "/login"}
+              href={user ? "/dashboard" : "/login"}
               onMouseEnter={handleCtaMouseEnter}
               onMouseLeave={handleCtaMouseLeave}
               className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide btn-primary-cta inline-flex items-center gap-2"

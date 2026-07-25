@@ -55,8 +55,7 @@ export default function DashboardLayout({
     { name: 'Dashboard', href: '/dashboard', exact: true, icon: 'dashboard' },
     { name: 'Meetings', href: '/dashboard/live', exact: false, icon: 'videocam' },
     { name: 'Upload Meeting', href: '/dashboard/upload', exact: true, icon: 'cloud_upload' },
-    { name: 'Company Memory', href: '/dashboard/memory', exact: true, icon: 'database' },
-    { name: 'Analytics', href: '/dashboard/graph', exact: false, icon: 'analytics' },
+    { name: 'Analytics & Memory', href: '/dashboard/graph', exact: true, icon: 'analytics' },
     { name: 'Decisions', href: '/dashboard/decisions', exact: false, icon: 'fact_check' },
     { name: 'Tasks', href: '/dashboard/tasks', exact: false, icon: 'assignment' },
   ];
@@ -67,11 +66,10 @@ export default function DashboardLayout({
       case '/dashboard/live': return 'Live Meeting';
       case '/dashboard/decisions': return 'Decisions Register';
       case '/dashboard/tasks': return 'Tasks Register';
-      case '/dashboard/graph': return 'Knowledge Graph';
+      case '/dashboard/graph': return 'Analytics & Knowledge Graph';
       case '/dashboard/settings': return 'System Settings';
       case '/dashboard/meetings': return 'Meetings';
       case '/dashboard/upload': return 'Upload Meeting';
-      case '/dashboard/memory': return 'Company Memory';
       case '/dashboard':
       default: return 'Dashboard';
     }
@@ -91,8 +89,8 @@ export default function DashboardLayout({
             <span className="material-symbols-outlined font-bold text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>hub</span>
           </div>
           <div>
-            <h1 className="font-display text-[18px] font-bold text-[#F8FAFC] tracking-tighter leading-tight group-hover:text-[#6366F1] transition-colors">Cue Intelligence</h1>
-            <p className="text-[10px] text-[#94A3B8] uppercase tracking-widest font-mono mt-0.5">Enterprise Suite</p>
+            <h1 className="font-display text-[18px] font-bold text-[#F8FAFC] tracking-tighter leading-tight group-hover:text-[#6366F1] transition-colors">Weave</h1>
+            <p className="text-[10px] text-[#94A3B8] uppercase tracking-widest font-mono mt-0.5">Intelligence Platform</p>
           </div>
         </Link>
 
@@ -111,15 +109,10 @@ export default function DashboardLayout({
               ? pathname === item.href
               : pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
 
-            // Map /dashboard/memory to /dashboard
-            const targetHref = item.href === '/dashboard/memory'
-              ? '/dashboard'
-              : item.href;
-
             return (
               <li key={item.name}>
                 <Link
-                  href={targetHref}
+                  href={item.href}
                   className={`flex items-center px-4 py-3 rounded-lg text-[14px] font-medium transition-all duration-200 ${
                     isActive
                       ? 'nav-active-item text-[#6366F1] font-bold border-l-4 border-[#6366F1] bg-[#6366F1]/10 shadow-[0_0_15px_rgba(99,102,241,0.15)]'

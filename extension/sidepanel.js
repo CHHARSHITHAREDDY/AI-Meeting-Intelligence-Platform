@@ -67,7 +67,7 @@ function ensureLiveMeeting() {
   if (meetingCreationPromise) return meetingCreationPromise;
 
   meetingCreationPromise = callApi('/api/live-meetings', 'POST', {
-    title: `Cue Sidepanel Session ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+    title: `Weave Sidepanel Session ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
     hostName: (speakerNameInput?.value || 'You').trim() || 'You',
   }).then((res) => {
     if (res.ok && res.data && res.data.meeting) {
