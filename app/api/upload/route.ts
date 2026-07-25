@@ -37,6 +37,60 @@ async function fetchYoutubeTitle(videoId: string): Promise<string> {
   return 'YouTube Video';
 }
 
+function parseRawMultipart(buffer: Buffer, contentTypeHeader: string): { fileBuffer: Buffer | null; fileName: string; title: string; link: string } {
+  let fileBuffer: Buffer | null = null;
+  let fileName = '';
+  let title = '';
+  let link = '';
+
+  const boundaryMatch = contentTypeHeader.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+  if (!boundaryMatch) return { fileBuffer, fileName, title, link };
+
+  const boundary = (boundaryMatch[1] || boundaryMatch[2]).trim();
+  const boundaryBuffer = Buffer.from(`--${boundary}`);
+  
+  let offset = 0;
+  const parts: Buffer[] = [];
+
+  while (offset < buffer.length) {
+    const idx = buffer.indexOf(boundaryBuffer, offset);
+    if (idx === -1) break;
+    if (offset > 0) {
+      parts.push(buffer.subarray(offset, idx));
+    }
+    offset = idx + boundaryBuffer.length;
+  }
+
+  for (const part of parts) {
+    const headerEndIdx = part.indexOf('\r\n\r\n');
+    if (headerEndIdx === -1) continue;
+
+    const headerText = part.subarray(0, headerEndIdx).toString('utf-8');
+    let bodyBuffer = part.subarray(headerEndIdx + 4);
+
+    if (bodyBuffer.length >= 2 && bodyBuffer[bodyBuffer.length - 2] === 13 && bodyBuffer[bodyBuffer.length - 1] === 10) {
+      bodyBuffer = bodyBuffer.subarray(0, bodyBuffer.length - 2);
+    }
+
+    const nameMatch = headerText.match(/name="([^"]+)"/i);
+    const filenameMatch = headerText.match(/filename="([^"]+)"/i);
+
+    if (nameMatch) {
+      const fieldName = nameMatch[1];
+      if (fieldName === 'file' || filenameMatch) {
+        fileBuffer = bodyBuffer;
+        fileName = filenameMatch ? filenameMatch[1] : 'uploaded_file';
+      } else if (fieldName === 'title') {
+        title = bodyBuffer.toString('utf-8').trim();
+      } else if (fieldName === 'link') {
+        link = bodyBuffer.toString('utf-8').trim();
+      }
+    }
+  }
+
+  return { fileBuffer, fileName, title, link };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const user = await getSessionUser();
@@ -57,12 +111,10 @@ export async function POST(request: NextRequest) {
       fileName = 'audio.pcm';
       const arrayBuffer = await request.arrayBuffer();
       audioInput = new Float32Array(arrayBuffer);
-    } else {
-      const formData = await request.formData();
-      const file = formData.get('file') as File | null;
-      const link = formData.get('link') as string | null;
-      title = (formData.get('title') as string) || '';
-
+    } else if (contentType.includes('application/json')) {
+      const body = await request.json();
+      title = body.title || '';
+      const link = body.link || '';
       if (link && link.trim() !== '') {
         const videoId = getYoutubeVideoId(link.trim());
         if (videoId) {
@@ -89,13 +141,69 @@ export async function POST(request: NextRequest) {
           audioInput = Buffer.from(arrayBuffer);
           fileName = title;
         }
-      } else if (file) {
+      } else {
+        return NextResponse.json({ error: 'No file or link provided in JSON body' }, { status: 400 });
+      }
+    } else {
+      let file: File | null = null;
+      let link: string | null = null;
+
+      try {
+        const formData = await request.formData();
+        file = formData.get('file') as File | null;
+        link = formData.get('link') as string | null;
+        title = (formData.get('title') as string) || '';
+      } catch (err: any) {
+        console.warn('[Upload API] Native request.formData() failed, falling back to arrayBuffer multipart parser:', err.message);
+        try {
+          const rawBuffer = Buffer.from(await request.arrayBuffer());
+          const parsed = parseRawMultipart(rawBuffer, contentType);
+          if (parsed.fileBuffer) {
+            audioInput = parsed.fileBuffer;
+            fileName = parsed.fileName;
+          }
+          if (parsed.title) title = parsed.title;
+          if (parsed.link) link = parsed.link;
+        } catch (rawErr: any) {
+          console.error('[Upload API] Raw multipart parse error:', rawErr);
+        }
+      }
+
+      if (!audioInput && link && link.trim() !== '') {
+        const videoId = getYoutubeVideoId(link.trim());
+        if (videoId) {
+          console.log('[Upload API] YouTube URL detected:', videoId);
+          if (!title) {
+            title = await fetchYoutubeTitle(videoId);
+          }
+          const segments = await YoutubeTranscript.fetchTranscript(videoId);
+          transcript = segments.map((s: any) => s.text).join(' ');
+          isLinkTranscribed = true;
+          fileName = 'youtube';
+        } else {
+          console.log('[Upload API] Generic media link detected:', link);
+          if (!title) {
+            const urlParts = link.split('/');
+            const lastPart = urlParts[urlParts.length - 1] || 'media';
+            title = lastPart.split('?')[0];
+          }
+          const fileRes = await fetch(link.trim());
+          if (!fileRes.ok) {
+            throw new Error(`Failed to download audio from link: HTTP ${fileRes.status}`);
+          }
+          const arrayBuffer = await fileRes.arrayBuffer();
+          audioInput = Buffer.from(arrayBuffer);
+          fileName = title;
+        }
+      } else if (!audioInput && file) {
         title = title || file.name.replace(/\.[^/.]+$/, "");
         fileName = file.name;
         const arrayBuffer = await file.arrayBuffer();
         audioInput = Buffer.from(arrayBuffer);
-      } else {
-        return NextResponse.json({ error: 'No file or link provided' }, { status: 400 });
+      }
+
+      if (!audioInput && !isLinkTranscribed) {
+        return NextResponse.json({ error: 'No valid audio/video file or media link received.' }, { status: 400 });
       }
     }
 
