@@ -13,160 +13,90 @@ import {
   Clock,
   AlertCircle
 } from 'lucide-react';
-import { Meeting, ActionItem } from '@/lib/db';
+import { Task } from '@/lib/db';
 
-interface TaskItem {
-  id: string; // page-unique ID: meetingId-itemId
-  dbId: string; // raw ID in database
-  meetingId: string;
-  task: string;
-  assignee: string;
-  avatarText: string;
-  dueDate: string;
-  sourceMeeting: string;
-  priority: 'High' | 'Medium' | 'Low';
-  status: 'pending' | 'completed';
+// Meeting titles for the "source meeting" link — fetched once alongside
+// tasks so each task card can link back without a per-task round trip.
+interface MeetingTitleLookup {
+  [meetingId: string]: string;
 }
 
 export default function TasksPage() {
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'completed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [meetingTitles, setMeetingTitles] = useState<MeetingTitleLookup>({});
   const [loading, setLoading] = useState(true);
   const statsRef = useRef<HTMLDivElement>(null);
 
-  const fetchTasksAndMeetings = async () => {
+  // Tasks are now an independent resource (see app/api/tasks) populated
+  // from AI extraction across every meeting plus any manually created
+  // tasks — no longer derived client-side from each meeting's analysis.
+  const fetchTasks = async () => {
     try {
-      const response = await fetch('/api/meetings');
-      if (response.ok) {
-        const meetingsData: Meeting[] = await response.json();
-        setMeetings(meetingsData);
-
-        const extractedTasks: TaskItem[] = [];
-        meetingsData.forEach(meeting => {
-          if (meeting.status === 'completed' && meeting.analysis?.actionItems) {
-            meeting.analysis.actionItems.forEach((a, idx) => {
-              const itemId = a.id || `act-${idx + 1}`;
-
-              // Avatar initials
-              const owner = a.assignee || 'Team';
-              const parts = owner.replace(/[^a-zA-Z\s]/g, '').trim().split(/\s+/);
-              let avatarText = 'TM';
-              if (parts.length >= 2) {
-                avatarText = (parts[0][0] + parts[1][0]).toUpperCase();
-              } else if (parts.length === 1 && parts[0]) {
-                avatarText = parts[0].substring(0, 2).toUpperCase();
-              }
-
-              // Priority calculation based on task keywords
-              let priority: 'High' | 'Medium' | 'Low' = 'Medium';
-              const lowerTask = a.task.toLowerCase();
-              if (
-                lowerTask.includes('critical') || 
-                lowerTask.includes('immediate') || 
-                lowerTask.includes('urgent') || 
-                lowerTask.includes('db') || 
-                lowerTask.includes('redis') || 
-                lowerTask.includes('latency')
-              ) {
-                priority = 'High';
-              } else if (
-                lowerTask.includes('document') || 
-                lowerTask.includes('copy') || 
-                lowerTask.includes('pricing sheet') || 
-                lowerTask.includes('nice to')
-              ) {
-                priority = 'Low';
-              }
-
-              extractedTasks.push({
-                id: `${meeting.id}-${itemId}`,
-                dbId: itemId,
-                meetingId: meeting.id,
-                task: a.task,
-                assignee: owner,
-                avatarText: avatarText,
-                dueDate: a.dueDate || 'No due date',
-                sourceMeeting: meeting.title,
-                priority: priority,
-                status: a.status || 'pending'
-              });
-            });
-          }
-        });
-
-        setTasks(extractedTasks);
+      const [tasksRes, meetingsRes] = await Promise.all([
+        fetch('/api/tasks'),
+        fetch('/api/meetings'),
+      ]);
+      if (tasksRes.ok) {
+        setTasks(await tasksRes.json());
+      }
+      if (meetingsRes.ok) {
+        const meetingsData = await meetingsRes.json();
+        const lookup: MeetingTitleLookup = {};
+        meetingsData.forEach((m: { id: string; title: string }) => { lookup[m.id] = m.title; });
+        setMeetingTitles(lookup);
       }
     } catch (error) {
-      console.error('Failed to fetch tasks/meetings:', error);
+      console.error('Failed to fetch tasks:', error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchTasksAndMeetings();
+    fetchTasks();
   }, []);
 
   const toggleTaskStatus = async (taskId: string) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
-    // Toggle local state immediately
     const updatedStatus = task.status === 'completed' ? 'pending' : 'completed';
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: updatedStatus } : t));
 
-    // Prepare update request for meeting
-    const parentMeeting = meetings.find(m => m.id === task.meetingId);
-    if (!parentMeeting || !parentMeeting.analysis) return;
-
-    const updatedDbActionItems: ActionItem[] = parentMeeting.analysis.actionItems.map((item, idx) => {
-      const itemId = item.id || `act-${idx + 1}`;
-      if (itemId === task.dbId || item.id === task.dbId) {
-        return { ...item, status: updatedStatus as 'pending' | 'completed' };
-      }
-      return item;
-    });
-
     try {
-      const response = await fetch(`/api/meetings/${task.meetingId}`, {
+      const response = await fetch(`/api/tasks/${taskId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ actionItems: updatedDbActionItems }),
+        body: JSON.stringify({ status: updatedStatus }),
       });
       if (!response.ok) {
-        throw new Error('Failed to update action item on the server');
+        throw new Error('Failed to update task on the server');
       }
-      
-      // Update local meetings state
-      setMeetings(prev => prev.map(m => {
-        if (m.id === task.meetingId && m.analysis) {
-          return {
-            ...m,
-            analysis: {
-              ...m.analysis,
-              actionItems: updatedDbActionItems
-            }
-          };
-        }
-        return m;
-      }));
     } catch (error) {
       console.error(error);
       // Revert if API failed
-      fetchTasksAndMeetings();
+      fetchTasks();
     }
   };
 
+  const avatarTextFor = (owner: string) => {
+    const parts = owner.replace(/[^a-zA-Z\s]/g, '').trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    if (parts.length === 1 && parts[0]) return parts[0].substring(0, 2).toUpperCase();
+    return 'TM';
+  };
+
   const filteredTasks = tasks.filter(task => {
-    const matchesSearch = 
-      task.task.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const sourceMeeting = task.meetingId ? (meetingTitles[task.meetingId] || '') : '';
+    const matchesSearch =
+      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       task.assignee.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.sourceMeeting.toLowerCase().includes(searchQuery.toLowerCase());
-    
+      sourceMeeting.toLowerCase().includes(searchQuery.toLowerCase());
+
     if (!matchesSearch) return false;
-    
+
     if (activeTab === 'pending') return task.status === 'pending';
     if (activeTab === 'completed') return task.status === 'completed';
     return true;
@@ -199,9 +129,7 @@ export default function TasksPage() {
             <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-5 shadow-lg flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Total Tasks</p>
-                <h3 className="text-2xl font-bold text-zinc-100 mt-1">
-                  <span className="task-stat-counter" data-target={totalTasks}>0</span>
-                </h3>
+                <h3 className="text-2xl font-bold text-zinc-100 mt-1">{totalTasks}</h3>
               </div>
               <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-400">
                 <Link2 className="w-5 h-5" />
@@ -211,9 +139,7 @@ export default function TasksPage() {
             <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-5 shadow-lg flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Pending Tasks</p>
-                <h3 className="text-2xl font-bold text-fuchsia-400 mt-1">
-                  <span className="task-stat-counter" data-target={pendingTasks}>0</span>
-                </h3>
+                <h3 className="text-2xl font-bold text-fuchsia-400 mt-1">{pendingTasks}</h3>
               </div>
               <div className="w-10 h-10 rounded-lg bg-fuchsia-500/10 flex items-center justify-center text-fuchsia-400">
                 <Clock className="w-5 h-5" />
@@ -223,9 +149,7 @@ export default function TasksPage() {
             <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-5 shadow-lg flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Completed Tasks</p>
-                <h3 className="text-2xl font-bold text-emerald-400 mt-1">
-                  <span className="task-stat-counter" data-target={completedTasks}>0</span>
-                </h3>
+                <h3 className="text-2xl font-bold text-emerald-400 mt-1">{completedTasks}</h3>
               </div>
               <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
                 <CheckCircle className="w-5 h-5" />
@@ -296,13 +220,14 @@ export default function TasksPage() {
             ) : (
               filteredTasks.map((task) => {
                 const isCompleted = task.status === 'completed';
+                const sourceMeetingTitle = task.meetingId ? meetingTitles[task.meetingId] : undefined;
                 return (
-                  <div 
-                    key={task.id} 
+                  <div
+                    key={task.id}
                     onClick={() => toggleTaskStatus(task.id)}
                     className={`p-4 rounded-xl border select-none transition-all duration-200 cursor-pointer flex items-center justify-between gap-4 ${
-                      isCompleted 
-                        ? 'bg-zinc-900/20 border-zinc-800/60 opacity-60' 
+                      isCompleted
+                        ? 'bg-zinc-900/20 border-zinc-800/60 opacity-60'
                         : 'bg-zinc-900/40 border-zinc-800/80 hover:border-violet-500/30 shadow-md shadow-black/10'
                     }`}
                   >
@@ -320,20 +245,24 @@ export default function TasksPage() {
                         <p className={`text-sm font-semibold leading-relaxed transition-all ${
                           isCompleted ? 'line-through text-zinc-600' : 'text-zinc-100'
                         }`}>
-                          {task.task}
+                          {task.title}
                         </p>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-zinc-500 font-semibold">
                           <span className="flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5" /> Due: {task.dueDate}
+                            <Calendar className="w-3.5 h-3.5" /> Due: {task.dueDate || 'No due date'}
                           </span>
-                          <span className="mx-1 text-zinc-800">•</span>
-                          <Link 
-                            href={`/dashboard/meeting/${task.meetingId}`}
-                            className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded text-violet-400 hover:text-violet-300 transition-colors"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Link2 className="w-3 h-3" /> {task.sourceMeeting}
-                          </Link>
+                          {task.meetingId && sourceMeetingTitle && (
+                            <>
+                              <span className="mx-1 text-zinc-800">•</span>
+                              <Link
+                                href={`/dashboard/meeting/${task.meetingId}`}
+                                className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded text-violet-400 hover:text-violet-300 transition-colors"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Link2 className="w-3 h-3" /> {sourceMeetingTitle}
+                              </Link>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -341,9 +270,9 @@ export default function TasksPage() {
                     <div className="flex items-center gap-4">
                       {/* Priority Badge */}
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider border ${
-                        task.priority === 'High'
+                        task.priority === 'high'
                           ? 'bg-rose-950/20 text-rose-400 border-rose-800/40'
-                          : task.priority === 'Medium'
+                          : task.priority === 'medium'
                             ? 'bg-amber-950/20 text-amber-400 border-amber-800/40'
                             : 'bg-zinc-800/20 text-zinc-400 border-zinc-800'
                       }`}>
@@ -353,7 +282,7 @@ export default function TasksPage() {
                       {/* Assignee Avatar */}
                       <div className="flex items-center gap-2 shrink-0">
                         <div className="w-6 h-6 rounded-full bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 flex items-center justify-center font-bold text-[9px]">
-                          {task.avatarText}
+                          {avatarTextFor(task.assignee)}
                         </div>
                         <span className="text-xs font-semibold text-zinc-200 hidden sm:inline">{task.assignee}</span>
                       </div>

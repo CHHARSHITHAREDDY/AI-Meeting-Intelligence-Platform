@@ -10,10 +10,9 @@ import {
 import {
   LiveKitRoom,
   VideoConference,
-  RoomAudioRenderer,
-  ControlBar,
-  useTracks,
 } from '@livekit/components-react';
+import { TranscriptionLanguage } from '@/lib/whisper';
+import LanguageSelect from '@/app/components/LanguageSelect';
 
 /* ─── Types ─────────────────────────────────────────────────────────────────── */
 interface TranscriptEntry { id: string; speaker: string; text: string; timestamp: string; }
@@ -34,6 +33,7 @@ function avatarColor(name: string) {
 /* ─── Main Page ─────────────────────────────────────────────────────────────── */
 export default function LiveMeetingPage() {
   /* meeting state */
+  const [language, setLanguage] = useState<TranscriptionLanguage>('en');
   const [meetingId, setMeetingId] = useState<string | null>(null);
   const [title, setTitle] = useState('Team Standup');
   const [hostName, setHostName] = useState('You');
@@ -474,7 +474,7 @@ export default function LiveMeetingPage() {
       const rec = new SpeechRecognition();
       rec.continuous = true;
       rec.interimResults = true;
-      rec.lang = 'en-US';
+      rec.lang = (language as string) === 'hi' ? 'hi-IN' : (language as string) === 'te' ? 'te-IN' : 'en-US';
 
       rec.onresult = (e: any) => {
         let finalStr = '';
@@ -561,36 +561,39 @@ export default function LiveMeetingPage() {
               : 'Create a WebRTC meeting room or join via link with real-time AI transcription.'}
           </p>
         </div>
-        {inMeeting && (
-          <div className="flex items-center gap-2">
-            {meetingStatus === 'scheduled' && (
-              <button onClick={startMeeting}
-                className="flex items-center gap-2 rounded-full bg-[#6366F1] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#5254cc] transition-colors shadow-lg shadow-indigo-500/20 cursor-pointer">
-                <Video className="h-4 w-4" /> Start Live Call
-              </button>
-            )}
-            {isLive && (
-              <button onClick={toggleCam}
-                className={`flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-colors cursor-pointer ${camOn ? 'bg-indigo-600/20 border border-indigo-500/40 text-indigo-300' : 'bg-rose-500/20 border border-rose-500/40 text-rose-400'
-                  }`}>
-                {camOn ? <><Camera className="h-4 w-4" /> Camera On</> : <><CameraOff className="h-4 w-4" /> Camera Off</>}
-              </button>
-            )}
-            {isLive && (
-              <button onClick={toggleMic}
-                className={`flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-colors cursor-pointer ${micOn ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300' : 'bg-zinc-800 border border-zinc-700 text-zinc-300'
-                  }`}>
-                {micOn ? <><Mic className="h-4 w-4 animate-pulse" /> Mic On</> : <><MicOff className="h-4 w-4" /> Mic Off</>}
-              </button>
-            )}
-            {isLive && (
-              <button onClick={endMeeting}
-                className="flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20 cursor-pointer">
-                <PhoneOff className="h-4 w-4" /> End Call
-              </button>
-            )}
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <LanguageSelect value={language} onChange={setLanguage} allowAuto={false} />
+          {inMeeting && (
+            <React.Fragment>
+              {meetingStatus === 'scheduled' && (
+                <button onClick={startMeeting}
+                  className="flex items-center gap-2 rounded-full bg-[#6366F1] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#5254cc] transition-colors shadow-lg shadow-indigo-500/20 cursor-pointer">
+                  <Video className="h-4 w-4" /> Start Live Call
+                </button>
+              )}
+              {isLive && (
+                <button onClick={toggleCam}
+                  className={`flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-colors cursor-pointer ${camOn ? 'bg-indigo-600/20 border border-indigo-500/40 text-indigo-300' : 'bg-rose-500/20 border border-rose-500/40 text-rose-400'
+                    }`}>
+                  {camOn ? <><Camera className="h-4 w-4" /> Camera On</> : <><CameraOff className="h-4 w-4" /> Camera Off</>}
+                </button>
+              )}
+              {isLive && (
+                <button onClick={toggleMic}
+                  className={`flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-colors cursor-pointer ${micOn ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300' : 'bg-zinc-800 border border-zinc-700 text-zinc-300'
+                    }`}>
+                  {micOn ? <><Mic className="h-4 w-4 animate-pulse" /> Mic On</> : <><MicOff className="h-4 w-4" /> Mic Off</>}
+                </button>
+              )}
+              {isLive && (
+                <button onClick={endMeeting}
+                  className="flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20 cursor-pointer">
+                  <PhoneOff className="h-4 w-4" /> End Call
+                </button>
+              )}
+            </React.Fragment>
+          )}
+        </div>
       </div>
 
       {/* ── Setup panel (before meeting) ── */}

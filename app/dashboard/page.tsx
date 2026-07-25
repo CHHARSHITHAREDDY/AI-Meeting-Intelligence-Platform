@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+// Trigger Next.js route manifest rebuild
 import { useRouter } from 'next/navigation';
 import {
   UploadCloud,
@@ -48,8 +49,78 @@ import {
   History,
   Link2
 } from 'lucide-react';
-import { Meeting, ActionItem, MindmapNode } from '@/lib/db';
+import { Meeting, ActionItem, MindmapNode, Task } from '@/lib/db';
+import { TranscriptionLanguage } from '@/lib/whisper';
+import LanguageSelect from '@/app/components/LanguageSelect';
 import { ContentType } from '@/lib/classify';
+
+// AI Daily Brief — a dashboard-home widget composed entirely from the
+// Calendar/Tasks resources (GET /api/meetings, GET /api/tasks). No new
+// backend endpoint: it's a derived read over data those APIs already serve.
+function DailyBriefWidget() {
+  const [meetingsToday, setMeetingsToday] = useState<Meeting[]>([]);
+  const [tasksDue, setTasksDue] = useState<Task[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const dayStart = new Date();
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+    const today = dayStart.toISOString().split('T')[0];
+
+    Promise.all([
+      fetch(`/api/meetings?start=${dayStart.toISOString()}&end=${dayEnd.toISOString()}`).then(r => r.ok ? r.json() : []),
+      fetch(`/api/tasks?status=pending&dueBefore=${today}`).then(r => r.ok ? r.json() : []),
+    ])
+      .then(([meetings, tasks]) => {
+        setMeetingsToday(meetings);
+        setTasksDue(tasks);
+      })
+      .catch(() => {})
+      .finally(() => setLoaded(true));
+  }, []);
+
+  if (!loaded) return null;
+
+  const overdue = tasksDue.filter(t => t.dueDate && t.dueDate < new Date().toISOString().split('T')[0]);
+  const highPriority = tasksDue.filter(t => t.priority === 'high');
+  const decisionsToday = meetingsToday.reduce((sum, m) => sum + (m.analysis?.decisions?.length || 0), 0);
+
+  if (meetingsToday.length === 0 && tasksDue.length === 0) return null;
+
+  return (
+    <div className="bg-[#121624]/90 border border-[#232B45] rounded-2xl p-5 shadow-xl backdrop-blur-md space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-bold text-[#F8FAFC] flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-[#6366F1]" /> AI Daily Brief
+        </h3>
+        <a href="/dashboard/calendar" className="text-[10px] font-mono text-[#5de6ff] hover:text-white">Open Calendar &rarr;</a>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="p-3 rounded-xl bg-[#0a0e17] border border-[#232B45]">
+          <p className="text-lg font-bold text-[#F8FAFC]">{meetingsToday.length}</p>
+          <p className="text-[10px] text-[#94A3B8] font-mono uppercase">Meetings Today</p>
+        </div>
+        <div className="p-3 rounded-xl bg-[#0a0e17] border border-[#232B45]">
+          <p className="text-lg font-bold text-[#F8FAFC]">{tasksDue.length}</p>
+          <p className="text-[10px] text-[#94A3B8] font-mono uppercase">Tasks Due</p>
+        </div>
+        <div className={`p-3 rounded-xl border ${overdue.length > 0 ? 'bg-rose-400/5 border-rose-400/30' : 'bg-[#0a0e17] border-[#232B45]'}`}>
+          <p className={`text-lg font-bold ${overdue.length > 0 ? 'text-rose-400' : 'text-[#F8FAFC]'}`}>{overdue.length}</p>
+          <p className="text-[10px] text-[#94A3B8] font-mono uppercase">Overdue</p>
+        </div>
+        <div className={`p-3 rounded-xl border ${highPriority.length > 0 ? 'bg-amber-400/5 border-amber-400/30' : 'bg-[#0a0e17] border-[#232B45]'}`}>
+          <p className={`text-lg font-bold ${highPriority.length > 0 ? 'text-amber-400' : 'text-[#F8FAFC]'}`}>{highPriority.length}</p>
+          <p className="text-[10px] text-[#94A3B8] font-mono uppercase">High Priority</p>
+        </div>
+      </div>
+      {decisionsToday > 0 && (
+        <p className="text-[11px] text-[#94A3B8] font-mono">{decisionsToday} decision{decisionsToday === 1 ? '' : 's'} logged from today's meetings.</p>
+      )}
+    </div>
+  );
+}
 
 const CONTENT_TYPE_META: Record<ContentType, { label: string; icon: React.ReactNode }> = {
   meeting: { label: 'Meeting', icon: <FileCheck className="w-3 h-3" /> },
@@ -90,6 +161,7 @@ export default function MeetingIntelligenceSaaSPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Realtime Live Audio Recording State
+  const [language, setLanguage] = useState<TranscriptionLanguage>('en');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [liveTranscript, setLiveTranscript] = useState<string[]>([]);
@@ -241,7 +313,7 @@ export default function MeetingIntelligenceSaaSPage() {
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
-        recognition.lang = 'en-US';
+        recognition.lang = (language as string) === 'hi' ? 'hi-IN' : (language as string) === 'te' ? 'te-IN' : 'en-US';
 
         recognition.onresult = (event: any) => {
           const currentTranscript: string[] = [];
@@ -332,6 +404,7 @@ export default function MeetingIntelligenceSaaSPage() {
     const formData = new FormData();
     formData.append('file', uploadFile);
     formData.append('title', meetingTitle || uploadFile.name.replace(/\.[^/.]+$/, ""));
+    formData.append('language', language);
 
     try {
       const statusSequence: ('transcribing' | 'summarizing' | 'decisions' | 'actions')[] = [
@@ -561,6 +634,8 @@ export default function MeetingIntelligenceSaaSPage() {
 
         {/* Action Controls */}
         <div className="flex items-center space-x-3">
+          <LanguageSelect value={language} onChange={setLanguage} allowAuto={false} />
+
           <button
             onClick={() => setShowUploadModal(true)}
             className="flex items-center gap-2 text-xs font-semibold text-[#DFE2EF] bg-[#181B25] hover:bg-[#232B45] border border-[#232B45] px-3.5 py-2 rounded-xl transition cursor-pointer"
@@ -622,6 +697,8 @@ export default function MeetingIntelligenceSaaSPage() {
         {/* CENTER TIMELINE & GENERATIONS AREA                                      */}
         {/* ----------------------------------------------------------------------- */}
         <main className="flex-1 overflow-y-auto p-6 space-y-6 min-w-0">
+
+          <DailyBriefWidget />
 
           {/* Date Group Header */}
           <div className="flex items-center justify-between">

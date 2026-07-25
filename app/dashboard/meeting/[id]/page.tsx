@@ -43,9 +43,12 @@ import {
   Plug,
   Mic2,
   History,
-  Link2
+  Link2,
+  Users,
+  Target,
+  ArrowRightCircle
 } from 'lucide-react';
-import { Meeting, MindmapNode } from '@/lib/db';
+import { Meeting, MindmapNode, Task } from '@/lib/db';
 import { ContentType } from '@/lib/classify';
 
 interface ChatMessage {
@@ -93,6 +96,19 @@ export default function SingleMeetingSaaSPage({ params }: MeetingPageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Calendar/Task traceability — tasks are an independent resource (see
+  // app/api/tasks) that carry the transcript-line/timestamp/speaker
+  // traceability AI-extracted action items don't have on their own.
+  const [relatedTasks, setRelatedTasks] = useState<Task[]>([]);
+  const [highlightedLineId, setHighlightedLineId] = useState<number | null>(null);
+
+  // Meeting Preparation panel — only relevant for a still-`scheduled`
+  // meeting (no transcript/analysis yet). Populated from data that already
+  // exists elsewhere: the project's prior meetings and its AI summary/flow.
+  const [previousMeeting, setPreviousMeeting] = useState<Meeting | null>(null);
+  const [pendingProjectTasks, setPendingProjectTasks] = useState<Task[]>([]);
+  const [projectSummary, setProjectSummary] = useState<any>(null);
+
 
   // Active Main Content View Tabs — just three: Summary, Transcript, Insights.
   // Insights groups everything type-specific together (Decisions/Tasks/Risks
@@ -122,7 +138,7 @@ export default function SingleMeetingSaaSPage({ params }: MeetingPageProps) {
       if (response.ok) {
         const data: Meeting = await response.json();
         setMeeting(data);
-        
+
         // Initial AI Copilot welcome message
         setChatMessages([
           {
@@ -132,6 +148,15 @@ export default function SingleMeetingSaaSPage({ params }: MeetingPageProps) {
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }
         ]);
+
+        fetch(`/api/tasks?meetingId=${data.id}`)
+          .then(res => res.ok ? res.json() : [])
+          .then(setRelatedTasks)
+          .catch(() => setRelatedTasks([]));
+
+        if (data.status === 'scheduled') {
+          await loadMeetingPreparation(data);
+        }
       } else {
         throw new Error('Failed to retrieve meeting details');
       }
@@ -140,6 +165,32 @@ export default function SingleMeetingSaaSPage({ params }: MeetingPageProps) {
       setError(err.message || 'Error loading meeting details');
     } fontally: {
       setLoading(false);
+    }
+  };
+
+  // Composes the Meeting Preparation panel entirely from data that already
+  // exists elsewhere in the app — the project's other meetings, its pending
+  // tasks, and its AI-synthesized summary/flow — rather than introducing any
+  // new backend logic.
+  const loadMeetingPreparation = async (scheduled: Meeting) => {
+    if (!scheduled.projectId) return;
+    try {
+      const projectRes = await fetch(`/api/projects/${scheduled.projectId}`);
+      if (projectRes.ok) {
+        const projectData = await projectRes.json();
+        setProjectSummary(projectData.project?.aiSummary || null);
+        const priorMeetings: Meeting[] = (projectData.meetings || [])
+          .filter((m: Meeting) => m.status === 'completed')
+          .sort((a: Meeting, b: Meeting) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setPreviousMeeting(priorMeetings[0] || null);
+      }
+
+      const tasksRes = await fetch(`/api/tasks?projectId=${scheduled.projectId}&status=pending`);
+      if (tasksRes.ok) {
+        setPendingProjectTasks(await tasksRes.json());
+      }
+    } catch (err) {
+      console.error('Failed to load meeting preparation data:', err);
     }
   };
 
@@ -185,6 +236,21 @@ export default function SingleMeetingSaaSPage({ params }: MeetingPageProps) {
       console.error('Failed to update action item status:', err);
     }
   };
+
+  // Task traceability: click a task -> switch to the Transcript tab, scroll
+  // to, and briefly highlight the line it was extracted from.
+  const handleJumpToTranscriptLine = (chunkIndex: number) => {
+    setActiveTab('transcript');
+    setTranscriptSearch('');
+    setSelectedSpeaker('all');
+    setTimeout(() => {
+      document.getElementById(`transcript-line-${chunkIndex}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightedLineId(chunkIndex);
+      setTimeout(() => setHighlightedLineId(null), 2500);
+    }, 50);
+  };
+
+  const findTaskForActionItem = (task: string) => relatedTasks.find(t => t.title === task && t.transcriptChunkIndex !== undefined);
 
   // Send query to AI Meeting Copilot
   const handleSendQuery = async (queryText?: string) => {
@@ -302,9 +368,122 @@ export default function SingleMeetingSaaSPage({ params }: MeetingPageProps) {
     );
   }
 
+  // A meeting scheduled on the Calendar has no recording/transcript/
+  // analysis yet — render an Overview + Meeting Preparation view instead of
+  // the Summary/Transcript/Insights tabs, which would just be empty.
+  if (meeting.status === 'scheduled') {
+    const scheduledMoment = new Date(meeting.scheduledAt || meeting.date);
+    const isSoon = scheduledMoment.getTime() - Date.now() < 60 * 60 * 1000;
+
+    return (
+      <div className="w-full min-h-[calc(100vh-5rem)] flex flex-col gap-6 antialiased max-w-4xl mx-auto">
+        <div className="bg-[#121624]/90 border border-[#232B45] rounded-2xl p-5 shadow-xl backdrop-blur-md flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center space-x-4">
+            <Link href="/dashboard/calendar" className="p-2.5 rounded-xl bg-[#181b25] border border-[#232B45] hover:border-[#6366F1] text-[#94A3B8] hover:text-white transition" title="Back to Calendar">
+              <ArrowLeft className="w-4 h-4" />
+            </Link>
+            <div>
+              <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+                {meeting.title}
+                <span className="text-[10px] font-mono font-semibold uppercase px-2.5 py-0.5 rounded-full bg-[#6366F1]/10 text-[#c0c1ff] border border-[#6366F1]/30">
+                  Scheduled
+                </span>
+              </h1>
+              <div className="flex items-center space-x-4 text-xs text-[#94A3B8] font-mono mt-1">
+                <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-[#6366F1]" />{scheduledMoment.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+                {meeting.durationMinutes && <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-[#5de6ff]" />{meeting.durationMinutes}m</span>}
+              </div>
+            </div>
+          </div>
+          <Link
+            href={`/dashboard/upload?meetingId=${meeting.id}`}
+            className="px-4 py-2 rounded-xl bg-[#6366F1] hover:bg-[#5457d1] text-xs font-bold text-white transition flex items-center gap-2 cursor-pointer shadow-md"
+          >
+            <UploadCloud className="w-4 h-4" />
+            Attach Recording
+          </Link>
+        </div>
+
+        {isSoon && (
+          <div className="bg-amber-400/5 border border-amber-400/30 rounded-2xl p-5 space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 font-mono flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" /> Meeting Preparation — starting soon
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <p className="text-[11px] font-mono uppercase tracking-wider text-[#94A3B8]">Previous Meeting</p>
+                {previousMeeting ? (
+                  <Link href={`/dashboard/meeting/${previousMeeting.id}`} className="block p-3 rounded-xl bg-[#0a0e17] border border-[#232B45] hover:border-[#6366F1] text-xs text-[#dfe2ef]">
+                    {previousMeeting.title}
+                    <span className="block text-[10px] text-[#94A3B8] font-mono mt-0.5">{new Date(previousMeeting.date).toLocaleDateString()}</span>
+                  </Link>
+                ) : (
+                  <p className="text-xs text-[#94A3B8]">No prior meeting found in this project.</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <p className="text-[11px] font-mono uppercase tracking-wider text-[#94A3B8]">Open Decisions / Next Priorities</p>
+                {projectSummary?.nextPriorities?.length > 0 ? (
+                  <ul className="space-y-1">
+                    {projectSummary.nextPriorities.slice(0, 4).map((p: string, idx: number) => (
+                      <li key={idx} className="text-xs text-[#dfe2ef] flex items-start gap-2">
+                        <Target className="w-3 h-3 text-[#5de6ff] mt-0.5 shrink-0" /><span>{p}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-[#94A3B8]">No open priorities recorded yet.</p>
+                )}
+              </div>
+            </div>
+            {pendingProjectTasks.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-[11px] font-mono uppercase tracking-wider text-[#94A3B8]">Pending Tasks ({pendingProjectTasks.length})</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {pendingProjectTasks.slice(0, 6).map(t => (
+                    <div key={t.id} className="text-xs p-2.5 rounded-lg bg-[#0a0e17] border border-[#232B45] flex items-center justify-between">
+                      <span className="text-[#dfe2ef] line-clamp-1">{t.title}</span>
+                      <span className="text-[10px] text-[#94A3B8] font-mono shrink-0 ml-2">{t.assignee}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="bg-[#121624]/90 border border-[#232B45] rounded-3xl p-6 shadow-2xl backdrop-blur-md space-y-6">
+          <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center gap-2">
+              <FileText className="w-4 h-4 text-[#6366F1]" /> Agenda
+            </h3>
+            <p className="text-xs text-[#dfe2ef] leading-relaxed whitespace-pre-wrap">
+              {meeting.agenda || 'No agenda set for this meeting yet.'}
+            </p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center gap-2">
+              <Users className="w-4 h-4 text-[#6366F1]" /> Participants {meeting.participants?.length ? `(${meeting.participants.length})` : ''}
+            </h3>
+            {meeting.participants && meeting.participants.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {meeting.participants.map((p, idx) => (
+                  <span key={idx} className="text-xs px-3 py-1.5 rounded-lg bg-[#181b25] border border-[#232B45] text-[#dfe2ef]">{p}</span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-[#94A3B8]">No participants listed.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full min-h-[calc(100vh-5rem)] flex flex-col xl:flex-row gap-6 antialiased">
-      
+
       {/* CENTER MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col space-y-6 min-w-0">
 
@@ -329,6 +508,20 @@ export default function SingleMeetingSaaSPage({ params }: MeetingPageProps) {
                   <span className="text-[10px] font-mono font-semibold uppercase px-2.5 py-0.5 rounded-full bg-[#6366F1]/10 text-[#a5b4fc] border border-[#6366F1]/30 flex items-center gap-1.5">
                     {CONTENT_TYPE_META[meeting.analysis.contentType].icon}
                     {CONTENT_TYPE_META[meeting.analysis.contentType].label}
+                  </span>
+                )}
+                {meeting.language && (
+                  <span className="text-[10px] font-mono font-semibold uppercase px-2.5 py-0.5 rounded-full bg-[#5de6ff]/10 text-[#5de6ff] border border-[#5de6ff]/30 flex items-center gap-1.5">
+                    <span>🌐</span>
+                    <span>
+                      {meeting.language === 'auto'
+                        ? `Auto (${meeting.detectedLanguage || 'Detected'})`
+                        : meeting.language === 'hi'
+                        ? 'Hindi'
+                        : meeting.language === 'te'
+                        ? 'Telugu'
+                        : 'English'}
+                    </span>
                   </span>
                 )}
               </h1>
@@ -444,9 +637,14 @@ export default function SingleMeetingSaaSPage({ params }: MeetingPageProps) {
               <div className="flex-1 overflow-y-auto space-y-3 pr-2 max-h-[550px] scrollbar-thin scrollbar-thumb-[#232B45]">
                 {filteredTranscript.length > 0 ? (
                   filteredTranscript.map((item) => (
-                    <div 
+                    <div
                       key={item.id}
-                      className="p-4 rounded-2xl bg-[#0a0e17]/80 border border-[#232B45] hover:border-[#6366F1]/40 transition space-y-1.5"
+                      id={`transcript-line-${item.id}`}
+                      className={`p-4 rounded-2xl border transition space-y-1.5 ${
+                        highlightedLineId === item.id
+                          ? 'bg-[#6366F1]/15 border-[#6366F1]'
+                          : 'bg-[#0a0e17]/80 border-[#232B45] hover:border-[#6366F1]/40'
+                      }`}
                     >
                       <div className="flex items-center justify-between text-xs">
                         <span className="font-bold text-[#5de6ff] flex items-center gap-1.5">
@@ -784,36 +982,47 @@ export default function SingleMeetingSaaSPage({ params }: MeetingPageProps) {
                     </h3>
                     <div className="space-y-2.5">
                       {meeting.analysis?.actionItems && meeting.analysis.actionItems.length > 0 ? (
-                        meeting.analysis.actionItems.map((item) => (
-                          <div
-                            key={item.id}
-                            onClick={() => handleToggleActionItem(item.id)}
-                            className={`p-3.5 rounded-xl border transition cursor-pointer flex items-center justify-between ${
-                              item.status === 'completed'
-                                ? 'bg-emerald-500/5 border-emerald-500/30 text-[#94A3B8]'
-                                : 'bg-[#181b25] border-[#232B45] hover:border-[#6366F1] text-[#dfe2ef]'
-                            }`}
-                          >
-                            <div className="flex items-center space-x-3">
-                              <input
-                                type="checkbox"
-                                checked={item.status === 'completed'}
-                                onChange={() => {}}
-                                className="w-4 h-4 accent-[#6366F1] cursor-pointer"
-                              />
-                              <span className={`text-xs ${item.status === 'completed' ? 'line-through text-[#94A3B8]' : 'font-medium'}`}>
-                                {item.task}
-                              </span>
-                            </div>
+                        meeting.analysis.actionItems.map((item) => {
+                          const trace = findTaskForActionItem(item.task);
+                          return (
+                            <div
+                              key={item.id}
+                              className={`p-3.5 rounded-xl border transition flex items-center justify-between ${
+                                item.status === 'completed'
+                                  ? 'bg-emerald-500/5 border-emerald-500/30 text-[#94A3B8]'
+                                  : 'bg-[#181b25] border-[#232B45] hover:border-[#6366F1] text-[#dfe2ef]'
+                              }`}
+                            >
+                              <div onClick={() => handleToggleActionItem(item.id)} className="flex items-center space-x-3 cursor-pointer flex-1">
+                                <input
+                                  type="checkbox"
+                                  checked={item.status === 'completed'}
+                                  onChange={() => {}}
+                                  className="w-4 h-4 accent-[#6366F1] cursor-pointer"
+                                />
+                                <span className={`text-xs ${item.status === 'completed' ? 'line-through text-[#94A3B8]' : 'font-medium'}`}>
+                                  {item.task}
+                                </span>
+                              </div>
 
-                            <div className="flex items-center space-x-3 text-[10px] font-mono">
-                              <span className="px-2 py-0.5 rounded bg-[#0a0e17] border border-[#232B45] text-[#c0c1ff]">
-                                {item.assignee}
-                              </span>
-                              <span className="text-[#94A3B8]">Due: {item.dueDate}</span>
+                              <div className="flex items-center space-x-3 text-[10px] font-mono shrink-0">
+                                {trace && (
+                                  <button
+                                    onClick={() => handleJumpToTranscriptLine(trace.transcriptChunkIndex!)}
+                                    title={`Jump to ${trace.sourceTimestamp || 'source'} in transcript`}
+                                    className="p-1 rounded text-[#5de6ff] hover:text-white hover:bg-[#5de6ff]/10 cursor-pointer"
+                                  >
+                                    <ArrowRightCircle className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                <span className="px-2 py-0.5 rounded bg-[#0a0e17] border border-[#232B45] text-[#c0c1ff]">
+                                  {item.assignee}
+                                </span>
+                                <span className="text-[#94A3B8]">Due: {item.dueDate}</span>
+                              </div>
                             </div>
-                          </div>
-                        ))
+                          );
+                        })
                       ) : (
                         <p className="text-xs text-[#94A3B8]">No action items assigned.</p>
                       )}

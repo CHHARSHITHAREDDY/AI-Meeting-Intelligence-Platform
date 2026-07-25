@@ -65,6 +65,45 @@ export async function initDb() {
       ALTER TABLE meetings ADD COLUMN IF NOT EXISTS project_id VARCHAR(255) REFERENCES projects(id) ON DELETE SET NULL;
     `);
 
+    // Calendar fields — additive, nullable, for meetings that are scheduled
+    // ahead of time (before any recording/transcript exists).
+    await client.query(`
+      ALTER TABLE meetings ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP WITH TIME ZONE;
+      ALTER TABLE meetings ADD COLUMN IF NOT EXISTS duration_minutes INTEGER;
+      ALTER TABLE meetings ADD COLUMN IF NOT EXISTS participants JSONB;
+      ALTER TABLE meetings ADD COLUMN IF NOT EXISTS agenda TEXT;
+      ALTER TABLE meetings ADD COLUMN IF NOT EXISTS priority VARCHAR(20);
+      ALTER TABLE meetings ADD COLUMN IF NOT EXISTS language VARCHAR(20);
+      ALTER TABLE meetings ADD COLUMN IF NOT EXISTS detected_language VARCHAR(50);
+    `);
+
+    // Tasks table — independent, cross-meeting execution record populated
+    // from AI extraction and/or manual creation. See lib/rag.ts's
+    // matchActionItemToChunk for how traceability fields get filled in.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tasks (
+        id VARCHAR(255) PRIMARY KEY,
+        user_id VARCHAR(255) REFERENCES users(id) ON DELETE CASCADE,
+        meeting_id VARCHAR(255) REFERENCES meetings(id) ON DELETE CASCADE,
+        project_id VARCHAR(255) REFERENCES projects(id) ON DELETE SET NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        assignee VARCHAR(255) NOT NULL DEFAULT 'Unassigned',
+        priority VARCHAR(20) NOT NULL DEFAULT 'medium',
+        status VARCHAR(20) NOT NULL DEFAULT 'pending',
+        due_date VARCHAR(255),
+        created_from VARCHAR(20) NOT NULL DEFAULT 'manual',
+        source_timestamp VARCHAR(20),
+        source_speaker VARCHAR(255),
+        source_sentence TEXT,
+        transcript_chunk_index INTEGER,
+        completed_at TIMESTAMP WITH TIME ZONE,
+        history JSONB DEFAULT '[]',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     console.log('[Neon DB] Tables verified successfully.');
     isDbInitialized = true;
   } catch (error) {
@@ -188,9 +227,46 @@ export interface Meeting {
   duration: string;
   transcript: string;
   analysis?: MeetingAnalysis;
-  status: 'processing' | 'completed' | 'failed' | 'live';
+  status: 'processing' | 'completed' | 'failed' | 'live' | 'scheduled' | 'cancelled';
   error?: string;
   projectId?: string;
+
+  // Calendar fields — present once a meeting is scheduled ahead of time or
+  // has been enriched with a real occurrence time/attendee list.
+  scheduledAt?: string;
+  durationMinutes?: number;
+  participants?: string[];
+  agenda?: string;
+  priority?: 'low' | 'medium' | 'high';
+  language?: 'en' | 'hi' | 'te' | 'auto';
+  detectedLanguage?: string;
+}
+
+export interface TaskHistoryEntry {
+  status: string;
+  changedAt: string;
+}
+
+export interface Task {
+  id: string;
+  userId: string;
+  meetingId?: string;
+  projectId?: string;
+  title: string;
+  description?: string;
+  assignee: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'pending' | 'completed';
+  dueDate?: string;
+  createdFrom: 'ai_extraction' | 'manual';
+  sourceTimestamp?: string;
+  sourceSpeaker?: string;
+  sourceSentence?: string;
+  transcriptChunkIndex?: number;
+  completedAt?: string;
+  history: TaskHistoryEntry[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ProjectSummary {
@@ -261,7 +337,14 @@ function rowToMeeting(row: any): Meeting {
     status: row.status,
     analysis: row.analysis || undefined,
     error: row.error || undefined,
-    projectId: row.project_id || undefined
+    projectId: row.project_id || undefined,
+    scheduledAt: row.scheduled_at || undefined,
+    durationMinutes: row.duration_minutes ?? undefined,
+    participants: row.participants || undefined,
+    agenda: row.agenda || undefined,
+    priority: row.priority || undefined,
+    language: row.language || undefined,
+    detectedLanguage: row.detected_language || undefined
   };
 }
 
@@ -288,12 +371,30 @@ export async function getMeetingById(id: string, userId: string): Promise<Meetin
   return rowToMeeting(rows[0]);
 }
 
+// Calendar month/week/day views filter by scheduled_at when present,
+// falling back to the upload/occurrence date otherwise, so both
+// pre-scheduled and already-recorded meetings show up on the right day.
+export async function getMeetingsByDateRange(userId: string, start: string, end: string): Promise<Meeting[]> {
+  await initDb();
+  const { rows } = await pool.query(
+    `SELECT * FROM meetings
+     WHERE user_id = $1
+       AND COALESCE(scheduled_at, date::timestamptz) BETWEEN $2 AND $3
+     ORDER BY COALESCE(scheduled_at, date::timestamptz) ASC`,
+    [userId, start, end]
+  );
+  return rows.map(rowToMeeting);
+}
+
 export async function saveMeeting(meeting: Meeting, userId: string): Promise<void> {
   await initDb();
   const { rows } = await pool.query('SELECT id FROM meetings WHERE id = $1 AND user_id = $2', [meeting.id, userId]);
   if (rows.length > 0) {
     await pool.query(
-      'UPDATE meetings SET title = $1, date = $2, duration = $3, transcript = $4, status = $5, analysis = $6, error = $7, project_id = $8 WHERE id = $9 AND user_id = $10',
+      `UPDATE meetings SET title = $1, date = $2, duration = $3, transcript = $4, status = $5, analysis = $6,
+         error = $7, project_id = $8, scheduled_at = $9, duration_minutes = $10, participants = $11,
+         agenda = $12, priority = $13, language = $14, detected_language = $15
+       WHERE id = $16 AND user_id = $17`,
       [
         meeting.title,
         meeting.date,
@@ -303,13 +404,23 @@ export async function saveMeeting(meeting: Meeting, userId: string): Promise<voi
         meeting.analysis ? JSON.stringify(meeting.analysis) : null,
         meeting.error || null,
         meeting.projectId || null,
+        meeting.scheduledAt || null,
+        meeting.durationMinutes ?? null,
+        meeting.participants ? JSON.stringify(meeting.participants) : null,
+        meeting.agenda || null,
+        meeting.priority || null,
+        meeting.language || null,
+        meeting.detectedLanguage || null,
         meeting.id,
         userId
       ]
     );
   } else {
     await pool.query(
-      'INSERT INTO meetings (id, title, date, duration, transcript, status, analysis, error, user_id, project_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+      `INSERT INTO meetings
+         (id, title, date, duration, transcript, status, analysis, error, user_id, project_id,
+          scheduled_at, duration_minutes, participants, agenda, priority, language, detected_language)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
       [
         meeting.id,
         meeting.title,
@@ -320,7 +431,14 @@ export async function saveMeeting(meeting: Meeting, userId: string): Promise<voi
         meeting.analysis ? JSON.stringify(meeting.analysis) : null,
         meeting.error || null,
         userId,
-        meeting.projectId || null
+        meeting.projectId || null,
+        meeting.scheduledAt || null,
+        meeting.durationMinutes ?? null,
+        meeting.participants ? JSON.stringify(meeting.participants) : null,
+        meeting.agenda || null,
+        meeting.priority || null,
+        meeting.language || null,
+        meeting.detectedLanguage || null
       ]
     );
   }
@@ -386,4 +504,191 @@ export async function updateProjectIntelligence(
       id
     ]
   );
+}
+
+// Task-related DB operations (Isolated by User) — the independent,
+// cross-meeting execution record. See lib/rag.ts's matchActionItemToChunk
+// for how the source_* traceability columns get populated.
+function rowToTask(row: any): Task {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    meetingId: row.meeting_id || undefined,
+    projectId: row.project_id || undefined,
+    title: row.title,
+    description: row.description || undefined,
+    assignee: row.assignee,
+    priority: row.priority,
+    status: row.status,
+    dueDate: row.due_date || undefined,
+    createdFrom: row.created_from,
+    sourceTimestamp: row.source_timestamp || undefined,
+    sourceSpeaker: row.source_speaker || undefined,
+    sourceSentence: row.source_sentence || undefined,
+    transcriptChunkIndex: row.transcript_chunk_index ?? undefined,
+    completedAt: row.completed_at || undefined,
+    history: row.history || [],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+export interface CreateTaskInput {
+  id: string;
+  userId: string;
+  meetingId?: string;
+  projectId?: string;
+  title: string;
+  description?: string;
+  assignee?: string;
+  priority?: 'low' | 'medium' | 'high';
+  dueDate?: string;
+  createdFrom: 'ai_extraction' | 'manual';
+  sourceTimestamp?: string;
+  sourceSpeaker?: string;
+  sourceSentence?: string;
+  transcriptChunkIndex?: number;
+}
+
+export async function createTask(input: CreateTaskInput): Promise<Task> {
+  await initDb();
+  const { rows } = await pool.query(
+    `INSERT INTO tasks
+       (id, user_id, meeting_id, project_id, title, description, assignee, priority, due_date,
+        created_from, source_timestamp, source_speaker, source_sentence, transcript_chunk_index,
+        history)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+     ON CONFLICT (id) DO NOTHING
+     RETURNING *`,
+    [
+      input.id,
+      input.userId,
+      input.meetingId || null,
+      input.projectId || null,
+      input.title,
+      input.description || null,
+      input.assignee || 'Unassigned',
+      input.priority || 'medium',
+      input.dueDate || null,
+      input.createdFrom,
+      input.sourceTimestamp || null,
+      input.sourceSpeaker || null,
+      input.sourceSentence || null,
+      input.transcriptChunkIndex ?? null,
+      JSON.stringify([{ status: 'pending', changedAt: new Date().toISOString() }])
+    ]
+  );
+  if (rows.length > 0) return rowToTask(rows[0]);
+  // Re-processing the same meeting (e.g. a retried upload) re-derives the
+  // same task id — treat that as "already exists" rather than erroring.
+  const existing = await getTaskById(input.id, input.userId);
+  return existing as Task;
+}
+
+export interface TaskFilters {
+  status?: 'pending' | 'completed';
+  projectId?: string;
+  meetingId?: string;
+  dueBefore?: string;
+  dueAfter?: string;
+}
+
+export async function getTasks(userId: string, filters: TaskFilters = {}): Promise<Task[]> {
+  await initDb();
+  const conditions: string[] = ['user_id = $1'];
+  const values: any[] = [userId];
+
+  if (filters.status) {
+    values.push(filters.status);
+    conditions.push(`status = $${values.length}`);
+  }
+  if (filters.projectId) {
+    values.push(filters.projectId);
+    conditions.push(`project_id = $${values.length}`);
+  }
+  if (filters.meetingId) {
+    values.push(filters.meetingId);
+    conditions.push(`meeting_id = $${values.length}`);
+  }
+  if (filters.dueBefore) {
+    values.push(filters.dueBefore);
+    conditions.push(`due_date IS NOT NULL AND due_date <= $${values.length}`);
+  }
+  if (filters.dueAfter) {
+    values.push(filters.dueAfter);
+    conditions.push(`due_date IS NOT NULL AND due_date >= $${values.length}`);
+  }
+
+  const { rows } = await pool.query(
+    `SELECT * FROM tasks WHERE ${conditions.join(' AND ')} ORDER BY due_date ASC NULLS LAST, created_at DESC`,
+    values
+  );
+  return rows.map(rowToTask);
+}
+
+export async function getTaskById(id: string, userId: string): Promise<Task | null> {
+  await initDb();
+  const { rows } = await pool.query('SELECT * FROM tasks WHERE id = $1 AND user_id = $2', [id, userId]);
+  if (rows.length === 0) return null;
+  return rowToTask(rows[0]);
+}
+
+export interface UpdateTaskInput {
+  title?: string;
+  description?: string;
+  assignee?: string;
+  priority?: 'low' | 'medium' | 'high';
+  status?: 'pending' | 'completed';
+  dueDate?: string;
+}
+
+export async function updateTask(id: string, userId: string, patch: UpdateTaskInput): Promise<Task | null> {
+  await initDb();
+  const existing = await getTaskById(id, userId);
+  if (!existing) return null;
+
+  // Only apply keys the caller actually provided — spreading `patch`
+  // wholesale would wipe out fields whose value happens to be undefined
+  // (e.g. a PATCH body that only sets `status` but still carries an
+  // `assignee: undefined` key from the route's destructuring).
+  const next: Task = { ...existing };
+  if (patch.title !== undefined) next.title = patch.title;
+  if (patch.description !== undefined) next.description = patch.description;
+  if (patch.assignee !== undefined) next.assignee = patch.assignee;
+  if (patch.priority !== undefined) next.priority = patch.priority;
+  if (patch.status !== undefined) next.status = patch.status;
+  if (patch.dueDate !== undefined) next.dueDate = patch.dueDate;
+
+  const statusChanged = patch.status && patch.status !== existing.status;
+  const history = statusChanged
+    ? [...existing.history, { status: patch.status!, changedAt: new Date().toISOString() }]
+    : existing.history;
+  const completedAt = patch.status === 'completed'
+    ? (existing.completedAt || new Date().toISOString())
+    : (patch.status === 'pending' ? undefined : existing.completedAt);
+
+  await pool.query(
+    `UPDATE tasks SET title = $1, description = $2, assignee = $3, priority = $4, status = $5,
+       due_date = $6, completed_at = $7, history = $8, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $9 AND user_id = $10`,
+    [
+      next.title,
+      next.description || null,
+      next.assignee,
+      next.priority,
+      next.status,
+      next.dueDate || null,
+      completedAt || null,
+      JSON.stringify(history),
+      id,
+      userId
+    ]
+  );
+
+  return getTaskById(id, userId);
+}
+
+export async function deleteTask(id: string, userId: string): Promise<void> {
+  await initDb();
+  await pool.query('DELETE FROM tasks WHERE id = $1 AND user_id = $2', [id, userId]);
 }

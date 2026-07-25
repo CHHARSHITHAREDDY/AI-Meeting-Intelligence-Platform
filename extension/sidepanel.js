@@ -315,7 +315,8 @@ function startBrowserSpeech() {
     const instance = new SR();
     instance.continuous = true;
     instance.interimResults = true;
-    instance.lang = 'en-US';
+    const savedLang = (window.activeExtLanguage || 'en');
+    instance.lang = savedLang === 'hi' ? 'hi-IN' : savedLang === 'te' ? 'te-IN' : 'en-US';
 
     instance.onresult = (event) => {
       if (isPaused) return;

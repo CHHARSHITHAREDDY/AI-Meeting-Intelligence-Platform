@@ -4,6 +4,8 @@ import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { UploadCloud, ArrowRight, Sparkles, Check, FileText, AlertTriangle, Play, FolderKanban, Plus } from 'lucide-react';
 import { Project } from '@/lib/db';
+import { TranscriptionLanguage } from '@/lib/whisper';
+import LanguageSelect from '@/app/components/LanguageSelect';
 
 function YouTubeIcon({ className = "w-4 h-4 text-rose-500" }: { className?: string }) {
   return (
@@ -13,8 +15,6 @@ function YouTubeIcon({ className = "w-4 h-4 text-rose-500" }: { className?: stri
   );
 }
 
-// Project picker used above both the YouTube and File upload forms — every
-// meeting belongs to a project, and users can create one inline if none exist.
 function ProjectPicker({
   projects,
   selectedProjectId,
@@ -128,10 +128,15 @@ function UploadPageInner() {
   // Mode: 'youtube' | 'file'
   const [activeTab, setActiveTab] = useState<'youtube' | 'file'>('youtube');
 
+  // Language state
+  const [language, setLanguage] = useState<TranscriptionLanguage>('auto');
+
   // Project assignment state
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [projectsLoaded, setProjectsLoaded] = useState(false);
+
+  const attachToMeetingId = searchParams?.get('meetingId') || '';
 
   // YouTube Input State
   const [youtubeUrl, setYoutubeUrl] = useState('');
@@ -161,8 +166,7 @@ function UploadPageInner() {
         setProjectsLoaded(true);
       })
       .catch(() => setProjectsLoaded(true));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   // Handle YouTube URL Submit
   const handleYouTubeSubmit = async (e: React.FormEvent) => {
@@ -193,6 +197,8 @@ function UploadPageInner() {
           link: youtubeUrl.trim(),
           title: videoTitle.trim() || undefined,
           projectId: selectedProjectId,
+          meetingId: attachToMeetingId || undefined,
+          language,
         })
       });
 
@@ -227,6 +233,8 @@ function UploadPageInner() {
     formData.append('file', file);
     if (videoTitle) formData.append('title', videoTitle);
     formData.append('projectId', selectedProjectId);
+    if (attachToMeetingId) formData.append('meetingId', attachToMeetingId);
+    formData.append('language', language);
 
     try {
       const res = await fetch('/api/upload', {
@@ -274,30 +282,34 @@ function UploadPageInner() {
       {/* Container Card */}
       <div className="w-full max-w-3xl space-y-8 animate-fade-in">
 
-        {/* Tab Switcher: YouTube URL vs Local File */}
-        <div className="inline-flex p-1.5 bg-[#121624] border border-[#232B45] rounded-full shadow-lg">
-          <button
-            onClick={() => setActiveTab('youtube')}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-bold transition cursor-pointer ${
-              activeTab === 'youtube'
-                ? 'bg-[#6366F1] text-white shadow-md shadow-[#6366F1]/30'
-                : 'text-[#94A3B8] hover:text-white'
-            }`}
-          >
-            <YouTubeIcon className="w-4 h-4 text-rose-400" />
-            <span>YouTube URL</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('file')}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-bold transition cursor-pointer ${
-              activeTab === 'file'
-                ? 'bg-[#6366F1] text-white shadow-md shadow-[#6366F1]/30'
-                : 'text-[#94A3B8] hover:text-white'
-            }`}
-          >
-            <UploadCloud className="w-4 h-4 text-[#5DE6FF]" />
-            <span>Upload File</span>
-          </button>
+        {/* Tab Switcher & Language Selector Header */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="inline-flex p-1.5 bg-[#121624] border border-[#232B45] rounded-full shadow-lg">
+            <button
+              onClick={() => setActiveTab('youtube')}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                activeTab === 'youtube'
+                  ? 'bg-[#6366F1] text-white shadow-md shadow-[#6366F1]/30'
+                  : 'text-[#94A3B8] hover:text-white'
+              }`}
+            >
+              <YouTubeIcon className="w-4 h-4 text-rose-400" />
+              <span>YouTube URL</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('file')}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                activeTab === 'file'
+                  ? 'bg-[#6366F1] text-white shadow-md shadow-[#6366F1]/30'
+                  : 'text-[#94A3B8] hover:text-white'
+              }`}
+            >
+              <UploadCloud className="w-4 h-4 text-[#5DE6FF]" />
+              <span>Upload File</span>
+            </button>
+          </div>
+
+          <LanguageSelect value={language} onChange={setLanguage} />
         </div>
 
         {/* Header Section (Matching User Screenshot) */}
@@ -307,7 +319,7 @@ function UploadPageInner() {
               Free <span className="bg-gradient-to-r from-rose-400 via-fuchsia-400 to-indigo-400 bg-clip-text text-transparent">YouTube Transcript</span> Generator
             </h1>
             <p className="text-sm md:text-base text-[#94A3B8] font-medium">
-              Instantly, without uploading video files.
+              Instantly, without uploading video files. Supports English, Hindi & Telugu.
             </p>
           </div>
         ) : (
@@ -316,12 +328,12 @@ function UploadPageInner() {
               Upload <span className="bg-gradient-to-r from-indigo-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">Audio or Video</span> File
             </h1>
             <p className="text-sm md:text-base text-[#94A3B8] font-medium">
-              Extract transcript, summary, key decisions, and chat with AI copilot.
+              Extract transcript, summary, key decisions, and chat with AI copilot in English, Hindi & Telugu.
             </p>
           </div>
         )}
 
-        {/* Project Picker — every meeting belongs to a project */}
+        {/* Project Picker */}
         {projectsLoaded && (
           <ProjectPicker
             projects={projects}
@@ -335,7 +347,6 @@ function UploadPageInner() {
         {activeTab === 'youtube' ? (
           <form onSubmit={handleYouTubeSubmit} className="space-y-6">
 
-            {/* Input Box & Button (Matching User Screenshot Layout) */}
             <div className="flex flex-col sm:flex-row items-center gap-3 bg-[#121624]/90 p-2 border border-[#232B45] rounded-full shadow-2xl focus-within:border-[#6366F1] transition-all max-w-2xl mx-auto backdrop-blur-md">
               <div className="relative flex-1 w-full pl-4">
                 <input
@@ -358,7 +369,6 @@ function UploadPageInner() {
               </button>
             </div>
 
-            {/* Subtext */}
             <p className="text-xs text-[#94A3B8] font-mono">
               {selectedProjectId ? 'Quick and simple. No catch.' : 'Select or create a project above to continue.'}
             </p>
@@ -367,7 +377,6 @@ function UploadPageInner() {
         ) : (
           <form onSubmit={handleFileSubmit} className="space-y-6 max-w-xl mx-auto">
 
-            {/* File Drag and Drop Box */}
             <div
               onDragEnter={handleDrag}
               onDragOver={handleDrag}
@@ -417,7 +426,7 @@ function UploadPageInner() {
             <div className="flex items-center justify-between text-xs font-bold text-[#5DE6FF]">
               <span className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-[#6366F1] animate-spin" />
-                Processing YouTube Transcript Pipeline...
+                Processing Multilingual Transcript Pipeline...
               </span>
               <span className="capitalize text-white font-mono">{status}</span>
             </div>
@@ -425,7 +434,7 @@ function UploadPageInner() {
               <div className="bg-gradient-to-r from-[#6366F1] via-fuchsia-500 to-[#5DE6FF] h-full transition-all duration-500 w-3/4 animate-pulse" />
             </div>
             <p className="text-[11px] text-[#94A3B8]">
-              Extracting dialogue speech, classifying content, generating summary, action items, and indexing for RAG chat...
+              Transcribing speech in {language === 'auto' ? 'Auto-detected language' : language.toUpperCase()}, extracting insights, and indexing for RAG chat...
             </p>
           </div>
         )}

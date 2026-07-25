@@ -68,6 +68,8 @@ export default function DashboardLayout({
   // Sidebar Items: "Meetings" directly navigates to /dashboard/live (Start/Join LiveKit Meeting Room)
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', exact: true, icon: 'dashboard' },
+    { name: 'Weave AI Chat', href: '/dashboard/chat', exact: true, icon: 'chat' },
+    { name: 'Calendar', href: '/dashboard/calendar', exact: false, icon: 'calendar_month' },
     { name: 'Projects', href: '/dashboard/projects', exact: false, icon: 'folder_special' },
     { name: 'Meetings', href: '/dashboard/live', exact: false, icon: 'videocam' },
     { name: 'Upload Meeting', href: '/dashboard/upload', exact: true, icon: 'cloud_upload' },
@@ -80,6 +82,8 @@ export default function DashboardLayout({
     if (pathname?.startsWith('/dashboard/meeting/')) return 'Meeting Detail';
     if (pathname?.startsWith('/dashboard/projects/')) return 'Project Workspace';
     switch (pathname) {
+      case '/dashboard/chat': return 'Weave AI Chat Assistant';
+      case '/dashboard/calendar': return 'Meeting Calendar';
       case '/dashboard/projects': return 'Projects';
       case '/dashboard/live': return 'Live Meeting';
       case '/dashboard/decisions': return 'Decisions Register';

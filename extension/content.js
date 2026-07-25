@@ -977,7 +977,8 @@
       const instance = new SR();
       instance.continuous = true;
       instance.interimResults = true;
-      instance.lang = 'en-US';
+      const savedLang = (window.activeExtLanguage || 'en');
+      instance.lang = savedLang === 'hi' ? 'hi-IN' : savedLang === 'te' ? 'te-IN' : 'en-US';
 
       instance.onresult = (event) => {
         if (isPaused) return;
@@ -1300,7 +1301,8 @@
       if (computeRms(mono16k) < SILENCE_RMS_THRESHOLD) return;
 
       const wavBuffer = encodeWavPcm16(mono16k, 16000);
-      const res = await callApiBinary('/api/transcribe-chunk', wavBuffer);
+      const extLang = window.activeExtLanguage || 'auto';
+      const res = await callApiBinary(`/api/transcribe-chunk?language=${extLang}`, wavBuffer);
       const text = res && res.ok && res.data && typeof res.data.text === 'string' ? res.data.text.trim() : '';
       if (text) {
         appendTranscriptLine(speaker, text, false);

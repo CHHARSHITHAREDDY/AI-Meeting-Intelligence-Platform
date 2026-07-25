@@ -1,52 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { transcribeAudio } from '@/lib/whisper';
+import { transcribeAudio, TranscriptionLanguage } from '@/lib/whisper';
+import { transcribeYoutube, getYoutubeVideoId, fetchYoutubeTitle } from '@/lib/youtube';
 import { extractMeetingInsights, extractLectureInsights, extractCodingInsights, extractPodcastInsights } from '@/lib/extract';
 import { classifyContentType, ContentType } from '@/lib/classify';
-import { saveMeeting, Meeting, MeetingAnalysis } from '@/lib/db';
+import { saveMeeting, getMeetingById, getProjectById, updateProjectIntelligence, Meeting, MeetingAnalysis } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
-import { regenerateProjectIntelligence } from '@/lib/projectIntelligence';
-// @ts-ignore
-import { YoutubeTranscript } from 'youtube-transcript';
 
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
- 
-function getYoutubeVideoId(url: string): string | null {
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-  const match = url.match(regExp);
-  return (match && match[2].length === 11) ? match[2] : null;
-}
 
-async function fetchYoutubeTitle(videoId: string): Promise<string> {
-  try {
-    const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
-        'Accept-Language': 'en-US,en;q=0.9'
-      }
-    });
-    if (res.ok) {
-      const html = await res.text();
-      const match = html.match(/<title>(.*?)<\/title>/i);
-      if (match && match[1]) {
-        return match[1].replace(/\s*-\s*YouTube$/i, '').trim();
-      }
-    }
-  } catch (err) {
-    console.warn('Failed to fetch YouTube title:', err);
-  }
-  return 'YouTube Video';
-}
-
-function parseRawMultipart(buffer: Buffer, contentTypeHeader: string): { fileBuffer: Buffer | null; fileName: string; title: string; link: string; projectId: string } {
+function parseRawMultipart(buffer: Buffer, contentTypeHeader: string): {
+  fileBuffer: Buffer | null;
+  fileName: string;
+  title: string;
+  link: string;
+  projectId: string;
+  meetingId: string;
+  language: TranscriptionLanguage;
+} {
   let fileBuffer: Buffer | null = null;
   let fileName = '';
   let title = '';
   let link = '';
   let projectId = '';
+  let meetingId = '';
+  let language: TranscriptionLanguage = 'auto';
 
   const boundaryMatch = contentTypeHeader.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
-  if (!boundaryMatch) return { fileBuffer, fileName, title, link, projectId };
+  if (!boundaryMatch) return { fileBuffer, fileName, title, link, projectId, meetingId, language };
 
   const boundary = (boundaryMatch[1] || boundaryMatch[2]).trim();
   const boundaryBuffer = Buffer.from(`--${boundary}`);
@@ -88,20 +69,28 @@ function parseRawMultipart(buffer: Buffer, contentTypeHeader: string): { fileBuf
         link = bodyBuffer.toString('utf-8').trim();
       } else if (fieldName === 'projectId') {
         projectId = bodyBuffer.toString('utf-8').trim();
+      } else if (fieldName === 'meetingId') {
+        meetingId = bodyBuffer.toString('utf-8').trim();
+      } else if (fieldName === 'language') {
+        language = (bodyBuffer.toString('utf-8').trim() as TranscriptionLanguage) || 'auto';
       }
     }
   }
 
-  return { fileBuffer, fileName, title, link, projectId };
+  return { fileBuffer, fileName, title, link, projectId, meetingId, language };
 }
 
 export async function POST(request: NextRequest) {
+  const tTotalStart = performance.now();
+  const timings: Record<string, number> = {};
+
   try {
     const user = await getSessionUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const tParseStart = performance.now();
     const contentType = request.headers.get('content-type') || '';
     let title = '';
     let audioInput: Buffer | Float32Array | null = null;
@@ -109,11 +98,16 @@ export async function POST(request: NextRequest) {
     let transcript = '';
     let isLinkTranscribed = false;
     let projectId = '';
+    let meetingId = '';
+    let language: TranscriptionLanguage = 'auto';
+    let detectedLanguage: string | undefined = undefined;
 
     if (contentType.includes('application/octet-stream')) {
       const url = new URL(request.url);
       title = url.searchParams.get('title') || 'Local Recording';
       projectId = url.searchParams.get('projectId') || '';
+      meetingId = url.searchParams.get('meetingId') || '';
+      language = (url.searchParams.get('language') as TranscriptionLanguage) || 'auto';
       fileName = 'audio.pcm';
       const arrayBuffer = await request.arrayBuffer();
       audioInput = new Float32Array(arrayBuffer);
@@ -121,16 +115,19 @@ export async function POST(request: NextRequest) {
       const body = await request.json();
       title = body.title || '';
       projectId = body.projectId || '';
+      meetingId = body.meetingId || '';
+      language = (body.language as TranscriptionLanguage) || 'auto';
       const link = body.link || '';
       if (link && link.trim() !== '') {
         const videoId = getYoutubeVideoId(link.trim());
         if (videoId) {
-          console.log('[Upload API] YouTube URL detected:', videoId);
+          console.log('[Upload API] YouTube URL detected:', videoId, 'lang:', language);
           if (!title) {
             title = await fetchYoutubeTitle(videoId);
           }
-          const segments = await YoutubeTranscript.fetchTranscript(videoId);
-          transcript = segments.map((s: any) => s.text).join(' ');
+          const ytResult = await transcribeYoutube(videoId, language);
+          transcript = ytResult.transcript;
+          detectedLanguage = ytResult.detectedLanguage;
           isLinkTranscribed = true;
           fileName = 'youtube';
         } else {
@@ -161,6 +158,8 @@ export async function POST(request: NextRequest) {
         link = formData.get('link') as string | null;
         title = (formData.get('title') as string) || '';
         projectId = (formData.get('projectId') as string) || '';
+        meetingId = (formData.get('meetingId') as string) || '';
+        language = ((formData.get('language') as string) as TranscriptionLanguage) || 'auto';
       } catch (err: any) {
         console.warn('[Upload API] Native request.formData() failed, falling back to arrayBuffer multipart parser:', err.message);
         try {
@@ -173,6 +172,8 @@ export async function POST(request: NextRequest) {
           if (parsed.title) title = parsed.title;
           if (parsed.link) link = parsed.link;
           if (parsed.projectId) projectId = parsed.projectId;
+          if (parsed.meetingId) meetingId = parsed.meetingId;
+          if (parsed.language) language = parsed.language;
         } catch (rawErr: any) {
           console.error('[Upload API] Raw multipart parse error:', rawErr);
         }
@@ -181,12 +182,13 @@ export async function POST(request: NextRequest) {
       if (!audioInput && link && link.trim() !== '') {
         const videoId = getYoutubeVideoId(link.trim());
         if (videoId) {
-          console.log('[Upload API] YouTube URL detected:', videoId);
+          console.log('[Upload API] YouTube URL detected:', videoId, 'lang:', language);
           if (!title) {
             title = await fetchYoutubeTitle(videoId);
           }
-          const segments = await YoutubeTranscript.fetchTranscript(videoId);
-          transcript = segments.map((s: any) => s.text).join(' ');
+          const ytResult = await transcribeYoutube(videoId, language);
+          transcript = ytResult.transcript;
+          detectedLanguage = ytResult.detectedLanguage;
           isLinkTranscribed = true;
           fileName = 'youtube';
         } else {
@@ -216,37 +218,78 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const id = Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 7);
-    
-    // Save initial processing state
-    const newMeeting: Meeting = {
-      id,
-      title: title || 'Web Link Analysis',
-      date: new Date().toISOString(),
-      duration: 'Processing...',
-      transcript: '',
-      status: 'processing',
-      projectId: projectId || undefined,
-    };
-    
+    timings['Upload Receive & Parse'] = performance.now() - tParseStart;
+
+    let scheduledMeeting: Meeting | null = null;
+    if (meetingId) {
+      const existing = await getMeetingById(meetingId, user.userId);
+      if (existing && existing.status === 'scheduled') {
+        scheduledMeeting = existing;
+      }
+    }
+
+    const id = scheduledMeeting?.id || (Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 7));
+
+    const newMeeting: Meeting = scheduledMeeting
+      ? {
+          ...scheduledMeeting,
+          title: title || scheduledMeeting.title,
+          duration: 'Processing...',
+          transcript: '',
+          status: 'processing',
+          projectId: projectId || scheduledMeeting.projectId,
+          language,
+          detectedLanguage,
+        }
+      : {
+          id,
+          title: title || 'Web Link Analysis',
+          date: new Date().toISOString(),
+          duration: 'Processing...',
+          transcript: '',
+          status: 'processing',
+          projectId: projectId || undefined,
+          language,
+          detectedLanguage,
+        };
+
+    const tInitialDbStart = performance.now();
     await saveMeeting(newMeeting, user.userId);
+    timings['Initial Processing DB Persist'] = performance.now() - tInitialDbStart;
 
     try {
       if (!isLinkTranscribed && audioInput) {
-        console.log(`Transcribing audio file: ${fileName}...`);
-        transcript = await transcribeAudio(audioInput, fileName);
+        const tWhisperStart = performance.now();
+        console.log(`Transcribing audio file: ${fileName} (lang=${language})...`);
+        const result = await transcribeAudio(audioInput, fileName, language);
+        transcript = result.text;
+        detectedLanguage = result.detectedLanguage;
+        timings['Audio & Whisper Pipeline'] = performance.now() - tWhisperStart;
       }
       
-      console.log('Classifying content type...');
-      const classification = await classifyContentType(transcript);
+      const tAiStart = performance.now();
+      console.log('Running concurrent Content Classification & AI Insight Extraction...');
+      
+      // Parallelize classification and default meeting insight extraction
+      const [classification, defaultMeetingInsights] = await Promise.all([
+        classifyContentType(transcript),
+        extractMeetingInsights(transcript)
+      ]);
+
       console.log(`[Upload API] Detected content type: ${classification.contentType} (${classification.confidence}% confidence)`);
 
-      console.log(`Extracting ${classification.contentType} insights...`);
-      const insights = await extractInsightsForType(transcript, classification.contentType);
+      let insights: MeetingAnalysis;
+      if (classification.contentType === 'meeting' || classification.contentType === 'general') {
+        insights = defaultMeetingInsights;
+      } else {
+        console.log(`Extracting specific ${classification.contentType} insights...`);
+        insights = await extractInsightsForType(transcript, classification.contentType);
+      }
+
       insights.contentType = classification.contentType;
       insights.contentTypeConfidence = classification.confidence;
+      timings['AI Insights & Classification'] = performance.now() - tAiStart;
 
-      // Calculate duration based on word count
       const wordCount = transcript.split(/\s+/).length;
       const minutes = Math.floor(wordCount / 130) || 1;
       const seconds = Math.floor((wordCount % 130) * 0.46) % 60;
@@ -256,13 +299,10 @@ export async function POST(request: NextRequest) {
       newMeeting.analysis = insights;
       newMeeting.duration = durationStr;
       newMeeting.status = 'completed';
+      newMeeting.language = language;
+      newMeeting.detectedLanguage = detectedLanguage;
 
-      // Index meeting context for the RAG chat pipeline. This is a secondary
-      // enhancement (chat context chunking) — a failure here must NOT discard
-      // the transcript + summary we already have, so it's isolated in its own
-      // try/catch instead of sharing the outer one (previously, any error in
-      // this step would mark an otherwise fully-successful meeting as
-      // 'failed', hiding a real transcript and summary from the user).
+      const tRagStart = performance.now();
       try {
         const { indexMeetingContext } = require('@/lib/rag');
         const indexedContext = indexMeetingContext(newMeeting);
@@ -271,20 +311,29 @@ export async function POST(request: NextRequest) {
       } catch (indexErr: any) {
         console.warn('[Upload API] RAG indexing failed (non-fatal):', indexErr?.message || indexErr);
       }
+      timings['RAG Indexing'] = performance.now() - tRagStart;
 
+      const tFinalDbStart = performance.now();
       await saveMeeting(newMeeting, user.userId);
-      console.log(`Meeting analysis & RAG indexing completed: ${newMeeting.id}`);
+      timings['Final DB Persist'] = performance.now() - tFinalDbStart;
 
-      // Every meeting added to a project should refresh that project's AI
-      // Summary/Progress/Flow automatically. This runs in the background
-      // (not awaited) so the upload response isn't held up by an extra
-      // LLM round-trip — the project view picks up the update shortly after.
+      const totalMs = performance.now() - tTotalStart;
+      timings['Total End-to-End Latency'] = totalMs;
+
+      console.log('\n=========================================================');
+      console.log('         PERFORMANCE PROFILING LATENCY REPORT            ');
+      console.log('=========================================================');
+      Object.entries(timings).forEach(([stage, dur]) => {
+        console.log(`- ${stage.padEnd(35)}: ${dur.toFixed(2)} ms`);
+      });
+      console.log('=========================================================\n');
+
       if (newMeeting.projectId) {
-        regenerateProjectIntelligence(newMeeting.projectId, user.userId).catch((err) =>
-          console.error(`[Upload API] Failed to refresh project ${newMeeting.projectId} after upload:`, err.message)
-        );
+        refreshProjectIntelligence(newMeeting.projectId, user.userId).catch((err) => {
+          console.warn('[Upload API] Background project intelligence refresh warning:', err?.message || err);
+        });
       }
-
+      
       return NextResponse.json(newMeeting);
     } catch (innerError: any) {
       console.error('Processing failed for meeting:', innerError);
@@ -299,12 +348,27 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Runs the extraction pipeline matching the detected content type. 'meeting'
-// and 'general' share the same extractor — the difference between them is
-// purely how the dashboard renders the result (general hides the
-// meeting-specific Decisions/Action Items/Risks sections), not how it's
-// extracted, since a generic Summary + Key Points is a safe default for any
-// content that doesn't clearly fit a more specific category.
+async function refreshProjectIntelligence(projectId: string, userId: string): Promise<void> {
+  const { extractProjectSynthesis } = require('@/lib/extract');
+  const { getMeetingsByProject } = require('@/lib/db');
+
+  const project = await getProjectById(projectId, userId);
+  if (!project) return;
+
+  const projectMeetings = await getMeetingsByProject(projectId, userId);
+  const completedMeetings = projectMeetings.filter((m: Meeting) => m.status === 'completed');
+
+  if (completedMeetings.length === 0) return;
+
+  const synthesis = await extractProjectSynthesis(
+    project.name,
+    project.description || '',
+    completedMeetings
+  );
+
+  await updateProjectIntelligence(projectId, synthesis);
+}
+
 async function extractInsightsForType(transcript: string, contentType: ContentType): Promise<MeetingAnalysis> {
   switch (contentType) {
     case 'lecture':
@@ -319,4 +383,3 @@ async function extractInsightsForType(transcript: string, contentType: ContentTy
       return extractMeetingInsights(transcript);
   }
 }
-

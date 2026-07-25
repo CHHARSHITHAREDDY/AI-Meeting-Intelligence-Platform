@@ -54,6 +54,33 @@ export async function PATCH(
       // Empty string explicitly unassigns the meeting from any project.
       meeting.projectId = body.projectId || undefined;
     }
+    // Calendar fields — reschedule/cancel a meeting, or edit its agenda and
+    // participant list, all through this same generic PATCH.
+    if (body.scheduledAt) {
+      if (isNaN(new Date(body.scheduledAt).getTime())) {
+        return NextResponse.json({ error: 'Invalid scheduledAt date' }, { status: 400 });
+      }
+      meeting.scheduledAt = new Date(body.scheduledAt).toISOString();
+    }
+    if (typeof body.durationMinutes === 'number') {
+      meeting.durationMinutes = body.durationMinutes;
+    }
+    if (Array.isArray(body.participants)) {
+      meeting.participants = body.participants;
+    }
+    if (typeof body.agenda === 'string') {
+      meeting.agenda = body.agenda;
+    }
+    if (body.priority && ['low', 'medium', 'high'].includes(body.priority)) {
+      meeting.priority = body.priority;
+    }
+    if (body.status && ['scheduled', 'cancelled'].includes(body.status)) {
+      // Only allow manual transitions between the two calendar-only
+      // statuses here — the pipeline statuses (processing/completed/
+      // failed/live) are exclusively managed by the upload/live-meeting
+      // routes and must not be settable through this generic PATCH.
+      meeting.status = body.status;
+    }
 
     await saveMeeting(meeting, user.userId);
 

@@ -51,6 +51,38 @@ export function chunkTranscript(transcript: string, meetingId: string): Semantic
   return chunks;
 }
 
+export interface ActionItemTraceMatch {
+  index: number;
+  timestamp: string;
+  speaker: string;
+  sentence: string;
+}
+
+export function matchActionItemToChunk(actionItemText: string, chunks: SemanticChunk[]): ActionItemTraceMatch | null {
+  if (!actionItemText || chunks.length === 0) return null;
+
+  const itemTokens = new Set(tokenize(actionItemText));
+  if (itemTokens.size === 0) return null;
+
+  let bestIndex = -1;
+  let bestScore = 0;
+
+  chunks.forEach((chunk, idx) => {
+    const chunkTokens = tokenize(chunk.text);
+    if (chunkTokens.length === 0) return;
+    const overlap = chunkTokens.filter(t => itemTokens.has(t)).length;
+    const score = overlap / Math.sqrt(chunkTokens.length);
+    if (score > bestScore) {
+      bestScore = score;
+      bestIndex = idx;
+    }
+  });
+
+  if (bestIndex === -1 || bestScore === 0) return null;
+  const match = chunks[bestIndex];
+  return { index: bestIndex, timestamp: match.timestamp, speaker: match.speaker, sentence: match.text };
+}
+
 // ---------------------------------------------------------------------------
 // 2. VECTOR EMBEDDING & TF-IDF COSINE SIMILARITY ENGINE
 // ---------------------------------------------------------------------------
@@ -91,20 +123,17 @@ export function indexMeetingContext(meeting: Meeting): ContextualMeetingIndex {
   const chunks = chunkTranscript(meeting.transcript, meeting.id);
   const speakers = Array.from(new Set(chunks.map(c => c.speaker)));
 
-  // Build vocabulary across all chunks
   const vocabSet = new Set<string>();
   chunks.forEach(c => {
     tokenize(c.text + ' ' + c.speaker).forEach(t => vocabSet.add(t));
   });
   const vocabulary = Array.from(vocabSet);
 
-  // Compute vector for each chunk
   chunks.forEach(c => {
     const tokens = tokenize(c.text + ' ' + c.speaker);
     c.vector = computeTFIDFVector(tokens, vocabulary);
   });
 
-  // Auto-generate suggested prompts dynamically from speakers & meeting analysis
   const suggestedPrompts: string[] = [
     "What were the key decisions made?",
     "What risks were identified?",
@@ -128,85 +157,111 @@ export function indexMeetingContext(meeting: Meeting): ContextualMeetingIndex {
 }
 
 // ---------------------------------------------------------------------------
-// 3. VECTOR SEMANTIC SEARCH RETRIEVAL
+// 3. HYBRID SEMANTIC SEARCH & CONCEPT ENHANCED RETRIEVAL
 // ---------------------------------------------------------------------------
-export function retrieveContextChunks(query: string, chunks: SemanticChunk[], topK = 5): SemanticChunk[] {
+const CONCEPT_SYNONYMS: Record<string, string[]> = {
+  decision: ['decision', 'decisions', 'agreed', 'decided', 'conclusion', 'resolved', 'approve'],
+  action: ['action', 'task', 'assigned', 'assignee', 'todo', 'work', 'due', 'owner', 'pending'],
+  risk: ['risk', 'risks', 'blocker', 'issue', 'concern', 'problem', 'mitigation', 'challenge'],
+  deadline: ['deadline', 'schedule', 'date', 'timeline', 'due', 'by'],
+};
+
+export function retrieveContextChunks(query: string, chunks: SemanticChunk[], topK = 6): SemanticChunk[] {
   if (!chunks || chunks.length === 0) return [];
 
-  // Build vocabulary from chunks
   const vocabSet = new Set<string>();
   chunks.forEach(c => {
     tokenize(c.text + ' ' + c.speaker).forEach(t => vocabSet.add(t));
   });
   const vocabulary = Array.from(vocabSet);
 
-  const queryTokens = tokenize(query);
-  const queryVector = computeTFIDFVector(queryTokens, vocabulary);
+  const rawQueryTokens = tokenize(query);
+  if (rawQueryTokens.length === 0) return chunks.slice(0, topK);
+
+  // Expand query with synonyms & concept terms
+  const expandedQueryTokens = new Set<string>(rawQueryTokens);
+  rawQueryTokens.forEach(t => {
+    Object.entries(CONCEPT_SYNONYMS).forEach(([concept, syns]) => {
+      if (syns.includes(t) || t.includes(concept)) {
+        syns.forEach(s => expandedQueryTokens.add(s));
+      }
+    });
+  });
+
+  const queryTokenList = Array.from(expandedQueryTokens);
+  const queryVector = computeTFIDFVector(queryTokenList, vocabulary);
 
   const scoredChunks = chunks.map(chunk => {
     let score = 0;
+    const chunkTextLower = (chunk.text + ' ' + chunk.speaker).toLowerCase();
+    const chunkTokens = tokenize(chunkTextLower);
+
+    // 1. Vector Cosine Similarity
     if (chunk.vector && chunk.vector.length === queryVector.length) {
-      score = cosineSimilarity(queryVector, chunk.vector);
-    } else {
-      // Term matching
-      const chunkTokens = tokenize(chunk.text + ' ' + chunk.speaker);
-      const overlap = queryTokens.filter(t => chunkTokens.includes(t)).length;
-      score = overlap / (queryTokens.length || 1);
+      score += cosineSimilarity(queryVector, chunk.vector) * 0.6;
     }
+
+    // 2. Token Overlap Score
+    const overlap = queryTokenList.filter(t => chunkTokens.includes(t)).length;
+    if (queryTokenList.length > 0) {
+      score += (overlap / queryTokenList.length) * 0.4;
+    }
+
+    // 3. Entity & Speaker Boost
+    rawQueryTokens.forEach(qt => {
+      if (chunk.speaker.toLowerCase().includes(qt)) {
+        score += 0.5;
+      }
+      if (chunkTextLower.includes(qt)) {
+        score += 0.2;
+      }
+    });
+
     return { chunk, score };
   });
 
-  return scoredChunks
-    .filter(sc => sc.score > 0)
+  const filtered = scoredChunks
+    .filter(sc => sc.score > 0.01)
     .sort((a, b) => b.score - a.score)
     .slice(0, topK)
     .map(sc => sc.chunk);
+
+  if (filtered.length > 0) return filtered;
+
+  // Fallback: substring keyword match
+  const keywordMatches = chunks.filter(c => 
+    rawQueryTokens.some(qt => (c.text + ' ' + c.speaker).toLowerCase().includes(qt))
+  );
+
+  return keywordMatches.slice(0, topK);
 }
 
 // ---------------------------------------------------------------------------
-// 4. GROUNDED RAG GENERATOR WITH CHAT MEMORY & TIMESTAMP CITATIONS
+// 4. GROUNDED RAG GENERATOR WITH FULL TRACEABILITY LOGGING
 // ---------------------------------------------------------------------------
-/**
- * Builds the content-type-specific block of the chat system prompt, so the
- * AI Copilot has the right grounding regardless of whether it's chatting
- * about a meeting, a lecture, a coding session, or a podcast.
- */
-function buildTypeSpecificContext(meeting: Meeting): string {
+function buildStructuredContextBlock(meeting: Meeting): string {
   const a = meeting.analysis;
   if (!a) return '';
 
-  switch (a.contentType) {
-    case 'lecture':
-      return [
-        a.notes?.length ? `Study Notes: ${a.notes.join('; ')}` : '',
-        a.flashcards?.length ? `Flashcard Topics: ${a.flashcards.map(f => f.question).join('; ')}` : '',
-      ].filter(Boolean).join('\n');
+  const blocks: string[] = [];
 
-    case 'coding':
-      return [
-        a.codeGuide ? `Code Guide: ${a.codeGuide}` : '',
-        a.apis?.length ? `APIs Discussed: ${a.apis.map(x => `${x.name} (${x.description})`).join('; ')}` : '',
-        a.libraries?.length ? `Libraries Discussed: ${a.libraries.map(x => `${x.name} (${x.purpose})`).join('; ')}` : '',
-        a.commands?.length ? `Commands Referenced: ${a.commands.map(x => x.command).join('; ')}` : '',
-      ].filter(Boolean).join('\n');
-
-    case 'podcast':
-      return [
-        a.keyInsights?.length ? `Key Insights: ${a.keyInsights.join('; ')}` : '',
-        a.timeline?.length ? `Timeline: ${a.timeline.map(t => `[${t.timestamp}] ${t.topic}`).join('; ')}` : '',
-        a.resources?.length ? `Resources Mentioned: ${a.resources.map(r => r.name).join('; ')}` : '',
-      ].filter(Boolean).join('\n');
-
-    case 'general':
-      return a.keyDiscussionPoints?.length ? `Key Points: ${a.keyDiscussionPoints.join('; ')}` : '';
-
-    case 'meeting':
-    default:
-      return [
-        `Decisions: ${a.decisions?.length ? a.decisions.map(d => `${d.decision} (by ${d.decider})`).join('; ') : 'N/A'}`,
-        `Action Items: ${a.actionItems?.length ? a.actionItems.map(x => `${x.task} (Assignee: ${x.assignee}, Due: ${x.dueDate})`).join('; ') : 'N/A'}`,
-      ].join('\n');
+  if (a.decisions && a.decisions.length > 0) {
+    blocks.push(`Decisions Made:\n` + a.decisions.map(d => `- [${d.id}] ${d.decision} (Decided by: ${d.decider}, Context: ${d.context})`).join('\n'));
   }
+
+  if (a.actionItems && a.actionItems.length > 0) {
+    blocks.push(`Action Items & Assignments:\n` + a.actionItems.map(x => `- [${x.id}] ${x.task} (Assignee: ${x.assignee}, Due: ${x.dueDate}, Status: ${x.status})`).join('\n'));
+  }
+
+  if (a.risks && a.risks.length > 0) {
+    blocks.push(`Identified Risks:\n` + a.risks.map(r => `- [${r.id}] ${r.risk} (Impact: ${r.impact}, Mitigation: ${r.mitigation})`).join('\n'));
+  }
+
+  if (a.contentType === 'coding' && a.codeGuide) {
+    blocks.push(`Technical Guide:\n${a.codeGuide}`);
+  }
+
+  return blocks.join('\n\n');
 }
 
 export async function generateGroundedRAGAnswer(
@@ -214,35 +269,47 @@ export async function generateGroundedRAGAnswer(
   meeting: Meeting,
   chatHistory: { sender: 'user' | 'assistant'; text: string }[] = []
 ): Promise<string> {
-  const index = indexMeetingContext(meeting);
-  const retrievedChunks = retrieveContextChunks(query, index.chunks, 5);
+  console.log('\n=========================================================');
+  console.log(`[RAG TRACE] Question Received: "${query}"`);
+  console.log(`[RAG TRACE] Target Meeting ID: "${meeting.id}" | Title: "${meeting.title}"`);
+  console.log('=========================================================');
 
-  // Format retrieved chunks with timestamps & speakers
+  const index = indexMeetingContext(meeting);
+  const retrievedChunks = retrieveContextChunks(query, index.chunks, 6);
+
+  console.log(`[RAG TRACE] Retrieved ${retrievedChunks.length} Context Chunks:`);
+  retrievedChunks.forEach((c, idx) => {
+    console.log(`  [Chunk ${idx + 1}] ID: ${c.id} | Timestamp: [${c.timestamp}] | Speaker: ${c.speaker}`);
+    console.log(`             Content: "${c.text.slice(0, 100)}${c.text.length > 100 ? '...' : ''}"`);
+  });
+
   const contextSnippet = retrievedChunks.length > 0
     ? retrievedChunks.map(c => `[${c.timestamp}] ${c.speaker}: "${c.text}"`).join('\n')
-    : index.chunks.slice(0, 8).map(c => `[${c.timestamp}] ${c.speaker}: "${c.text}"`).join('\n');
+    : 'No direct dialogue chunk matched the query keywords.';
 
-  // Format conversation memory
+  const structuredContext = buildStructuredContextBlock(meeting);
   const memoryText = chatHistory.slice(-4).map(h => `${h.sender === 'user' ? 'User' : 'Assistant'}: ${h.text}`).join('\n');
 
   const systemPrompt = `You are the AI Copilot for the recording "${meeting.title}".
-Your job is to answer user questions grounded EXCLUSIVELY in the transcript context provided below.
+Your sole objective is to answer the user's specific question using ONLY the provided transcript dialogue and meeting facts.
 
-CRITICAL INSTRUCTIONS:
-1. Base your answer strictly on the context.
-2. ALWAYS include timestamp citations in your response when referencing statements or topics (e.g. "Speaker 1 mentioned... Source: [00:03:12]").
-3. Synthesize clear, intelligent, professional answers in complete sentences.
-4. If a question cannot be answered from the transcript, state: "I cannot find specific discussion details about this in the recording."
+STRICT GUIDELINES:
+1. Answer ONLY the specific question asked: "${query}".
+2. DO NOT provide a general meeting summary unless explicitly asked to summarize.
+3. Reference specific speakers and include timestamp citations in your response (e.g. "[02:15] Speaker 1 stated...").
+4. Use the Structured Facts and Relevant Transcript Chunks below to provide accurate, specific details.
+5. If the requested information is not mentioned in the transcript or structured facts, state: "I couldn't find specific discussion details about this in the recording."
 
-Content Context:
-Summary: ${meeting.analysis?.summary || 'N/A'}
-${buildTypeSpecificContext(meeting)}
+Structured Meeting Facts:
+${structuredContext || 'None'}
 
 Relevant Transcript Chunks:
 ${contextSnippet}
 
 Recent Conversation History:
-${memoryText}`;
+${memoryText || 'None'}`;
+
+  console.log('[RAG TRACE] Prompt Construction complete. Sending request to LLM...');
 
   const nvidiaApiKey = process.env.NVIDIA_API_KEY;
   const llamaApiKey = process.env.LLAMA_API_KEY;
@@ -262,13 +329,16 @@ ${memoryText}`;
         temperature: 0.2,
       });
       const responseText = completion.choices[0]?.message?.content || '';
-      if (responseText.trim() !== '') return responseText;
+      if (responseText.trim() !== '') {
+        console.log('[RAG TRACE] LLM Response received from NVIDIA Nemotron.');
+        return responseText;
+      }
     } catch (err: any) {
       console.warn('[RAG Engine] NVIDIA Nemotron API notice:', err.message);
     }
   }
 
-  // 1. Try Llama API
+  // 2. Try Llama API
   if (llamaApiKey && llamaApiKey !== 'YOUR_LLAMA_API_KEY' && llamaApiKey.trim() !== '') {
     try {
       const client = new OpenAI({ apiKey: llamaApiKey, baseURL: 'https://api.llama-api.com' });
@@ -281,7 +351,10 @@ ${memoryText}`;
         max_tokens: 800,
       });
       const responseText = completion.choices[0].message.content || '';
-      if (responseText.trim() !== '') return responseText;
+      if (responseText.trim() !== '') {
+        console.log('[RAG TRACE] LLM Response received from Llama API.');
+        return responseText;
+      }
     } catch (err: any) {
       if (!err.message?.includes('404')) {
         console.warn('[RAG Engine] Llama API notice:', err.message);
@@ -289,7 +362,7 @@ ${memoryText}`;
     }
   }
 
-  // 2. Try Anthropic Claude API
+  // 3. Try Anthropic Claude API
   if (anthropicApiKey && anthropicApiKey !== 'YOUR_ANTHROPIC_API_KEY' && anthropicApiKey.trim() !== '') {
     try {
       const anthropic = new Anthropic({ apiKey: anthropicApiKey });
@@ -300,18 +373,22 @@ ${memoryText}`;
         messages: [{ role: 'user', content: query }],
       });
       const responseText = res.content[0].type === 'text' ? res.content[0].text : '';
-      if (responseText.trim() !== '') return responseText;
+      if (responseText.trim() !== '') {
+        console.log('[RAG TRACE] LLM Response received from Anthropic API.');
+        return responseText;
+      }
     } catch (err: any) {
       console.warn('[RAG Engine] Anthropic API error:', err.message);
     }
   }
 
-  // 3. Fallback Fully Dynamic Grounded RAG Generator
+  // 4. Grounded Dynamic RAG Fallback Generator
+  console.log('[RAG TRACE] Using Grounded Dynamic RAG Fallback Engine.');
   return fallbackGroundedRAG(query, meeting, index, retrievedChunks);
 }
 
 // ---------------------------------------------------------------------------
-// FULLY DYNAMIC GROUNDED RAG GENERATOR (ZERO HARDCODED NAMES OR QUESTIONS)
+// DYNAMIC GROUNDED RAG FALLBACK GENERATOR (SPECIFIC QUERY ANSWERING)
 // ---------------------------------------------------------------------------
 function fallbackGroundedRAG(
   query: string, 
@@ -319,32 +396,46 @@ function fallbackGroundedRAG(
   index: ContextualMeetingIndex, 
   retrievedChunks: SemanticChunk[]
 ): string {
-  const queryTokens = tokenize(query);
-  const allChunks = index.chunks;
+  const queryLower = query.toLowerCase();
 
-  // 1. If query matches speaker count / who spoke
-  const isSpeakerQuery = queryTokens.some(t => ['speaker', 'speakers', 'who', 'participant', 'participants', 'people', 'person'].includes(t));
-  if (isSpeakerQuery && index.speakers.length > 0) {
-    const speakerList = index.speakers.map(s => {
-      const firstLine = allChunks.find(c => c.speaker === s);
-      return firstLine ? `• **${s}** — First active at [${firstLine.timestamp}]: "${firstLine.text}"` : `• **${s}**`;
-    }).join('\n');
-
-    return `Based on the recording context, there are **${index.speakers.length} active speaker(s)** identified in "${meeting.title}":\n\n${speakerList}`;
+  // 1. Handle Decisions Questions
+  if (queryLower.includes('decision') || queryLower.includes('decided') || queryLower.includes('agreed')) {
+    if (meeting.analysis?.decisions && meeting.analysis.decisions.length > 0) {
+      const decList = meeting.analysis.decisions.map(d => `• **${d.decision}** (Decided by: ${d.decider} — ${d.context})`).join('\n');
+      return `Based on the recording "${meeting.title}", here are the decisions recorded:\n\n${decList}`;
+    }
   }
 
-  // 2. Dynamic Semantic Retrieval from Transcribed Chunks
-  const targetChunks = retrievedChunks.length > 0 ? retrievedChunks : allChunks.slice(0, 5);
-
-  if (targetChunks.length > 0) {
-    const structuredAnswers = targetChunks.map(c => 
-      `• **${c.speaker}** [${c.timestamp}]: "${c.text}"`
-    ).join('\n\n');
-
-    const summaryOverview = meeting.analysis?.summary ? `**Session Summary Context:**\n${meeting.analysis.summary}\n\n` : '';
-
-    return `Based on the transcript context for "${meeting.title}", here are the relevant details:\n\n${summaryOverview}**Relevant Dialogue Statements:**\n\n${structuredAnswers}`;
+  // 2. Handle Action Items / Tasks Questions
+  if (queryLower.includes('assigned') || queryLower.includes('task') || queryLower.includes('action item') || queryLower.includes('pending') || queryLower.includes('who')) {
+    if (meeting.analysis?.actionItems && meeting.analysis.actionItems.length > 0) {
+      const actList = meeting.analysis.actionItems.map(x => `• **${x.task}** — Assigned to: **${x.assignee}** (Due: ${x.dueDate}, Status: ${x.status})`).join('\n');
+      return `Based on the recording "${meeting.title}", here are the action item assignments:\n\n${actList}`;
+    }
   }
 
-  return `I analyzed the transcript for "${meeting.title}". Here is the executive overview:\n\n${meeting.analysis?.summary || 'No summary available.'}`;
+  // 3. Handle Risks / Blockers Questions
+  if (queryLower.includes('risk') || queryLower.includes('blocker') || queryLower.includes('concern') || queryLower.includes('issue')) {
+    if (meeting.analysis?.risks && meeting.analysis.risks.length > 0) {
+      const riskList = meeting.analysis.risks.map(r => `• **${r.risk}** — Impact: **${r.impact}** (Mitigation: ${r.mitigation})`).join('\n');
+      return `Based on the recording "${meeting.title}", here are the identified risks:\n\n${riskList}`;
+    }
+  }
+
+  // 4. Handle Speaker List Questions
+  if (queryLower.includes('speaker') || queryLower.includes('who spoke') || queryLower.includes('participants')) {
+    if (index.speakers.length > 0) {
+      const speakerList = index.speakers.map(s => `• **${s}**`).join('\n');
+      return `There were **${index.speakers.length} speaker(s)** active in "${meeting.title}":\n\n${speakerList}`;
+    }
+  }
+
+  // 5. Answer using specific dialogue chunks
+  if (retrievedChunks.length > 0) {
+    const dialogueLines = retrievedChunks.map(c => `• [${c.timestamp}] **${c.speaker}**: "${c.text}"`).join('\n\n');
+    return `Here are the specific statements from "${meeting.title}" regarding "${query}":\n\n${dialogueLines}`;
+  }
+
+  // 6. Honest "Information Not Found" Answer (Never fallback to generic meeting summary!)
+  return `I couldn't find specific discussion details about "${query}" in this meeting recording.`;
 }
