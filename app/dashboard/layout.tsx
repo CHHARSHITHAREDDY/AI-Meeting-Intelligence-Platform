@@ -50,14 +50,15 @@ export default function DashboardLayout({
       .toUpperCase();
   };
 
+  // Distinct hrefs & keys so only 1 item is highlighted when active
   const navItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: 'dashboard' },
-    { name: 'Meetings', href: '/dashboard', icon: 'videocam' },
-    { name: 'Upload Meeting', href: '/dashboard', icon: 'cloud_upload' },
-    { name: 'Company Memory', href: '/dashboard', icon: 'database' },
-    { name: 'Analytics', href: '/dashboard/graph', icon: 'analytics' },
-    { name: 'Decisions', href: '/dashboard/decisions', icon: 'fact_check' },
-    { name: 'Tasks', href: '/dashboard/tasks', icon: 'assignment' },
+    { name: 'Dashboard', href: '/dashboard', exact: true, icon: 'dashboard' },
+    { name: 'Meetings', href: '/dashboard/meetings', exact: true, icon: 'videocam' },
+    { name: 'Upload Meeting', href: '/dashboard/upload', exact: true, icon: 'cloud_upload' },
+    { name: 'Company Memory', href: '/dashboard/memory', exact: true, icon: 'database' },
+    { name: 'Analytics', href: '/dashboard/graph', exact: false, icon: 'analytics' },
+    { name: 'Decisions', href: '/dashboard/decisions', exact: false, icon: 'fact_check' },
+    { name: 'Tasks', href: '/dashboard/tasks', exact: false, icon: 'assignment' },
   ];
 
   const getPageTitle = () => {
@@ -68,8 +69,11 @@ export default function DashboardLayout({
       case '/dashboard/tasks': return 'Tasks Register';
       case '/dashboard/graph': return 'Knowledge Graph';
       case '/dashboard/settings': return 'System Settings';
+      case '/dashboard/meetings': return 'Meetings';
+      case '/dashboard/upload': return 'Upload Meeting';
+      case '/dashboard/memory': return 'Company Memory';
       case '/dashboard':
-      default: return 'Company Memory';
+      default: return 'Dashboard';
     }
   };
 
@@ -103,13 +107,21 @@ export default function DashboardLayout({
         {/* Navigation Links */}
         <ul ref={navContainerRef} className="flex-1 space-y-1.5 px-3">
           {navItems.map((item) => {
-            const isActive = item.href === '/dashboard'
-              ? pathname === '/dashboard'
-              : pathname?.startsWith(item.href);
+            const isActive = item.exact
+              ? pathname === item.href
+              : pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
+
+            // Map /dashboard/upload to /dashboard?upload=true to immediately open file upload modal
+            const targetHref = item.href === '/dashboard/upload'
+              ? '/dashboard?upload=true'
+              : ['/dashboard/meetings', '/dashboard/memory'].includes(item.href)
+                ? '/dashboard'
+                : item.href;
+
             return (
               <li key={item.name}>
                 <Link
-                  href={item.href}
+                  href={targetHref}
                   className={`flex items-center px-4 py-3 rounded-lg text-[14px] font-medium transition-all duration-200 ${
                     isActive
                       ? 'nav-active-item text-[#6366F1] font-bold border-l-4 border-[#6366F1] bg-[#6366F1]/10 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
@@ -144,7 +156,7 @@ export default function DashboardLayout({
           </Link>
 
           <Link
-            href="/dashboard/live"
+            href="/dashboard?upload=true"
             className="w-full btn-primary-cta py-3 rounded-lg flex items-center justify-center text-[14px] cursor-pointer"
           >
             <span className="material-symbols-outlined mr-2 text-[20px]">add</span>
@@ -228,7 +240,7 @@ export default function DashboardLayout({
                   {user ? (
                     <>
                       <div className="px-3 py-2 border-b border-[#232B45] mb-2">
-                        <p className="text-xs font-bold text-white truncate">{user.name}</p>
+                        <p className="text-xs font-bold text-[#F8FAFC] truncate">{user.name}</p>
                         <p className="text-[10px] text-[#94A3B8] truncate">{user.email}</p>
                       </div>
                       <button 

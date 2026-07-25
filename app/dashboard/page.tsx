@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   UploadCloud,
   Search,
@@ -24,7 +25,17 @@ import {
   FileCheck,
   Zap,
   ChevronRight,
-  X
+  ChevronDown,
+  X,
+  Mic,
+  MicOff,
+  Video,
+  Plus,
+  Link as LinkIcon,
+  Globe,
+  Settings,
+  Sliders,
+  ExternalLink
 } from 'lucide-react';
 import { Meeting, ActionItem } from '@/lib/db';
 
@@ -36,33 +47,62 @@ interface ChatMessage {
 }
 
 export default function MeetingIntelligenceSaaSPage() {
+  const router = useRouter();
+
   // Meetings state from backend API
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [activeMeeting, setActiveMeeting] = useState<Meeting | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Upload & Drag-and-Drop State
+  // Search & Filter State
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Right Side Panel Sub-Tabs ('chat' | 'meetings' | 'actions')
+  const [rightPanelTab, setRightPanelTab] = useState<'chat' | 'meetings' | 'actions'>('chat');
+
+  // Upload Modal & Drag-and-Drop State
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [dragActive, setDragActive] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'transcribing' | 'summarizing' | 'decisions' | 'actions' | 'done' | 'failed'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const statsContainerRef = useRef<HTMLDivElement>(null);
 
-  // Active Main Content View Tabs ('transcript' | 'summary')
+  // Realtime Live Audio Recording State
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [liveTranscript, setLiveTranscript] = useState<string[]>([]);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const speechRecognitionRef = useRef<any>(null);
+
+  // Active Main Content View Tabs ('summary' | 'transcript')
   const [activeTab, setActiveTab] = useState<'summary' | 'transcript'>('summary');
 
-  // Transcript Features State
+  // Transcript Filtering & Features
   const [transcriptSearch, setTranscriptSearch] = useState('');
   const [selectedSpeaker, setSelectedSpeaker] = useState<string>('all');
-  const [copiedTranscript, setCopiedTranscript] = useState(false);
 
   // AI Copilot Chat State
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [inputQuery, setInputQuery] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Live Meeting Invite URL State
+  const [meetingUrlInput, setMeetingUrlInput] = useState('');
+
+  // Auto-open upload modal if ?upload=true query parameter is in URL
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('upload') === 'true') {
+        setShowUploadModal(true);
+      }
+    }
+  }, []);
 
   // Fetch all user meetings from backend API
   const fetchMeetings = async () => {
@@ -71,10 +111,14 @@ export default function MeetingIntelligenceSaaSPage() {
       if (response.ok) {
         const data: Meeting[] = await response.json();
         setMeetings(data);
+        if (data.length > 0 && !activeMeeting) {
+          setActiveMeeting(data[0]);
+          initChatForMeeting(data[0]);
+        }
       }
     } catch (error) {
       console.error('[SaaS Page] Failed to fetch meetings:', error);
-    } finally {
+    } fontally: {
       setLoading(false);
     }
   };
@@ -83,12 +127,123 @@ export default function MeetingIntelligenceSaaSPage() {
     fetchMeetings();
   }, []);
 
+  // Initialize Chat Messages for active meeting
+  const initChatForMeeting = (meeting: Meeting) => {
+    setChatMessages([
+      {
+        id: 'msg-init',
+        sender: 'assistant',
+        text: `Hello! I have indexed the meeting "${meeting.title}". Ask me anything about key decisions, action items, risks, or request an Executive MOM.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
+  };
+
+  // Switch active meeting view & open detailed 3-panel screen
+  const handleSelectMeeting = (meeting: Meeting) => {
+    setActiveMeeting(meeting);
+    initChatForMeeting(meeting);
+    router.push(`/dashboard/meeting/${meeting.id}`);
+  };
+
   // Scroll chat to bottom when messages update
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, isChatLoading]);
 
-  // Handle Drag & Drop
+  // Keyboard shortcut Ctrl+K to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        document.getElementById('global-search-input')?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // ---------------------------------------------------------------------------
+  // REALTIME AUDIO RECORDING ENGINE
+  // ---------------------------------------------------------------------------
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      setLiveTranscript([]);
+      setRecordingTime(0);
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        const audioFile = new File([audioBlob], `Live_Recording_${Date.now()}.wav`, { type: 'audio/wav' });
+        await processUploadedFile(audioFile, `Live Recording - ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+      };
+
+      mediaRecorder.start(1000);
+      setIsRecording(true);
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        recognition.onresult = (event: any) => {
+          const currentTranscript: string[] = [];
+          for (let i = 0; i < event.results.length; i++) {
+            const transcriptLine = event.results[i][0].transcript;
+            if (transcriptLine.trim()) {
+              currentTranscript.push(transcriptLine);
+            }
+          }
+          setLiveTranscript(currentTranscript);
+        };
+
+        recognition.start();
+        speechRecognitionRef.current = recognition;
+      }
+
+    } catch (err: any) {
+      alert("Microphone permission denied or audio recording device unavailable: " + err.message);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+    }
+    if (speechRecognitionRef.current) {
+      speechRecognitionRef.current.stop();
+    }
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+    }
+    setIsRecording(false);
+  };
+
+  const formatTimer = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  // ---------------------------------------------------------------------------
+  // FILE UPLOAD & PROCESSING
+  // ---------------------------------------------------------------------------
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -128,66 +283,68 @@ export default function MeetingIntelligenceSaaSPage() {
     }
   };
 
-  // Upload and Process File through Backend Pipeline
-  const handleUploadSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file) return;
-
+  const processUploadedFile = async (uploadFile: File, meetingTitle: string) => {
     setUploadStatus('uploading');
     setErrorMessage('');
 
-    // Animate processing progress steps for SaaS feedback
-    const step1 = setTimeout(() => setUploadStatus('transcribing'), 1200);
-    const step2 = setTimeout(() => setUploadStatus('summarizing'), 2800);
-    const step3 = setTimeout(() => setUploadStatus('decisions'), 4200);
-    const step4 = setTimeout(() => setUploadStatus('actions'), 5500);
-
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('title', title || file.name.replace(/\.[^/.]+$/, ""));
+    formData.append('file', uploadFile);
+    formData.append('title', meetingTitle || uploadFile.name.replace(/\.[^/.]+$/, ""));
 
     try {
+      const statusSequence: ('transcribing' | 'summarizing' | 'decisions' | 'actions')[] = [
+        'transcribing',
+        'summarizing',
+        'decisions',
+        'actions'
+      ];
+      let stepIdx = 0;
+      const interval = setInterval(() => {
+        if (stepIdx < statusSequence.length) {
+          setUploadStatus(statusSequence[stepIdx]);
+          stepIdx++;
+        }
+      }, 2500);
+
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
 
-      clearTimeout(step1);
-      clearTimeout(step2);
-      clearTimeout(step3);
-      clearTimeout(step4);
+      clearInterval(interval);
 
       if (response.ok) {
         const processedMeeting: Meeting = await response.json();
         setUploadStatus('done');
         setFile(null);
         setTitle('');
+        setShowUploadModal(false);
         setActiveMeeting(processedMeeting);
-
-        // Initialize default AI Copilot greeting for the newly processed meeting
-        setChatMessages([
-          {
-            id: 'msg-init',
-            sender: 'assistant',
-            text: `Hello! I have indexed the meeting "${processedMeeting.title}". Ask me anything about key decisions, action items, risks, or request an Executive MOM.`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }
-        ]);
+        initChatForMeeting(processedMeeting);
 
         fetchMeetings();
         setTimeout(() => setUploadStatus('idle'), 1500);
+
+        // Directly navigate to full meeting view
+        router.push(`/dashboard/meeting/${processedMeeting.id}`);
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to upload and process recording');
+        setUploadStatus('failed');
+        setErrorMessage(errorData.error || 'Failed to process file.');
       }
     } catch (err: any) {
-      console.error('[Upload Error]:', err);
       setUploadStatus('failed');
-      setErrorMessage(err.message || 'Error occurred during processing.');
+      setErrorMessage(err.message || 'Network error occurred during upload.');
     }
   };
 
-  // Toggle Action Item Status
+  const handleUploadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!file) return;
+    await processUploadedFile(file, title);
+  };
+
+  // Toggle Action Item Checkbox
   const handleToggleActionItem = async (itemId: string) => {
     if (!activeMeeting || !activeMeeting.analysis) return;
 
@@ -210,91 +367,61 @@ export default function MeetingIntelligenceSaaSPage() {
     };
 
     setActiveMeeting(updatedMeeting);
-
-    try {
-      await fetch(`/api/meetings/${activeMeeting.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ actionItems: updatedActions }),
-      });
-    } catch (err) {
-      console.error('Failed to update action item status:', err);
-    }
+    setMeetings(prev => prev.map(m => m.id === updatedMeeting.id ? updatedMeeting : m));
   };
 
-  // Delete Meeting
-  const handleDeleteMeeting = async (id: string, e: React.MouseEvent) => {
+  // Handle AI Copilot Chat Submit
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this meeting recording?')) return;
+    if (!inputQuery.trim() || !activeMeeting || isChatLoading) return;
 
-    try {
-      const res = await fetch(`/api/meetings/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setMeetings(prev => prev.filter(m => m.id !== id));
-        if (activeMeeting?.id === id) {
-          setActiveMeeting(null);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to delete meeting:', err);
-    }
-  };
-
-  // Send query to AI Meeting Copilot
-  const handleSendQuery = async (queryText?: string) => {
-    const messageToSend = queryText || inputQuery;
-    if (!messageToSend.trim() || !activeMeeting) return;
-
+    const userMsgText = inputQuery.trim();
     const userMsg: ChatMessage = {
-      id: Date.now().toString(),
+      id: `msg-${Date.now()}`,
       sender: 'user',
-      text: messageToSend,
+      text: userMsgText,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
     setChatMessages(prev => [...prev, userMsg]);
-    if (!queryText) setInputQuery('');
+    setInputQuery('');
     setIsChatLoading(true);
 
     try {
-      const response = await fetch(`/api/meetings/${activeMeeting.id}/chat`, {
+      const res = await fetch(`/api/meetings/${activeMeeting.id}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: messageToSend, chatHistory: chatMessages }),
+        body: JSON.stringify({
+          message: userMsgText,
+          chatHistory: chatMessages.map(m => ({ sender: m.sender, text: m.text }))
+        })
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        const aiMsg: ChatMessage = {
-          id: (Date.now() + 1).toString(),
+      if (res.ok) {
+        const data = await res.json();
+        const botMsg: ChatMessage = {
+          id: `msg-${Date.now() + 1}`,
           sender: 'assistant',
-          text: data.reply || 'No response returned from AI Copilot.',
+          text: data.reply || 'No response generated.',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
-        setChatMessages(prev => [...prev, aiMsg]);
+        setChatMessages(prev => [...prev, botMsg]);
       } else {
-        throw new Error('Copilot response failed');
+        throw new Error('Failed to get answer from AI Copilot');
       }
     } catch (err: any) {
-      const errorMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        sender: 'assistant',
-        text: `Sorry, I encountered an issue querying the meeting context: ${err.message}`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setChatMessages(prev => [...prev, errorMsg]);
+      setChatMessages(prev => [
+        ...prev,
+        {
+          id: `msg-err-${Date.now()}`,
+          sender: 'assistant',
+          text: `⚠️ Error: ${err.message || 'Unable to connect to AI RAG engine.'}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      ]);
     } finally {
       setIsChatLoading(false);
     }
-  };
-
-  // Copy Transcript Text
-  const handleCopyTranscript = () => {
-    if (!activeMeeting?.transcript) return;
-    navigator.clipboard.writeText(activeMeeting.transcript);
-    setCopiedTranscript(true);
-    setTimeout(() => setCopiedTranscript(false), 2000);
   };
 
   // Parse Dialogue lines for Speaker and Timestamp display
@@ -306,650 +433,512 @@ export default function MeetingIntelligenceSaaSPage() {
       const timeSpeakerMatch = line.match(/^\[(\d{2}:\d{2})\]\s*([^:]+):\s*(.*)/i);
       if (timeSpeakerMatch) {
         return {
-          id: idx,
+          id: `line-${idx}`,
           timestamp: timeSpeakerMatch[1],
           speaker: timeSpeakerMatch[2].trim(),
           text: timeSpeakerMatch[3].trim()
         };
       }
       return {
-        id: idx,
+        id: `line-${idx}`,
         timestamp: '00:00',
         speaker: 'Participant',
-        text: line.trim()
+        text: line
       };
     });
   };
 
   const parsedTranscript = getParsedTranscriptLines();
 
-  // Extract unique speaker list for speaker filter dropdown
-  const uniqueSpeakers = Array.from(new Set(parsedTranscript.map(t => t.speaker)));
-
-  // Filter transcript lines based on search query & selected speaker
   const filteredTranscript = parsedTranscript.filter(item => {
-    const matchesSearch = transcriptSearch === '' || item.text.toLowerCase().includes(transcriptSearch.toLowerCase()) || item.speaker.toLowerCase().includes(transcriptSearch.toLowerCase());
+    const matchesSearch = item.text.toLowerCase().includes(transcriptSearch.toLowerCase()) ||
+      item.speaker.toLowerCase().includes(transcriptSearch.toLowerCase());
     const matchesSpeaker = selectedSpeaker === 'all' || item.speaker === selectedSpeaker;
     return matchesSearch && matchesSpeaker;
   });
 
+  // Group meetings by Date (Today, Yesterday, Earlier)
+  const filteredMeetings = meetings.filter(m =>
+    m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    m.transcript.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const isToday = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const today = new Date();
+    return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+  };
+
+  const isYesterday = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return d.getDate() === yesterday.getDate() && d.getMonth() === yesterday.getMonth() && d.getFullYear() === yesterday.getFullYear();
+  };
+
+  const todayMeetings = filteredMeetings.filter(m => isToday(m.date));
+  const yesterdayMeetings = filteredMeetings.filter(m => isYesterday(m.date));
+  const earlierMeetings = filteredMeetings.filter(m => !isToday(m.date) && !isYesterday(m.date));
+
+  // Extract all action items across meetings for the right panel
+  const allActionItems: { item: ActionItem; meetingTitle: string }[] = [];
+  meetings.forEach(m => {
+    if (m.analysis?.actionItems) {
+      m.analysis.actionItems.forEach(a => {
+        allActionItems.push({ item: a, meetingTitle: m.title });
+      });
+    }
+  });
+
   return (
-    <div className="w-full min-h-[calc(100vh-5rem)] flex flex-col xl:flex-row gap-6 antialiased">
+    <div className="w-full h-full bg-[#0F131C] text-[#DFE2EF] flex flex-col font-sans antialiased overflow-hidden">
 
       {/* ========================================================================= */}
-      {/* CENTER MAIN CONTENT AREA (Flex-1)                                          */}
+      {/* TOP DASHBOARD CONTROL BAR                                                 */}
       {/* ========================================================================= */}
-      <div className="flex-1 flex flex-col space-y-6 min-w-0">
+      <div className="bg-[#0A0E17]/90 border-b border-[#232B45] px-6 py-3 flex items-center justify-between backdrop-blur-md shrink-0">
 
-        {/* ----------------------------------------------------------------------- */}
-        {/* TOP HEADER: ACTIVE MEETING METADATA / SELECTOR                         */}
-        {/* ----------------------------------------------------------------------- */}
-        {activeMeeting && (
-          <div className="bg-[#121624]/90 border border-[#232B45] rounded-2xl p-5 shadow-xl backdrop-blur-md flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#6366F1] to-[#5de6ff] p-0.5 shadow-lg shadow-[#6366F1]/20">
-                <div className="w-full h-full bg-[#0a0e17] rounded-[10px] flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-[#5de6ff]" />
-                </div>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-                  {activeMeeting.title}
-                  <span className="text-[10px] font-mono font-semibold uppercase px-2.5 py-0.5 rounded-full bg-[#34D399]/10 text-[#34D399] border border-[#34D399]/30">
-                    AI Analyzed
-                  </span>
-                </h1>
-                <div className="flex items-center space-x-4 text-xs text-[#94A3B8] font-mono mt-1">
-                  <span className="flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-[#6366F1]" />
-                    {new Date(activeMeeting.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-[#5de6ff]" />
-                    {activeMeeting.duration || '2m 30s'}
-                  </span>
-                </div>
-              </div>
-            </div>
+        {/* Global Search Bar */}
+        <div className="relative w-72 md:w-80">
+          <Search className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            id="global-search-input"
+            type="text"
+            placeholder="Ask or search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-[#181B25] text-xs text-[#F8FAFC] pl-10 pr-12 py-2 rounded-xl border border-[#232B45] focus:border-[#6366F1] focus:bg-[#1C1F29] transition-all outline-none"
+          />
+          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono font-semibold text-[#94A3B8] bg-[#0A0E17] border border-[#232B45] px-1.5 py-0.5 rounded">
+            CtrlK
+          </kbd>
+        </div>
 
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={() => setActiveMeeting(null)}
-                className="px-4 py-2 rounded-xl bg-[#181b25] border border-[#232B45] hover:border-[#6366F1] text-xs font-semibold text-[#c0c1ff] hover:text-white transition flex items-center gap-2 cursor-pointer shadow-md"
-              >
-                <UploadCloud className="w-4 h-4 text-[#6366F1]" />
-                Upload New Recording
-              </button>
+        {/* Action Controls */}
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="flex items-center gap-2 text-xs font-semibold text-[#DFE2EF] bg-[#181B25] hover:bg-[#232B45] border border-[#232B45] px-3.5 py-2 rounded-xl transition cursor-pointer"
+          >
+            <UploadCloud className="w-4 h-4 text-[#5DE6FF]" />
+            <span>Import</span>
+          </button>
+
+          <button
+            onClick={isRecording ? stopRecording : startRecording}
+            className={`flex items-center gap-2 text-xs font-bold text-white px-4 py-2 rounded-full transition shadow-lg cursor-pointer ${isRecording
+              ? 'bg-rose-600 hover:bg-rose-700 animate-pulse shadow-rose-600/30'
+              : 'bg-[#6366F1] hover:bg-[#4F46E5] shadow-[#6366F1]/30'
+              }`}
+          >
+            {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            <span>{isRecording ? `Recording ${formatTimer(recordingTime)}` : 'Record'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* REALTIME LIVE AUDIO RECORDING BANNER                                      */}
+      {/* ========================================================================= */}
+      {isRecording && (
+        <div className="bg-gradient-to-r from-[#6366F1] via-indigo-600 to-[#5DE6FF] text-white px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl border-b border-[#232B45] shrink-0">
+          <div className="flex items-center space-x-3">
+            <div className="w-3.5 h-3.5 rounded-full bg-rose-400 animate-ping" />
+            <div>
+              <div className="font-bold text-xs flex items-center gap-2">
+                Live Microphone Audio Recording Active
+                <span className="font-mono text-[11px] bg-black/30 px-2 py-0.5 rounded-full">{formatTimer(recordingTime)}</span>
+              </div>
+              <p className="text-[11px] text-indigo-100 mt-0.5">Streaming speech and generating transcript in real time...</p>
             </div>
           </div>
-        )}
+
+          {liveTranscript.length > 0 && (
+            <div className="bg-black/30 border border-white/20 rounded-xl px-3 py-1.5 text-xs max-w-xl truncate text-white italic">
+              "{liveTranscript[liveTranscript.length - 1]}"
+            </div>
+          )}
+
+          <button
+            onClick={stopRecording}
+            className="bg-white text-rose-600 hover:bg-rose-50 px-3.5 py-1.5 rounded-lg text-xs font-bold transition shadow cursor-pointer shrink-0"
+          >
+            Stop & Process Audio
+          </button>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MAIN 3-PANEL VIEWPORT CONTAINER                                          */}
+      {/* ========================================================================= */}
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
 
         {/* ----------------------------------------------------------------------- */}
-        {/* DEFAULT STATE: NO MEETING SELECTED / FILE UPLOAD CARD                   */}
+        {/* CENTER TIMELINE & GENERATIONS AREA                                      */}
         {/* ----------------------------------------------------------------------- */}
-        {!activeMeeting && (
-          <div className="space-y-6">
+        <main className="flex-1 overflow-y-auto p-6 space-y-6 min-w-0">
 
-            {/* Upload Area */}
-            <div className="bg-[#121624]/90 border border-[#232B45] rounded-3xl p-8 shadow-2xl backdrop-blur-md relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-80 h-80 bg-[#6366F1]/5 rounded-full blur-3xl pointer-events-none -z-10" />
+          {/* Date Group Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-bold text-[#F8FAFC]">Today, {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+              <ChevronDown className="w-4 h-4 text-[#94A3B8]" />
+            </div>
+            <button className="text-xs text-[#94A3B8] hover:text-white font-medium flex items-center gap-1 cursor-pointer">
+              <span>For you</span>
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
-              <div className="max-w-2xl mx-auto text-center space-y-4">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#6366F1]/10 border border-[#6366F1]/30 text-[#c0c1ff] text-xs font-mono font-semibold">
-                  <Sparkles className="w-3.5 h-3.5 text-[#5de6ff]" />
-                  Whisper Speech Recognition & AI Intelligence Pipeline
-                </div>
-
-                <h2 className="text-3xl font-extrabold text-white tracking-tight">
-                  Upload Meeting Recording
-                </h2>
-
-                <p className="text-sm text-[#94A3B8] max-w-lg mx-auto">
-                  Upload a meeting recording to generate transcript, summaries, action items, decisions, and insights.
-                </p>
-
-                {/* Drag and Drop Container */}
-                <form
-                  onSubmit={handleUploadSubmit}
-                  onDragEnter={handleDrag}
-                  className="mt-6"
+          {/* Note Card List (Middle Generations) */}
+          <div className="space-y-3">
+            {todayMeetings.length > 0 ? (
+              todayMeetings.map((m) => (
+                <div
+                  key={m.id}
+                  onClick={() => handleSelectMeeting(m)}
+                  className={`bg-[#121624]/90 border rounded-2xl p-4 transition-all duration-200 cursor-pointer backdrop-blur-md flex items-start space-x-4 ${activeMeeting?.id === m.id
+                    ? 'border-[#6366F1] bg-[#181B25] ring-2 ring-[#6366F1]/20 shadow-[0_0_20px_rgba(99,102,241,0.15)]'
+                    : 'border-[#232B45] hover:border-[#6366F1]/40 hover:bg-[#181B25]/80'
+                    }`}
                 >
-                  <div
-                    onDragOver={handleDrag}
-                    onDragLeave={handleDrag}
-                    onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-2xl p-10 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center space-y-4 ${dragActive
-                      ? 'border-[#5de6ff] bg-[#5de6ff]/5 scale-[1.01]'
-                      : 'border-[#232B45] hover:border-[#6366F1]/60 bg-[#0a0e17]/60 hover:bg-[#181b25]/80'
-                      }`}
-                  >
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".mp3,.wav,.m4a,.mp4,.mov,audio/*,video/*"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-
-                    <div className="w-16 h-16 rounded-2xl bg-[#1c1f29] border border-[#232B45] flex items-center justify-center text-[#6366F1] shadow-xl group-hover:scale-110 transition-transform">
-                      <UploadCloud className="w-8 h-8 text-[#5de6ff]" />
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#6366F1] to-[#5DE6FF] text-white font-bold flex items-center justify-center text-sm shrink-0 shadow-md">
+                    S
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center space-x-2 min-w-0 flex-1">
+                        <h3 className="text-sm font-bold text-white truncate max-w-sm xl:max-w-md">{m.title}</h3>
+                        <span className="text-[10px] font-mono text-[#5DE6FF] bg-[#5DE6FF]/10 px-2 py-0.5 rounded-full border border-[#5DE6FF]/20 shrink-0">
+                          Click to open →
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-mono text-[#5DE6FF] shrink-0 font-bold ml-2">{m.duration || '1 min'}</span>
                     </div>
-
-                    {file ? (
-                      <div className="text-center space-y-1">
-                        <p className="text-sm font-bold text-[#5de6ff]">{file.name}</p>
-                        <p className="text-xs text-[#94A3B8]">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-1 text-center">
-                        <p className="text-sm font-semibold text-[#dfe2ef]">
-                          Drag & drop audio or video file here, or <span className="text-[#6366F1] underline">browse</span>
-                        </p>
-                        <div className="flex items-center justify-center gap-2 text-[11px] text-[#94A3B8] font-mono pt-2">
-                          <span className="px-2 py-0.5 rounded bg-[#1c1f29] border border-[#232B45]">Audio: .MP3, .WAV, .M4A</span>
-                          <span className="px-2 py-0.5 rounded bg-[#1c1f29] border border-[#232B45]">Video: .MP4, .MOV</span>
-                        </div>
-                      </div>
+                    <p className="text-xs text-[#94A3B8] font-mono">
+                      {new Date(m.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · {m.duration || '1 min'} · Sandeep B
+                    </p>
+                    {m.analysis?.summary && (
+                      <p className="text-xs text-[#DFE2EF] pt-1 line-clamp-2 leading-relaxed">
+                        {m.analysis.summary}
+                      </p>
                     )}
                   </div>
+                </div>
+              ))
+            ) : (
+              <div className="bg-[#121624]/80 border border-dashed border-[#232B45] rounded-2xl p-8 text-center space-y-3">
+                <FileText className="w-8 h-8 text-[#6366F1] mx-auto" />
+                <h4 className="text-sm font-bold text-white">No meeting generations yet today</h4>
+                <p className="text-xs text-[#94A3B8]">Click "Import" or "+ Record" to record audio and generate AI transcript notes.</p>
+              </div>
+            )}
+          </div>
 
-                  {file && (
-                    <div className="mt-4 flex flex-col sm:flex-row items-center gap-3">
-                      <input
-                        type="text"
-                        placeholder="Meeting title (optional)"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        className="flex-1 bg-[#0a0e17] text-white px-4 py-2.5 rounded-xl border border-[#232B45] text-xs focus:outline-none focus:border-[#6366F1] placeholder-[#94A3B8]"
-                      />
-                      <button
-                        type="submit"
-                        disabled={uploadStatus !== 'idle' && uploadStatus !== 'failed'}
-                        className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#6366F1] to-[#4F46E5] text-white text-xs font-bold shadow-lg shadow-[#6366F1]/30 hover:opacity-95 transition cursor-pointer flex items-center justify-center gap-2"
-                      >
-                        <Sparkles className="w-4 h-4 text-[#5de6ff]" />
-                        Process Meeting
-                      </button>
+          {/* Yesterday Header & List */}
+          {yesterdayMeetings.length > 0 && (
+            <div className="space-y-3 pt-4">
+              <div className="flex items-center space-x-2 text-sm font-bold text-white">
+                <span>Yesterday</span>
+                <ChevronDown className="w-4 h-4 text-[#94A3B8]" />
+              </div>
+              {yesterdayMeetings.map((m) => (
+                <div
+                  key={m.id}
+                  onClick={() => handleSelectMeeting(m)}
+                  className={`bg-[#121624]/90 border rounded-2xl p-4 transition-all duration-200 cursor-pointer flex items-start space-x-4 ${activeMeeting?.id === m.id
+                    ? 'border-[#6366F1] bg-[#181B25] ring-2 ring-[#6366F1]/20 shadow-[0_0_20px_rgba(99,102,241,0.15)]'
+                    : 'border-[#232B45] hover:border-[#6366F1]/40 hover:bg-[#181B25]/80'
+                    }`}
+                >
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#6366F1] to-[#5DE6FF] text-white font-bold flex items-center justify-center text-sm shrink-0 shadow-md">
+                    S
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center space-x-2 min-w-0 flex-1">
+                        <h3 className="text-sm font-bold text-white truncate max-w-sm xl:max-w-md">{m.title}</h3>
+                        <span className="text-[10px] font-mono text-[#5DE6FF] bg-[#5DE6FF]/10 px-2 py-0.5 rounded-full border border-[#5DE6FF]/20 shrink-0">
+                          Click to open →
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-mono text-[#5DE6FF] shrink-0 font-bold ml-2">{m.duration || '1 min'}</span>
                     </div>
-                  )}
-                </form>
-
-                {/* Processing Progress Feedback Bar */}
-                {uploadStatus !== 'idle' && uploadStatus !== 'done' && (
-                  <div className="mt-6 p-4 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-3 text-left">
-                    <div className="flex items-center justify-between text-xs font-semibold text-[#dfe2ef]">
-                      <span className="flex items-center gap-2">
-                        <RefreshCw className="w-4 h-4 text-[#5de6ff] animate-spin" />
-                        Processing Pipeline Active...
-                      </span>
-                      <span className="font-mono text-[#5de6ff] capitalize">{uploadStatus}</span>
-                    </div>
-
-                    <div className="grid grid-cols-5 gap-1.5 pt-1">
-                      <div className={`h-1.5 rounded-full transition-all ${['uploading', 'transcribing', 'summarizing', 'decisions', 'actions', 'done'].includes(uploadStatus) ? 'bg-[#5de6ff]' : 'bg-[#232B45]'}`} />
-                      <div className={`h-1.5 rounded-full transition-all ${['transcribing', 'summarizing', 'decisions', 'actions', 'done'].includes(uploadStatus) ? 'bg-[#5de6ff]' : 'bg-[#232B45]'}`} />
-                      <div className={`h-1.5 rounded-full transition-all ${['summarizing', 'decisions', 'actions', 'done'].includes(uploadStatus) ? 'bg-[#5de6ff]' : 'bg-[#232B45]'}`} />
-                      <div className={`h-1.5 rounded-full transition-all ${['decisions', 'actions', 'done'].includes(uploadStatus) ? 'bg-[#5de6ff]' : 'bg-[#232B45]'}`} />
-                      <div className={`h-1.5 rounded-full transition-all ${['actions', 'done'].includes(uploadStatus) ? 'bg-[#5de6ff]' : 'bg-[#232B45]'}`} />
-                    </div>
-
-                    <p className="text-[11px] text-[#94A3B8] font-mono">
-                      Step: {uploadStatus === 'uploading' && '1/5 Uploading recording file...'}
-                      {uploadStatus === 'transcribing' && '2/5 Transcribing speech with Whisper...'}
-                      {uploadStatus === 'summarizing' && '3/5 Generating Executive Summary & Topics...'}
-                      {uploadStatus === 'decisions' && '4/5 Extracting Decisions & Deciders...'}
-                      {uploadStatus === 'actions' && '5/5 Structuring Action Items & Risk Matrix...'}
+                    <p className="text-xs text-[#94A3B8] font-mono">
+                      {new Date(m.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · Sandeep B
                     </p>
                   </div>
-                )}
-
-                {uploadStatus === 'failed' && (
-                  <div className="mt-4 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 shrink-0" />
-                    <span>{errorMessage || 'Processing failed. Please check backend environment configuration.'}</span>
-                  </div>
-                )}
-
-              </div>
-            </div>
-
-            {/* List of Previously Processed Meetings */}
-            {meetings.length > 0 && (
-              <div className="bg-[#121624]/90 border border-[#232B45] rounded-3xl p-6 shadow-xl backdrop-blur-md space-y-4">
-                <div className="flex items-center justify-between border-b border-[#232B45] pb-4">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-[#6366F1]" />
-                    Previously Analyzed Meetings ({meetings.length})
-                  </h3>
-                  <span className="text-xs text-[#94A3B8] font-mono">Select a meeting to open in 3-Panel View</span>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {meetings.map((m) => (
-                    <div
-                      key={m.id}
-                      onClick={() => {
-                        setActiveMeeting(m);
-                        setChatMessages([
-                          {
-                            id: 'msg-init-' + m.id,
-                            sender: 'assistant',
-                            text: `Connected to meeting context: "${m.title}". Ask me any questions about this recording.`,
-                            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                          }
-                        ]);
-                      }}
-                      className="p-4 rounded-2xl bg-[#0a0e17] border border-[#232B45] hover:border-[#6366F1] transition-all cursor-pointer group flex items-start justify-between"
-                    >
-                      <div className="space-y-1.5 flex-1 pr-3">
-                        <h4 className="text-xs font-bold text-white group-hover:text-[#5de6ff] transition-colors line-clamp-1">
-                          {m.title}
-                        </h4>
-                        <p className="text-[11px] text-[#94A3B8] line-clamp-2">
-                          {m.analysis?.summary || m.transcript.slice(0, 100) || 'No summary available.'}
-                        </p>
-                        <div className="flex items-center gap-3 text-[10px] text-[#94A3B8] font-mono pt-1">
-                          <span>{new Date(m.date).toLocaleDateString()}</span>
-                          <span>•</span>
-                          <span>{m.duration || 'Audio'}</span>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={(e) => handleDeleteMeeting(m.id, e)}
-                        className="p-1.5 rounded-lg text-[#94A3B8] hover:text-rose-400 hover:bg-rose-500/10 transition"
-                        title="Delete meeting"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ----------------------------------------------------------------------- */}
-        {/* ACTIVE MEETING PROCESSED VIEW: TRANSCRIPT & SUMMARY TABS                */}
-        {/* ----------------------------------------------------------------------- */}
-        {activeMeeting && (
-          <div className="bg-[#121624]/90 border border-[#232B45] rounded-3xl p-6 shadow-2xl backdrop-blur-md flex-1 flex flex-col min-h-0 space-y-6">
-
-            {/* Tab Controls */}
-            <div className="flex items-center justify-between border-b border-[#232B45] pb-4">
-              <div className="flex items-center space-x-2 bg-[#0a0e17] p-1.5 rounded-xl border border-[#232B45]">
-                <button
-                  onClick={() => setActiveTab('summary')}
-                  className={`px-5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${activeTab === 'summary'
-                    ? 'bg-[#6366F1] text-white shadow-lg shadow-[#6366F1]/30'
-                    : 'text-[#94A3B8] hover:text-white hover:bg-[#181b25]'
-                    }`}
-                >
-                  <FileText className="w-4 h-4" />
-                  Summary & Insights
-                </button>
-                <button
-                  onClick={() => setActiveTab('transcript')}
-                  className={`px-5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${activeTab === 'transcript'
-                    ? 'bg-[#6366F1] text-white shadow-lg shadow-[#6366F1]/30'
-                    : 'text-[#94A3B8] hover:text-white hover:bg-[#181b25]'
-                    }`}
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  Full Transcript
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#1c1f29] text-[#5de6ff]">
-                    {parsedTranscript.length} lines
-                  </span>
-                </button>
-              </div>
-
-              {activeTab === 'transcript' && (
-                <button
-                  onClick={handleCopyTranscript}
-                  className="px-3.5 py-1.5 rounded-lg bg-[#181b25] border border-[#232B45] hover:border-[#6366F1] text-xs font-medium text-[#c0c1ff] transition flex items-center gap-2 cursor-pointer"
-                >
-                  {copiedTranscript ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copiedTranscript ? 'Copied!' : 'Copy Transcript'}
-                </button>
-              )}
-            </div>
-
-            {/* TAB 1: TRANSCRIPT VIEW */}
-            {activeTab === 'transcript' && (
-              <div className="space-y-4 flex-1 flex flex-col min-h-0">
-                {/* Transcript Toolbar */}
-                <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0a0e17] p-3 rounded-xl border border-[#232B45]">
-                  {/* Search */}
-                  <div className="relative flex-1 min-w-[200px]">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
-                    <input
-                      type="text"
-                      placeholder="Search dialogue keywords..."
-                      value={transcriptSearch}
-                      onChange={(e) => setTranscriptSearch(e.target.value)}
-                      className="w-full bg-[#181b25] text-white pl-9 pr-4 py-1.5 text-xs rounded-lg border border-[#232B45] focus:outline-none focus:border-[#5de6ff]"
-                    />
-                  </div>
-
-                  {/* Speaker Filter */}
-                  {uniqueSpeakers.length > 0 && (
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs text-[#94A3B8] font-mono">Speaker:</span>
-                      <select
-                        value={selectedSpeaker}
-                        onChange={(e) => setSelectedSpeaker(e.target.value)}
-                        className="bg-[#181b25] text-white text-xs px-3 py-1.5 rounded-lg border border-[#232B45] focus:outline-none focus:border-[#5de6ff] cursor-pointer"
-                      >
-                        <option value="all">All Speakers ({uniqueSpeakers.length})</option>
-                        {uniqueSpeakers.map(spk => (
-                          <option key={spk} value={spk}>{spk}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-
-                {/* Transcript Dialogue List */}
-                <div className="flex-1 overflow-y-auto space-y-3 pr-2 max-h-[550px] scrollbar-thin scrollbar-thumb-[#232B45]">
-                  {filteredTranscript.length > 0 ? (
-                    filteredTranscript.map((item) => (
-                      <div
-                        key={item.id}
-                        className="p-4 rounded-2xl bg-[#0a0e17]/80 border border-[#232B45] hover:border-[#6366F1]/40 transition space-y-1.5"
-                      >
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-bold text-[#5de6ff] flex items-center gap-1.5">
-                            <UserIcon className="w-3.5 h-3.5 text-[#6366F1]" />
-                            {item.speaker}
-                          </span>
-                          <span className="font-mono text-[11px] text-[#94A3B8] px-2 py-0.5 rounded bg-[#181b25] border border-[#232B45]">
-                            {item.timestamp}
-                          </span>
-                        </div>
-                        <p className="text-xs text-[#dfe2ef] leading-relaxed">
-                          {item.text}
-                        </p>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-12 text-xs text-[#94A3B8]">
-                      No dialogue lines match search filter.
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* TAB 2: SUMMARY & DYNAMIC AI SECTIONS VIEW */}
-            {activeTab === 'summary' && (
-              <div className="space-y-6 overflow-y-auto pr-2 max-h-[600px] scrollbar-thin scrollbar-thumb-[#232B45]">
-
-                {/* 1. Executive Summary */}
-                <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-2">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-[#6366F1]" />
-                    1. Executive Summary
-                  </h3>
-                  <p className="text-xs text-[#dfe2ef] leading-relaxed">
-                    {activeMeeting.analysis?.summary || 'Summary processing complete.'}
-                  </p>
-                </div>
-
-                {/* 2. Key Discussion Points */}
-                {activeMeeting.analysis?.keyDiscussionPoints && activeMeeting.analysis.keyDiscussionPoints.length > 0 && (
-                  <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-3">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center gap-2">
-                      <ListChecks className="w-4 h-4 text-[#6366F1]" />
-                      2. Key Discussion Points
-                    </h3>
-                    <ul className="space-y-2">
-                      {activeMeeting.analysis.keyDiscussionPoints.map((point, idx) => (
-                        <li key={idx} className="text-xs text-[#dfe2ef] flex items-start gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#5de6ff] mt-1.5 shrink-0" />
-                          <span>{point}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* 3. Decisions Taken */}
-                <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center justify-between">
-                    <span className="flex items-center gap-2">
-                      <FileCheck className="w-4 h-4 text-[#6366F1]" />
-                      3. Decisions Taken ({activeMeeting.analysis?.decisions.length || 0})
-                    </span>
-                  </h3>
-
-                  <div className="space-y-3">
-                    {activeMeeting.analysis?.decisions && activeMeeting.analysis.decisions.length > 0 ? (
-                      activeMeeting.analysis.decisions.map((d) => (
-                        <div key={d.id} className="p-3.5 rounded-xl bg-[#181b25] border border-[#232B45] space-y-1">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-bold text-white">{d.decision}</span>
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#6366F1]/10 text-[#c0c1ff] border border-[#6366F1]/30">
-                              Decider: {d.decider || 'Team'}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-[#94A3B8]">Context: {d.context}</p>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-xs text-[#94A3B8]">No formal decisions detected in transcript.</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* 4. Action Items */}
-                <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center gap-2">
-                    <CheckSquare className="w-4 h-4 text-[#6366F1]" />
-                    4. Action Items ({activeMeeting.analysis?.actionItems.length || 0})
-                  </h3>
-
-                  <div className="space-y-2.5">
-                    {activeMeeting.analysis?.actionItems && activeMeeting.analysis.actionItems.length > 0 ? (
-                      activeMeeting.analysis.actionItems.map((item) => (
-                        <div
-                          key={item.id}
-                          onClick={() => handleToggleActionItem(item.id)}
-                          className={`p-3.5 rounded-xl border transition cursor-pointer flex items-center justify-between ${item.status === 'completed'
-                            ? 'bg-emerald-500/5 border-emerald-500/30 text-[#94A3B8]'
-                            : 'bg-[#181b25] border-[#232B45] hover:border-[#6366F1] text-[#dfe2ef]'
-                            }`}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <input
-                              type="checkbox"
-                              checked={item.status === 'completed'}
-                              onChange={() => { }}
-                              className="w-4 h-4 accent-[#6366F1] cursor-pointer"
-                            />
-                            <span className={`text-xs ${item.status === 'completed' ? 'line-through text-[#94A3B8]' : 'font-medium'}`}>
-                              {item.task}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center space-x-3 text-[10px] font-mono">
-                            <span className="px-2 py-0.5 rounded bg-[#0a0e17] border border-[#232B45] text-[#c0c1ff]">
-                              {item.assignee}
-                            </span>
-                            <span className="text-[#94A3B8]">Due: {item.dueDate}</span>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-xs text-[#94A3B8]">No action items assigned.</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* 5. Risks Identified */}
-                <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center gap-2">
-                    <ShieldAlert className="w-4 h-4 text-[#6366F1]" />
-                    5. Risks Identified ({activeMeeting.analysis?.risks.length || 0})
-                  </h3>
-
-                  <div className="space-y-3">
-                    {activeMeeting.analysis?.risks && activeMeeting.analysis.risks.length > 0 ? (
-                      activeMeeting.analysis.risks.map((r) => (
-                        <div key={r.id} className="p-3.5 rounded-xl bg-[#181b25] border border-[#232B45] space-y-1">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-bold text-white">{r.risk}</span>
-                            <span className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded ${r.impact === 'high' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                              }`}>
-                              {r.impact} Impact
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-[#94A3B8]">Mitigation: {r.mitigation}</p>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-xs text-[#94A3B8]">No major risks identified.</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* 6. Next Steps */}
-                {activeMeeting.analysis?.nextSteps && activeMeeting.analysis.nextSteps.length > 0 && (
-                  <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-3">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center gap-2">
-                      <ChevronRight className="w-4 h-4 text-[#6366F1]" />
-                      6. Next Steps
-                    </h3>
-                    <ul className="space-y-2">
-                      {activeMeeting.analysis.nextSteps.map((step, idx) => (
-                        <li key={idx} className="text-xs text-[#dfe2ef] flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#6366F1]" />
-                          <span>{step}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-              </div>
-            )}
-
-          </div>
-        )}
-
-      </div>
-
-      {/* ========================================================================= */}
-      {/* RIGHT AI COPILOT PANEL (w-96)                                             */}
-      {/* ========================================================================= */}
-      <div className="w-full xl:w-96 bg-[#121624]/90 border border-[#232B45] rounded-3xl p-5 shadow-2xl backdrop-blur-md flex flex-col h-[750px] xl:h-auto shrink-0">
-
-        {/* Panel Header */}
-        <div className="border-b border-[#232B45] pb-4 mb-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-7 h-7 rounded-lg bg-[#6366F1]/20 border border-[#6366F1]/40 flex items-center justify-center text-[#5de6ff]">
-              <Bot className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-white tracking-tight">AI Meeting Copilot</h3>
-              <p className="text-[10px] text-[#94A3B8] font-mono">Contextual RAG Assistant</p>
-            </div>
-          </div>
-
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Connected to active meeting context" />
-        </div>
-
-        {/* Suggested Prompt Chips */}
-        {activeMeeting && (
-          <div className="mb-4 space-y-1.5">
-            <p className="text-[10px] text-[#94A3B8] font-mono uppercase tracking-wider">Suggested Prompts:</p>
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                "What were the key decisions?",
-                "What risks were identified?",
-                "Generate MOM",
-                "Generate client version",
-                "Generate engineering summary"
-              ].map((prompt, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleSendQuery(prompt)}
-                  disabled={isChatLoading}
-                  className="text-[11px] px-2.5 py-1 rounded-full bg-[#0a0e17] border border-[#232B45] hover:border-[#6366F1] text-[#c0c1ff] hover:text-white transition cursor-pointer text-left truncate max-w-full"
-                >
-                  {prompt}
-                </button>
               ))}
             </div>
+          )}
+
+        </main>
+
+        {/* ----------------------------------------------------------------------- */}
+        {/* RIGHT SIDE PANEL: AI CHAT | MEETINGS | ACTION ITEMS                    */}
+        {/* ----------------------------------------------------------------------- */}
+        <aside className="w-full lg:w-80 xl:w-96 bg-[#0A0E17] border-l border-[#232B45] flex flex-col h-full shrink-0 shadow-2xl">
+
+          {/* Sub-Navigation Tabs Header */}
+          <div className="border-b border-[#232B45] px-4 flex items-center space-x-6 shrink-0">
+            <button
+              onClick={() => setRightPanelTab('chat')}
+              className={`py-3.5 text-xs font-bold border-b-2 transition cursor-pointer ${rightPanelTab === 'chat' ? 'border-[#6366F1] text-[#6366F1]' : 'border-transparent text-[#94A3B8] hover:text-white'
+                }`}
+            >
+              AI Chat
+            </button>
+            <button
+              onClick={() => setRightPanelTab('meetings')}
+              className={`py-3.5 text-xs font-bold border-b-2 transition cursor-pointer ${rightPanelTab === 'meetings' ? 'border-[#6366F1] text-[#6366F1]' : 'border-transparent text-[#94A3B8] hover:text-white'
+                }`}
+            >
+              Meetings
+            </button>
+            <button
+              onClick={() => setRightPanelTab('actions')}
+              className={`py-3.5 text-xs font-bold border-b-2 transition cursor-pointer ${rightPanelTab === 'actions' ? 'border-[#6366F1] text-[#6366F1]' : 'border-transparent text-[#94A3B8] hover:text-white'
+                }`}
+            >
+              Action Items
+            </button>
           </div>
-        )}
 
-        {/* Chat Messages Stream */}
-        <div className="flex-1 overflow-y-auto space-y-3 pr-1 mb-4 scrollbar-thin scrollbar-thumb-[#232B45]">
-          {chatMessages.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3 text-[#94A3B8]">
-              <Bot className="w-10 h-10 text-[#6366F1]/40" />
-              <p className="text-xs">
-                {activeMeeting ? "Ask anything about this meeting." : "Upload or select a meeting to start chatting with AI Copilot."}
-              </p>
-            </div>
-          ) : (
-            chatMessages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex flex-col space-y-1 ${msg.sender === 'user' ? 'items-end' : 'items-start'
-                  }`}
-              >
-                <div
-                  className={`p-3.5 rounded-2xl text-xs max-w-[90%] leading-relaxed ${msg.sender === 'user'
-                    ? 'bg-[#6366F1] text-white rounded-br-none shadow-md shadow-[#6366F1]/20'
-                    : 'bg-[#0a0e17] text-[#dfe2ef] border border-[#232B45] rounded-bl-none'
-                    }`}
-                >
-                  <p className="whitespace-pre-line">{msg.text}</p>
-                </div>
-                <span className="text-[9px] text-[#94A3B8] font-mono px-1">{msg.timestamp}</span>
+          {/* TAB 1: AI CHAT (RAG Assistant) */}
+          {rightPanelTab === 'chat' && (
+            <div className="flex-1 flex flex-col min-h-0 p-4">
+              <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+                {chatMessages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex flex-col space-y-1 ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
+                  >
+                    <div
+                      className={`p-3 rounded-2xl text-xs max-w-[90%] leading-relaxed ${msg.sender === 'user'
+                        ? 'bg-[#6366F1] text-white rounded-br-none shadow-md'
+                        : 'bg-[#181B25] text-[#DFE2EF] rounded-bl-none border border-[#232B45]'
+                        }`}
+                    >
+                      <p className="whitespace-pre-line">{msg.text}</p>
+                    </div>
+                    <span className="text-[9px] text-[#94A3B8] font-mono px-1">{msg.timestamp}</span>
+                  </div>
+                ))}
+                {isChatLoading && (
+                  <div className="flex items-center space-x-2 text-xs text-[#5DE6FF] font-medium bg-[#181B25] p-3 rounded-xl border border-[#232B45] w-fit animate-pulse">
+                    <Sparkles className="w-3.5 h-3.5 text-[#6366F1]" />
+                    <span>Searching transcript context...</span>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
               </div>
-            ))
-          )}
 
-          {isChatLoading && (
-            <div className="flex items-center space-x-2 p-3 rounded-2xl bg-[#0a0e17] border border-[#232B45] text-xs text-[#5de6ff] w-fit">
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-              <span>Analyzing meeting context...</span>
+              {/* Chat Input Form */}
+              <form onSubmit={handleSendMessage} className="mt-3 relative shrink-0">
+                <input
+                  type="text"
+                  placeholder="Ask anything about the meeting..."
+                  value={inputQuery}
+                  onChange={(e) => setInputQuery(e.target.value)}
+                  className="w-full bg-[#181B25] text-xs text-[#F8FAFC] pl-3.5 pr-10 py-2.5 rounded-xl border border-[#232B45] focus:border-[#6366F1] outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={!inputQuery.trim() || isChatLoading}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-[#6366F1] hover:bg-[#232B45] rounded-lg transition disabled:opacity-40 cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                </button>
+              </form>
             </div>
           )}
 
-          <div ref={chatEndRef} />
-        </div>
+          {/* TAB 2: MEETINGS (Record & Calendar Settings) */}
+          {rightPanelTab === 'meetings' && (
+            <div className="flex-1 overflow-y-auto p-4 space-y-6 text-xs">
+              <div className="space-y-2">
+                <h4 className="font-bold text-white text-sm">Record a live meeting</h4>
+                <p className="text-[#94A3B8]">Works with Zoom, Google Meet, or Microsoft Teams</p>
 
-        {/* Chat Input Form */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSendQuery();
-          }}
-          className="relative pt-2 border-t border-[#232B45]"
-        >
-          <input
-            type="text"
-            disabled={!activeMeeting || isChatLoading}
-            value={inputQuery}
-            onChange={(e) => setInputQuery(e.target.value)}
-            placeholder={activeMeeting ? "Ask anything about this meeting..." : "Upload recording to chat..."}
-            className="w-full bg-[#0a0e17] text-white text-xs pl-3.5 pr-10 py-3 rounded-xl border border-[#232B45] focus:outline-none focus:border-[#6366F1] placeholder-[#94A3B8] disabled:opacity-50"
-          />
-          <button
-            type="submit"
-            disabled={!activeMeeting || !inputQuery.trim() || isChatLoading}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-[#6366F1] text-white hover:bg-[#4F46E5] disabled:opacity-40 transition cursor-pointer"
-          >
-            <Send className="w-3.5 h-3.5" />
-          </button>
-        </form>
+                <div className="relative mt-2">
+                  <Video className="w-4 h-4 text-[#94A3B8] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Paste meeting URL to add Notetaker"
+                    value={meetingUrlInput}
+                    onChange={(e) => setMeetingUrlInput(e.target.value)}
+                    className="w-full bg-[#181B25] text-xs text-[#F8FAFC] pl-9 pr-3 py-2.5 rounded-xl border border-[#232B45] outline-none focus:border-[#6366F1]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2 border-t border-[#232B45] pt-4">
+                <h4 className="font-bold text-white">Record upcoming meetings</h4>
+                <button className="w-full bg-[#181B25] border border-[#232B45] hover:bg-[#232B45] p-3 rounded-xl flex items-center justify-between text-left cursor-pointer transition">
+                  <span className="font-medium text-[#DFE2EF]">AI Notetaker settings</span>
+                  <ChevronRight className="w-4 h-4 text-[#94A3B8]" />
+                </button>
+              </div>
+
+              <div className="space-y-3 border-t border-[#232B45] pt-4">
+                <div className="flex items-center space-x-2">
+                  <Calendar className="w-4 h-4 text-[#5DE6FF]" />
+                  <span className="font-bold text-white">Calendar</span>
+                </div>
+                <p className="text-[#94A3B8] leading-relaxed">
+                  Connect your calendar to automatically record and summarize upcoming Zoom, Meet, or Teams calls.
+                </p>
+
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button className="bg-[#181B25] border border-[#232B45] hover:bg-[#232B45] p-2.5 rounded-xl flex items-center justify-center space-x-2 font-bold text-[#DFE2EF] transition cursor-pointer">
+                    <Globe className="w-3.5 h-3.5 text-[#5DE6FF]" />
+                    <span>Google</span>
+                  </button>
+                  <button className="bg-[#181B25] border border-[#232B45] hover:bg-[#232B45] p-2.5 rounded-xl flex items-center justify-center space-x-2 font-bold text-[#DFE2EF] transition cursor-pointer">
+                    <Globe className="w-3.5 h-3.5 text-[#6366F1]" />
+                    <span>Outlook</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: ACTION ITEMS */}
+          {rightPanelTab === 'actions' && (
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              <h4 className="font-bold text-white text-sm mb-2">All Action Items ({allActionItems.length})</h4>
+              {allActionItems.length > 0 ? (
+                allActionItems.map(({ item, meetingTitle }) => (
+                  <div
+                    key={item.id}
+                    onClick={() => handleToggleActionItem(item.id)}
+                    className="bg-[#181B25] border border-[#232B45] hover:border-[#6366F1]/50 p-3 rounded-xl space-y-1 cursor-pointer transition"
+                  >
+                    <div className="flex items-start space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={item.status === 'completed'}
+                        onChange={() => { }}
+                        className="w-3.5 h-3.5 accent-[#6366F1] mt-0.5"
+                      />
+                      <span className={`text-xs ${item.status === 'completed' ? 'line-through text-[#94A3B8]' : 'font-medium text-[#DFE2EF]'}`}>
+                        {item.task}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-[#94A3B8] font-mono pl-5">
+                      <span>Assignee: {item.assignee}</span>
+                      <span>{meetingTitle}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-[#94A3B8] text-center pt-8">No action items recorded yet.</p>
+              )}
+            </div>
+          )}
+
+        </aside>
 
       </div>
+
+      {/* ========================================================================= */}
+      {/* UPLOAD FILE MODAL DIALOG                                                  */}
+      {/* ========================================================================= */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-[#121624] border border-[#232B45] rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-[#232B45] pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <UploadCloud className="w-5 h-5 text-[#5DE6FF]" />
+                Import Meeting Recording
+              </h3>
+              <button
+                onClick={() => setShowUploadModal(false)}
+                className="text-[#94A3B8] hover:text-white p-1 rounded-lg transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUploadSubmit} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-[#DFE2EF] block mb-1">Meeting Title (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Weekly Product Sync"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full bg-[#181B25] text-xs text-[#F8FAFC] px-3.5 py-2.5 rounded-xl border border-[#232B45] focus:border-[#6366F1] outline-none"
+                />
+              </div>
+
+              {/* Drag and Drop Box */}
+              <div
+                onDragEnter={handleDrag}
+                onDragOver={handleDrag}
+                onDragLeave={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-2xl p-8 transition cursor-pointer flex flex-col items-center justify-center space-y-3 ${dragActive ? 'border-[#5DE6FF] bg-[#5DE6FF]/10' : 'border-[#232B45] hover:border-[#6366F1] bg-[#0A0E17]'
+                  }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".mp3,.wav,.m4a,.mp4,.mov,audio/*,video/*"
+                  onChange={handleFileChange}
+                  onClick={(e) => e.stopPropagation()}
+                  className="hidden"
+                />
+                <UploadCloud className="w-8 h-8 text-[#5DE6FF]" />
+                <div className="text-center">
+                  <p className="text-xs font-bold text-white">
+                    {file ? file.name : 'Click to upload or drag & drop'}
+                  </p>
+                  <p className="text-[11px] text-[#94A3B8] mt-0.5">MP4, MOV, MP3, WAV or M4A</p>
+                </div>
+              </div>
+
+              {/* Pipeline Progress Indicator */}
+              {uploadStatus !== 'idle' && (
+                <div className="space-y-2 bg-[#181B25] p-3.5 rounded-xl border border-[#232B45]">
+                  <div className="flex items-center justify-between text-xs font-bold text-[#5DE6FF]">
+                    <span>Processing Pipeline...</span>
+                    <span className="capitalize">{uploadStatus}</span>
+                  </div>
+                  <div className="w-full bg-[#0A0E17] h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-gradient-to-r from-[#6366F1] to-[#5DE6FF] h-full transition-all duration-500 w-3/4 animate-pulse" />
+                  </div>
+                </div>
+              )}
+
+              {errorMessage && (
+                <p className="text-xs text-rose-300 font-medium bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/30">
+                  {errorMessage}
+                </p>
+              )}
+
+              <div className="flex justify-end space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowUploadModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-[#94A3B8] hover:text-white hover:bg-[#181B25] transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!file || uploadStatus !== 'idle'}
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-[#6366F1] hover:bg-[#4F46E5] text-white transition disabled:opacity-40 shadow-lg shadow-[#6366F1]/20 cursor-pointer"
+                >
+                  Start Processing
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );
