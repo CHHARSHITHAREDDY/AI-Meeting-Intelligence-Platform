@@ -166,6 +166,49 @@ export function retrieveContextChunks(query: string, chunks: SemanticChunk[], to
 // ---------------------------------------------------------------------------
 // 4. GROUNDED RAG GENERATOR WITH CHAT MEMORY & TIMESTAMP CITATIONS
 // ---------------------------------------------------------------------------
+/**
+ * Builds the content-type-specific block of the chat system prompt, so the
+ * AI Copilot has the right grounding regardless of whether it's chatting
+ * about a meeting, a lecture, a coding session, or a podcast.
+ */
+function buildTypeSpecificContext(meeting: Meeting): string {
+  const a = meeting.analysis;
+  if (!a) return '';
+
+  switch (a.contentType) {
+    case 'lecture':
+      return [
+        a.notes?.length ? `Study Notes: ${a.notes.join('; ')}` : '',
+        a.flashcards?.length ? `Flashcard Topics: ${a.flashcards.map(f => f.question).join('; ')}` : '',
+      ].filter(Boolean).join('\n');
+
+    case 'coding':
+      return [
+        a.codeGuide ? `Code Guide: ${a.codeGuide}` : '',
+        a.apis?.length ? `APIs Discussed: ${a.apis.map(x => `${x.name} (${x.description})`).join('; ')}` : '',
+        a.libraries?.length ? `Libraries Discussed: ${a.libraries.map(x => `${x.name} (${x.purpose})`).join('; ')}` : '',
+        a.commands?.length ? `Commands Referenced: ${a.commands.map(x => x.command).join('; ')}` : '',
+      ].filter(Boolean).join('\n');
+
+    case 'podcast':
+      return [
+        a.keyInsights?.length ? `Key Insights: ${a.keyInsights.join('; ')}` : '',
+        a.timeline?.length ? `Timeline: ${a.timeline.map(t => `[${t.timestamp}] ${t.topic}`).join('; ')}` : '',
+        a.resources?.length ? `Resources Mentioned: ${a.resources.map(r => r.name).join('; ')}` : '',
+      ].filter(Boolean).join('\n');
+
+    case 'general':
+      return a.keyDiscussionPoints?.length ? `Key Points: ${a.keyDiscussionPoints.join('; ')}` : '';
+
+    case 'meeting':
+    default:
+      return [
+        `Decisions: ${a.decisions?.length ? a.decisions.map(d => `${d.decision} (by ${d.decider})`).join('; ') : 'N/A'}`,
+        `Action Items: ${a.actionItems?.length ? a.actionItems.map(x => `${x.task} (Assignee: ${x.assignee}, Due: ${x.dueDate})`).join('; ') : 'N/A'}`,
+      ].join('\n');
+  }
+}
+
 export async function generateGroundedRAGAnswer(
   query: string,
   meeting: Meeting,
@@ -182,19 +225,18 @@ export async function generateGroundedRAGAnswer(
   // Format conversation memory
   const memoryText = chatHistory.slice(-4).map(h => `${h.sender === 'user' ? 'User' : 'Assistant'}: ${h.text}`).join('\n');
 
-  const systemPrompt = `You are the AI Meeting Copilot for the meeting "${meeting.title}".
-Your job is to answer user questions grounded EXCLUSIVELY in the meeting transcript context provided below.
+  const systemPrompt = `You are the AI Copilot for the recording "${meeting.title}".
+Your job is to answer user questions grounded EXCLUSIVELY in the transcript context provided below.
 
 CRITICAL INSTRUCTIONS:
-1. Base your answer strictly on the meeting context.
+1. Base your answer strictly on the context.
 2. ALWAYS include timestamp citations in your response when referencing statements or topics (e.g. "Speaker 1 mentioned... Source: [00:03:12]").
 3. Synthesize clear, intelligent, professional answers in complete sentences.
-4. If a question cannot be answered from the meeting transcript, state: "I cannot find specific discussion details about this in the meeting recording."
+4. If a question cannot be answered from the transcript, state: "I cannot find specific discussion details about this in the recording."
 
-Meeting Context:
+Content Context:
 Summary: ${meeting.analysis?.summary || 'N/A'}
-Decisions: ${meeting.analysis?.decisions.map(d => `${d.decision} (by ${d.decider})`).join('; ') || 'N/A'}
-Action Items: ${meeting.analysis?.actionItems.map(a => `${a.task} (Assignee: ${a.assignee}, Due: ${a.dueDate})`).join('; ') || 'N/A'}
+${buildTypeSpecificContext(meeting)}
 
 Relevant Transcript Chunks:
 ${contextSnippet}

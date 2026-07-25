@@ -53,7 +53,7 @@ export async function transcribeAudio(audioInput: Buffer | Float32Array, fileNam
           const ffmpegCmd = `"${ffmpegPath}" -y -i "${tempInputPath}" -vn -acodec pcm_s16le -ar 16000 -ac 1 "${tempWavPath}"`;
           execSync(ffmpegCmd, {
             stdio: ['ignore', 'ignore', 'pipe'],
-            timeout: 90000,
+            timeout: 180000,
           });
 
           if (fs.existsSync(tempWavPath) && fs.statSync(tempWavPath).size > 44) {
@@ -132,9 +132,17 @@ export async function transcribeAudio(audioInput: Buffer | Float32Array, fileNam
       }
     }
 
-    // Step 6: Formatted speech transcript overview for media recording
-    console.log(`[Whisper Pipeline] Media processing completed for session "${cleanTitle}". Generating speech transcript...`);
-    return `[00:05] Speaker 1: Welcome to the session for ${cleanTitle}. Today we are reviewing key discussion topics, project deliverables, and strategic execution priorities.\n[00:35] Speaker 2: Understood. Let's ensure all key decisions, action items, and potential risks identified during this session are documented.`;
+    // No usable audio could be extracted (ffmpeg conversion failed/timed out,
+    // or the local Whisper model produced no text). Fail loudly instead of
+    // returning a canned placeholder transcript — a fabricated transcript
+    // would silently flow into extractMeetingInsights() and produce a
+    // "summary" that has nothing to do with the actual recording, which is
+    // exactly why some uploads previously looked transcribed-but-generic.
+    throw new Error(
+      audioSamples
+        ? 'Local Whisper produced no speech text for this recording (audio may be silent, too short, or unsupported).'
+        : 'Could not extract audio from this file — ffmpeg conversion failed or timed out. Try a shorter clip or a standard format (mp3/wav/mp4).'
+    );
 
   } finally {
     // Cleanup temporary files on disk

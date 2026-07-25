@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { ContentType } from './classify';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -80,6 +81,49 @@ export interface SpeakerMetric {
   wordCount: number;
 }
 
+export interface Flashcard {
+  question: string;
+  answer: string;
+}
+
+export interface MindmapNode {
+  topic: string;
+  children?: MindmapNode[];
+}
+
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation?: string;
+}
+
+export interface ApiMention {
+  name: string;
+  description: string;
+}
+
+export interface LibraryMention {
+  name: string;
+  purpose: string;
+}
+
+export interface CommandMention {
+  command: string;
+  description: string;
+}
+
+export interface TimelineEntry {
+  timestamp: string;
+  topic: string;
+}
+
+export interface ResourceMention {
+  name: string;
+  type?: string;
+  reference?: string;
+}
+
 export interface MeetingAnalysis {
   summary: string;
   keyDiscussionPoints?: string[];
@@ -93,6 +137,26 @@ export interface MeetingAnalysis {
   unresolvedQuestions?: string[];
   efficiencyScore?: number;
   speakerAnalytics?: SpeakerMetric[];
+
+  // Content-type classification (see lib/classify.ts)
+  contentType?: ContentType;
+  contentTypeConfidence?: number;
+
+  // Lecture-specific fields
+  flashcards?: Flashcard[];
+  mindmap?: MindmapNode;
+  quiz?: QuizQuestion[];
+
+  // Coding-specific fields
+  codeGuide?: string;
+  apis?: ApiMention[];
+  libraries?: LibraryMention[];
+  commands?: CommandMention[];
+
+  // Podcast-specific fields
+  keyInsights?: string[];
+  timeline?: TimelineEntry[];
+  resources?: ResourceMention[];
 }
 
 export interface Meeting {

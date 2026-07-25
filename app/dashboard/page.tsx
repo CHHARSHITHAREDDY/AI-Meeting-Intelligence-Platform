@@ -24,9 +24,29 @@ import {
   FileCheck,
   Zap,
   ChevronRight,
-  X
+  X,
+  GraduationCap,
+  BookOpen,
+  Layers,
+  HelpCircle,
+  Code2,
+  Terminal,
+  Package,
+  Plug,
+  Mic2,
+  History,
+  Link2
 } from 'lucide-react';
-import { Meeting, ActionItem } from '@/lib/db';
+import { Meeting, ActionItem, MindmapNode } from '@/lib/db';
+import { ContentType } from '@/lib/classify';
+
+const CONTENT_TYPE_META: Record<ContentType, { label: string; icon: React.ReactNode }> = {
+  meeting: { label: 'Meeting', icon: <FileCheck className="w-3 h-3" /> },
+  lecture: { label: 'Lecture', icon: <GraduationCap className="w-3 h-3" /> },
+  coding: { label: 'Coding Session', icon: <Code2 className="w-3 h-3" /> },
+  podcast: { label: 'Podcast', icon: <Mic2 className="w-3 h-3" /> },
+  general: { label: 'General', icon: <FileText className="w-3 h-3" /> },
+};
 
 interface ChatMessage {
   id: string;
@@ -57,6 +77,10 @@ export default function MeetingIntelligenceSaaSPage() {
   const [transcriptSearch, setTranscriptSearch] = useState('');
   const [selectedSpeaker, setSelectedSpeaker] = useState<string>('all');
   const [copiedTranscript, setCopiedTranscript] = useState(false);
+
+  // Lecture: Flashcards & Quiz interactive state
+  const [flippedFlashcards, setFlippedFlashcards] = useState<Set<number>>(new Set());
+  const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
 
   // AI Copilot Chat State
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -163,6 +187,8 @@ export default function MeetingIntelligenceSaaSPage() {
         setFile(null);
         setTitle('');
         setActiveMeeting(processedMeeting);
+        setFlippedFlashcards(new Set());
+        setQuizAnswers({});
 
         // Initialize default AI Copilot greeting for the newly processed meeting
         setChatMessages([
@@ -326,6 +352,16 @@ export default function MeetingIntelligenceSaaSPage() {
   // Extract unique speaker list for speaker filter dropdown
   const uniqueSpeakers = Array.from(new Set(parsedTranscript.map(t => t.speaker)));
 
+  // Content-type-aware rendering: older meetings have no contentType saved,
+  // so they default to the original meeting view. 'general' explicitly hides
+  // the meeting-specific sections (Decisions/Action Items/Risks/Next Steps)
+  // rather than forcing them onto content that isn't a meeting.
+  const contentType: ContentType = activeMeeting?.analysis?.contentType || 'meeting';
+  const showMeetingSections = contentType === 'meeting';
+  const showLectureSections = contentType === 'lecture';
+  const showCodingSections = contentType === 'coding';
+  const showPodcastSections = contentType === 'podcast';
+
   // Filter transcript lines based on search query & selected speaker
   const filteredTranscript = parsedTranscript.filter(item => {
     const matchesSearch = transcriptSearch === '' || item.text.toLowerCase().includes(transcriptSearch.toLowerCase()) || item.speaker.toLowerCase().includes(transcriptSearch.toLowerCase());
@@ -358,6 +394,12 @@ export default function MeetingIntelligenceSaaSPage() {
                   <span className="text-[10px] font-mono font-semibold uppercase px-2.5 py-0.5 rounded-full bg-[#34D399]/10 text-[#34D399] border border-[#34D399]/30">
                     AI Analyzed
                   </span>
+                  {activeMeeting.analysis?.contentType && (
+                    <span className="text-[10px] font-mono font-semibold uppercase px-2.5 py-0.5 rounded-full bg-[#6366F1]/10 text-[#a5b4fc] border border-[#6366F1]/30 flex items-center gap-1.5">
+                      {CONTENT_TYPE_META[activeMeeting.analysis.contentType].icon}
+                      {CONTENT_TYPE_META[activeMeeting.analysis.contentType].label}
+                    </span>
+                  )}
                 </h1>
                 <div className="flex items-center space-x-4 text-xs text-[#94A3B8] font-mono mt-1">
                   <span className="flex items-center gap-1.5">
@@ -531,6 +573,8 @@ export default function MeetingIntelligenceSaaSPage() {
                       key={m.id}
                       onClick={() => {
                         setActiveMeeting(m);
+                        setFlippedFlashcards(new Set());
+                        setQuizAnswers({});
                         setChatMessages([
                           {
                             id: 'msg-init-' + m.id,
@@ -543,9 +587,17 @@ export default function MeetingIntelligenceSaaSPage() {
                       className="p-4 rounded-2xl bg-[#0a0e17] border border-[#232B45] hover:border-[#6366F1] transition-all cursor-pointer group flex items-start justify-between"
                     >
                       <div className="space-y-1.5 flex-1 pr-3">
-                        <h4 className="text-xs font-bold text-white group-hover:text-[#5de6ff] transition-colors line-clamp-1">
-                          {m.title}
-                        </h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-xs font-bold text-white group-hover:text-[#5de6ff] transition-colors line-clamp-1">
+                            {m.title}
+                          </h4>
+                          {m.analysis?.contentType && (
+                            <span className="shrink-0 text-[9px] font-mono font-semibold uppercase px-1.5 py-0.5 rounded-full bg-[#6366F1]/10 text-[#a5b4fc] border border-[#6366F1]/30 flex items-center gap-1">
+                              {CONTENT_TYPE_META[m.analysis.contentType].icon}
+                              {CONTENT_TYPE_META[m.analysis.contentType].label}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[11px] text-[#94A3B8] line-clamp-2">
                           {m.analysis?.summary || m.transcript.slice(0, 100) || 'No summary available.'}
                         </p>
@@ -715,6 +767,7 @@ export default function MeetingIntelligenceSaaSPage() {
                   </div>
                 )}
 
+              {showMeetingSections && (<>
                 {/* 3. Decisions Taken */}
                 <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-3">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center justify-between">
@@ -831,6 +884,228 @@ export default function MeetingIntelligenceSaaSPage() {
                     </ul>
                   </div>
                 )}
+              </>)}
+
+              {/* LECTURE: Study Notes, Flashcards, Mindmap, Quiz */}
+              {showLectureSections && (<>
+                {activeMeeting.analysis?.notes && activeMeeting.analysis.notes.length > 0 && (
+                  <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-[#6366F1]" />
+                      Study Notes
+                    </h3>
+                    <ul className="space-y-2">
+                      {activeMeeting.analysis.notes.map((note, idx) => (
+                        <li key={idx} className="text-xs text-[#dfe2ef] flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#5de6ff] mt-1.5 shrink-0" />
+                          <span>{note}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {activeMeeting.analysis?.flashcards && activeMeeting.analysis.flashcards.length > 0 && (
+                  <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-[#6366F1]" />
+                      Flashcards ({activeMeeting.analysis.flashcards.length})
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {activeMeeting.analysis.flashcards.map((card, idx) => {
+                        const flipped = flippedFlashcards.has(idx);
+                        return (
+                          <div
+                            key={idx}
+                            onClick={() => setFlippedFlashcards(prev => {
+                              const next = new Set(prev);
+                              if (next.has(idx)) next.delete(idx); else next.add(idx);
+                              return next;
+                            })}
+                            className="p-3.5 rounded-xl bg-[#181b25] border border-[#232B45] hover:border-[#6366F1] cursor-pointer space-y-1.5 min-h-[80px] flex flex-col justify-center"
+                          >
+                            <span className="text-[9px] font-mono uppercase tracking-wider text-[#94A3B8]">{flipped ? 'Answer' : 'Question'} · tap to flip</span>
+                            <p className="text-xs text-[#dfe2ef] leading-relaxed">{flipped ? card.answer : card.question}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {activeMeeting.analysis?.mindmap && (
+                  <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-[#6366F1]" />
+                      Mindmap
+                    </h3>
+                    <MindmapView node={activeMeeting.analysis.mindmap} depth={0} />
+                  </div>
+                )}
+
+                {activeMeeting.analysis?.quiz && activeMeeting.analysis.quiz.length > 0 && (
+                  <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center gap-2">
+                      <HelpCircle className="w-4 h-4 text-[#6366F1]" />
+                      Quiz ({activeMeeting.analysis.quiz.length})
+                    </h3>
+                    <div className="space-y-4">
+                      {activeMeeting.analysis.quiz.map((q, qIdx) => {
+                        const selected = quizAnswers[qIdx];
+                        return (
+                          <div key={qIdx} className="space-y-2">
+                            <p className="text-xs font-semibold text-white">{qIdx + 1}. {q.question}</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {q.options.map((opt, oIdx) => {
+                                const isSelected = selected === oIdx;
+                                const isCorrect = oIdx === q.correctIndex;
+                                const showResult = selected !== undefined;
+                                return (
+                                  <button
+                                    key={oIdx}
+                                    onClick={() => setQuizAnswers(prev => ({ ...prev, [qIdx]: oIdx }))}
+                                    className={`text-left text-[11px] px-3 py-2 rounded-lg border transition ${
+                                      showResult && isCorrect ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300'
+                                      : showResult && isSelected && !isCorrect ? 'bg-rose-500/10 border-rose-500/40 text-rose-300'
+                                      : 'bg-[#181b25] border-[#232B45] text-[#dfe2ef] hover:border-[#6366F1]'
+                                    }`}
+                                  >
+                                    {opt}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {selected !== undefined && q.explanation && (
+                              <p className="text-[11px] text-[#94A3B8]">{q.explanation}</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>)}
+
+              {/* CODING: Code Guide, APIs, Libraries, Commands */}
+              {showCodingSections && (<>
+                {activeMeeting.analysis?.codeGuide && (
+                  <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center gap-2">
+                      <Code2 className="w-4 h-4 text-[#6366F1]" />
+                      Code Guide
+                    </h3>
+                    <p className="text-xs text-[#dfe2ef] leading-relaxed whitespace-pre-wrap font-mono">{activeMeeting.analysis.codeGuide}</p>
+                  </div>
+                )}
+
+                {activeMeeting.analysis?.apis && activeMeeting.analysis.apis.length > 0 && (
+                  <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center gap-2">
+                      <Plug className="w-4 h-4 text-[#6366F1]" />
+                      APIs Mentioned ({activeMeeting.analysis.apis.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {activeMeeting.analysis.apis.map((api, idx) => (
+                        <div key={idx} className="p-3 rounded-xl bg-[#181b25] border border-[#232B45]">
+                          <span className="text-xs font-bold text-white font-mono">{api.name}</span>
+                          <p className="text-[11px] text-[#94A3B8] mt-0.5">{api.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {activeMeeting.analysis?.libraries && activeMeeting.analysis.libraries.length > 0 && (
+                  <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center gap-2">
+                      <Package className="w-4 h-4 text-[#6366F1]" />
+                      Libraries Mentioned ({activeMeeting.analysis.libraries.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {activeMeeting.analysis.libraries.map((lib, idx) => (
+                        <div key={idx} className="p-3 rounded-xl bg-[#181b25] border border-[#232B45]">
+                          <span className="text-xs font-bold text-white font-mono">{lib.name}</span>
+                          <p className="text-[11px] text-[#94A3B8] mt-0.5">{lib.purpose}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {activeMeeting.analysis?.commands && activeMeeting.analysis.commands.length > 0 && (
+                  <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center gap-2">
+                      <Terminal className="w-4 h-4 text-[#6366F1]" />
+                      Commands ({activeMeeting.analysis.commands.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {activeMeeting.analysis.commands.map((cmd, idx) => (
+                        <div key={idx} className="p-3 rounded-xl bg-[#181b25] border border-[#232B45]">
+                          <code className="text-[11px] font-mono text-[#5de6ff]">{cmd.command}</code>
+                          <p className="text-[11px] text-[#94A3B8] mt-0.5">{cmd.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>)}
+
+              {/* PODCAST: Key Insights, Timeline, Resources */}
+              {showPodcastSections && (<>
+                {activeMeeting.analysis?.keyInsights && activeMeeting.analysis.keyInsights.length > 0 && (
+                  <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[#6366F1]" />
+                      Key Insights
+                    </h3>
+                    <ul className="space-y-2">
+                      {activeMeeting.analysis.keyInsights.map((insight, idx) => (
+                        <li key={idx} className="text-xs text-[#dfe2ef] flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#5de6ff] mt-1.5 shrink-0" />
+                          <span>{insight}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {activeMeeting.analysis?.timeline && activeMeeting.analysis.timeline.length > 0 && (
+                  <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center gap-2">
+                      <History className="w-4 h-4 text-[#6366F1]" />
+                      Timeline
+                    </h3>
+                    <div className="space-y-2">
+                      {activeMeeting.analysis.timeline.map((entry, idx) => (
+                        <div key={idx} className="flex items-start gap-3 text-xs">
+                          <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#181b25] border border-[#232B45] text-[#5de6ff] shrink-0">{entry.timestamp}</span>
+                          <span className="text-[#dfe2ef]">{entry.topic}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {activeMeeting.analysis?.resources && activeMeeting.analysis.resources.length > 0 && (
+                  <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center gap-2">
+                      <Link2 className="w-4 h-4 text-[#6366F1]" />
+                      Resources Mentioned ({activeMeeting.analysis.resources.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {activeMeeting.analysis.resources.map((res, idx) => (
+                        <div key={idx} className="p-3 rounded-xl bg-[#181b25] border border-[#232B45] flex items-center justify-between">
+                          <div>
+                            <span className="text-xs font-bold text-white">{res.name}</span>
+                            {res.type && <span className="text-[10px] text-[#94A3B8] ml-2 uppercase font-mono">{res.type}</span>}
+                          </div>
+                          {res.reference && <span className="text-[10px] text-[#5de6ff] font-mono truncate max-w-[40%]">{res.reference}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>)}
 
               </div>
             )}
@@ -951,6 +1226,25 @@ export default function MeetingIntelligenceSaaSPage() {
 
       </div>
 
+    </div>
+  );
+}
+
+// Recursive nested-outline renderer for the Lecture mindmap field.
+function MindmapView({ node, depth }: { node: MindmapNode; depth: number }) {
+  return (
+    <div style={{ marginLeft: depth > 0 ? 16 : 0 }} className={depth > 0 ? 'mt-1.5 border-l border-[#232B45] pl-3' : ''}>
+      <div className="flex items-center gap-2">
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${depth === 0 ? 'bg-[#5de6ff]' : 'bg-[#6366F1]'}`} />
+        <span className={`text-xs ${depth === 0 ? 'font-bold text-white' : 'text-[#dfe2ef]'}`}>{node.topic}</span>
+      </div>
+      {node.children && node.children.length > 0 && (
+        <div className="space-y-1.5 mt-1.5">
+          {node.children.map((child, idx) => (
+            <MindmapView key={idx} node={child} depth={depth + 1} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

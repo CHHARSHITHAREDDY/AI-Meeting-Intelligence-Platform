@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { transcribeAudio } from '@/lib/whisper';
-import { extractMeetingInsights } from '@/lib/extract';
-import { saveMeeting, Meeting } from '@/lib/db';
+import { extractMeetingInsights, extractLectureInsights, extractCodingInsights, extractPodcastInsights } from '@/lib/extract';
+import { classifyContentType, ContentType } from '@/lib/classify';
+import { saveMeeting, Meeting, MeetingAnalysis } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 // @ts-ignore
 import { YoutubeTranscript } from 'youtube-transcript';
@@ -118,9 +119,15 @@ export async function POST(request: NextRequest) {
         transcript = await transcribeAudio(audioInput, fileName);
       }
       
-      console.log('Extracting insights with LlamaCloud...');
-      const insights = await extractMeetingInsights(transcript);
-      
+      console.log('Classifying content type...');
+      const classification = await classifyContentType(transcript);
+      console.log(`[Upload API] Detected content type: ${classification.contentType} (${classification.confidence}% confidence)`);
+
+      console.log(`Extracting ${classification.contentType} insights...`);
+      const insights = await extractInsightsForType(transcript, classification.contentType);
+      insights.contentType = classification.contentType;
+      insights.contentTypeConfidence = classification.confidence;
+
       // Calculate duration based on word count
       const wordCount = transcript.split(/\s+/).length;
       const minutes = Math.floor(wordCount / 130) || 1;
@@ -132,12 +139,21 @@ export async function POST(request: NextRequest) {
       newMeeting.duration = durationStr;
       newMeeting.status = 'completed';
 
-      // Index meeting context for RAG Vector Pipeline
-      const { indexMeetingContext } = require('@/lib/rag');
-      const indexedContext = indexMeetingContext(newMeeting);
-      newMeeting.analysis.chunks = indexedContext.chunks;
-      newMeeting.analysis.suggestedPrompts = indexedContext.suggestedPrompts;
-      
+      // Index meeting context for the RAG chat pipeline. This is a secondary
+      // enhancement (chat context chunking) — a failure here must NOT discard
+      // the transcript + summary we already have, so it's isolated in its own
+      // try/catch instead of sharing the outer one (previously, any error in
+      // this step would mark an otherwise fully-successful meeting as
+      // 'failed', hiding a real transcript and summary from the user).
+      try {
+        const { indexMeetingContext } = require('@/lib/rag');
+        const indexedContext = indexMeetingContext(newMeeting);
+        newMeeting.analysis.chunks = indexedContext.chunks;
+        newMeeting.analysis.suggestedPrompts = indexedContext.suggestedPrompts;
+      } catch (indexErr: any) {
+        console.warn('[Upload API] RAG indexing failed (non-fatal):', indexErr?.message || indexErr);
+      }
+
       await saveMeeting(newMeeting, user.userId);
       console.log(`Meeting analysis & RAG indexing completed: ${newMeeting.id}`);
       
@@ -152,6 +168,27 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Upload handler error:', error);
     return NextResponse.json({ error: 'Failed to upload and process: ' + error.message }, { status: 500 });
+  }
+}
+
+// Runs the extraction pipeline matching the detected content type. 'meeting'
+// and 'general' share the same extractor — the difference between them is
+// purely how the dashboard renders the result (general hides the
+// meeting-specific Decisions/Action Items/Risks sections), not how it's
+// extracted, since a generic Summary + Key Points is a safe default for any
+// content that doesn't clearly fit a more specific category.
+async function extractInsightsForType(transcript: string, contentType: ContentType): Promise<MeetingAnalysis> {
+  switch (contentType) {
+    case 'lecture':
+      return extractLectureInsights(transcript);
+    case 'coding':
+      return extractCodingInsights(transcript);
+    case 'podcast':
+      return extractPodcastInsights(transcript);
+    case 'meeting':
+    case 'general':
+    default:
+      return extractMeetingInsights(transcript);
   }
 }
 
