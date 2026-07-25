@@ -1,30 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { extractMeetingInsights } from '@/lib/extract';
-import { LiveMeetingInsights, LiveTranscriptEntry } from '@/lib/liveMeeting';
-import { addAiActivity, addMemoryNote, addParticipant, appendTranscriptAndInsights, getLiveMeeting, updateLiveMeetingStatus } from '@/lib/liveMeetingStore';
-
-function toLiveInsights(analysis: any): LiveMeetingInsights {
-  return {
-    summary: analysis.summary || 'Live meeting summary is being generated.',
-    decisions: (analysis.decisions || []).map((item: any, index: number) => ({
-      id: item.id || `decision-${index + 1}`,
-      title: item.decision || item.title || 'Decision captured',
-      detail: item.context || item.detail || 'Captured during the live meeting.',
-    })),
-    actionItems: (analysis.actionItems || []).map((item: any, index: number) => ({
-      id: item.id || `action-${index + 1}`,
-      title: item.task || item.title || 'Action item captured',
-      detail: item.assignee ? `Assigned to ${item.assignee}` : 'Assigned during the live meeting.',
-      assignee: item.assignee,
-      dueDate: item.dueDate,
-    })),
-    risks: (analysis.risks || []).map((item: any, index: number) => ({
-      id: item.id || `risk-${index + 1}`,
-      title: item.risk || item.title || 'Risk captured',
-      detail: item.mitigation || item.detail || 'Risk flagged during the live meeting.',
-    })),
-  };
-}
+import { generateFinalSummaries } from '@/lib/extract';
+import { buildLiveMeetingInsights, LiveTranscriptEntry } from '@/lib/liveMeeting';
+import {
+  addAiActivity,
+  addMemoryNote,
+  addParticipant,
+  appendTranscriptAndInsights,
+  getLiveMeeting,
+  setFinalSummaries,
+  updateLiveMeetingStatus,
+} from '@/lib/liveMeetingStore';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ meetingId: string }> }) {
   try {
@@ -32,6 +17,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const body = await request.json();
     const text = typeof body?.text === 'string' ? body.text.trim() : '';
     const speaker = typeof body?.speaker === 'string' && body.speaker.trim() ? body.speaker.trim() : 'Participant';
+    const clientTimestamp = typeof body?.timestamp === 'string' ? body.timestamp : undefined;
 
     if (!text) {
       return NextResponse.json({ error: 'No transcript text provided' }, { status: 400 });
@@ -42,15 +28,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'Live meeting not found' }, { status: 404 });
     }
 
+    // Guard against duplicate transcript entries (e.g. a retried request or a
+    // speech-recognition restart re-emitting the same final utterance).
+    const lastEntry = existing.transcriptEntries[existing.transcriptEntries.length - 1];
+    if (lastEntry && lastEntry.text.trim().toLowerCase() === text.toLowerCase() && lastEntry.speaker === speaker) {
+      return NextResponse.json({ meeting: existing, duplicate: true });
+    }
+
     const entry: LiveTranscriptEntry = {
       id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
       speaker,
       text,
-      timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+      timestamp: clientTimestamp || new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
     };
 
-    const analysis = await extractMeetingInsights(`${existing.transcriptText} ${text}`);
-    const insights = toLiveInsights(analysis);
+    // Fast, local, incremental insight extraction — no external API calls, so
+    // this stays responsive even for very long meetings with frequent updates.
+    const mergedEntries = [...existing.transcriptEntries, entry];
+    const insights = buildLiveMeetingInsights(mergedEntries);
     const updated = appendTranscriptAndInsights(meetingId, entry, insights);
     if (!updated) {
       return NextResponse.json({ error: 'Failed to update live meeting' }, { status: 500 });
@@ -78,10 +73,20 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ meeting });
     }
 
-    if (action === 'end') {
-      const meeting = updateLiveMeetingStatus(meetingId, 'ended');
+    if (action === 'end' || action === 'finalize' || action === 'summarize') {
+      // 'summarize' generates an on-demand Executive/Technical/Minutes preview
+      // mid-meeting without ending the session; 'end'/'finalize' does the same
+      // but also marks the session as ended (playback finished).
+      let meeting = action === 'summarize' ? getLiveMeeting(meetingId) : updateLiveMeetingStatus(meetingId, 'ended');
       if (!meeting) return NextResponse.json({ error: 'Live meeting not found' }, { status: 404 });
-      return NextResponse.json({ meeting });
+
+      const finalSummaries = await generateFinalSummaries(meeting.transcriptText);
+      const withSummaries = setFinalSummaries(meetingId, finalSummaries);
+      addAiActivity(meetingId, action === 'summarize'
+        ? 'Generated an on-demand executive/technical/minutes summary preview.'
+        : 'Generated final executive, technical, and minutes summaries.');
+
+      return NextResponse.json({ meeting: withSummaries || meeting });
     }
 
     if (action === 'memory') {

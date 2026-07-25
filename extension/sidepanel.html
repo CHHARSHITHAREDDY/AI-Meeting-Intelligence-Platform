@@ -352,6 +352,47 @@
       color: #fecdd3;
     }
 
+    .insight-field { color: #94A3B8; font-size: 10px; display: block; margin-top: 2px; }
+    .insight-field b { color: #dfe2ef; font-weight: 600; }
+
+    .insight-summary {
+      background: rgba(139, 92, 246, 0.12);
+      border-left: 3px solid #a855f7;
+      color: #f3e8ff;
+    }
+
+    #speakerNameInput {
+      background: #0d0e15;
+      border: 1px solid #232B45;
+      color: #c0c1ff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 8px;
+      border-radius: 6px;
+      outline: none;
+      width: 100%;
+      margin-top: 6px;
+    }
+    #speakerNameInput:focus { border-color: #6366F1; }
+
+    /* Chat Panel */
+    .chat-panel { display: none; flex-direction: column; gap: 8px; }
+    .chat-panel.active { display: flex; }
+    .chat-messages { display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto; }
+    .chat-msg { font-size: 11px; line-height: 1.4; padding: 8px 10px; border-radius: 8px; max-width: 90%; }
+    .chat-msg-user { align-self: flex-end; background: rgba(99, 102, 241, 0.25); color: #e0e7ff; }
+    .chat-msg-ai { align-self: flex-start; background: rgba(255,255,255,0.06); color: #dfe2ef; white-space: pre-wrap; }
+    .chat-input-row { display: flex; gap: 6px; }
+    .chat-input {
+      flex: 1; background: #0d0e15; border: 1px solid #232B45; color: #f8fafc;
+      font-size: 11px; padding: 8px 10px; border-radius: 6px; outline: none;
+    }
+    .chat-send-btn {
+      background: #6366F1; border: none; color: #fff; font-size: 11px; font-weight: 700;
+      padding: 8px 14px; border-radius: 6px; cursor: pointer;
+    }
+    .chat-send-btn:disabled { opacity: 0.5; cursor: default; }
+
     /* Footer */
     .footer {
       padding: 12px 16px;
@@ -421,6 +462,7 @@
           <option value="tab_only">Tab Audio Only (Google Meet / Zoom)</option>
           <option value="mic_only">Microphone Only</option>
         </select>
+        <input id="speakerNameInput" type="text" value="You" placeholder="Your name in the transcript" />
       </div>
     </div>
 
@@ -451,10 +493,22 @@
         <button class="tab-btn" data-tab="decisions">Decisions</button>
         <button class="tab-btn" data-tab="tasks">Tasks</button>
         <button class="tab-btn" data-tab="risks">Risks</button>
+        <button class="tab-btn" id="chatTabBtn" data-tab="chat">💬 Chat</button>
       </div>
       <div id="insightList" class="insight-list">
         <div style="font-size: 11px; color: #94A3B8; text-align: center; padding: 12px 0;">
           Listening for key commitments & decisions...
+        </div>
+      </div>
+      <div id="chatPanel" class="chat-panel">
+        <div id="chatMessages" class="chat-messages">
+          <div style="font-size: 11px; color: #94A3B8; text-align: center; padding: 12px 0;">
+            Ask about decisions, tasks, risks, or anything said so far.
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <input id="chatInput" class="chat-input" type="text" placeholder="Ask AI about this meeting..." />
+          <button id="chatSendBtn" class="chat-send-btn">Send</button>
         </div>
       </div>
     </div>
