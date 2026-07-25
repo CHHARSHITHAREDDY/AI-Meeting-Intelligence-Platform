@@ -130,7 +130,7 @@ ${memorySnippet || 'None'}`;
     if (llamaApiKey && llamaApiKey !== 'YOUR_LLAMA_API_KEY' && llamaApiKey.trim() !== '') {
       try {
         if (llamaApiKey.startsWith('llx-')) {
-          const { runLlamaCloudExtraction } = require('@/lib/rag');
+          const { runLlamaCloudExtraction } = require('@/lib/llamaCloud');
           const schema = { type: 'object', properties: { answer: { type: 'string' } }, required: ['answer'] };
           const llamaCloudRes = await runLlamaCloudExtraction(
             `${systemPrompt}\n\nUser Question: ${query}`,
