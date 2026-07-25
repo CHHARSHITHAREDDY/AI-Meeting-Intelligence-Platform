@@ -429,6 +429,8 @@
     }
   }
 
+  let recognitionWatchdog = null;
+
   function startRealSpeechRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return null;
@@ -467,11 +469,22 @@
 
       instance.onend = () => {
         if (recognitionInstance && !isPaused) {
-          try { recognitionInstance.start(); } catch (_) {}
+          setTimeout(() => {
+            try { recognitionInstance.start(); } catch (_) {}
+          }, 100);
         }
       };
 
       instance.start();
+
+      // Watchdog timer: automatically restarts recognition if browser stops it silently
+      if (recognitionWatchdog) clearInterval(recognitionWatchdog);
+      recognitionWatchdog = setInterval(() => {
+        if (recognitionInstance && !isPaused) {
+          try { instance.start(); } catch (_) {} // safe no-op if already running
+        }
+      }, 3000);
+
       return instance;
     } catch (err) {
       console.warn('[Cue Extension] Web Speech API initialization notice:', err);
@@ -486,46 +499,77 @@
     seenCaptions.clear();
     const video = document.querySelector('video');
 
-    // 1. YouTube Subtitle Track Fetching (if on YouTube)
+    // 1. YouTube Subtitle Track Fetching (Support both official & auto-generated ASR captions)
     if (window.location.hostname.includes('youtube.com')) {
       const videoId = new URLSearchParams(window.location.search).get('v');
       if (videoId) {
-        fetch(`https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&fmt=json3`)
-          .then(res => res.json())
-          .then(data => {
-            if (data && data.events) {
-              const cues = data.events
-                .filter(e => e.segs && e.segs.length > 0)
-                .map(e => ({
-                  start: e.tStartMs / 1000,
-                  text: e.segs.map(s => s.utf8).join('').trim()
-                }))
-                .filter(c => c.text && c.text !== '\n');
+        const fetchCues = (url) => {
+          fetch(url)
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.events) {
+                const cues = data.events
+                  .filter(e => e.segs && e.segs.length > 0)
+                  .map(e => ({
+                    start: e.tStartMs / 1000,
+                    text: e.segs.map(s => s.utf8).join('').trim()
+                  }))
+                  .filter(c => c.text && c.text !== '\n');
 
-              if (videoSyncInterval) clearInterval(videoSyncInterval);
-              videoSyncInterval = setInterval(() => {
-                if (isPaused || !video) return;
-                const currentTime = video.currentTime;
-                cues.forEach(c => {
-                  if (Math.abs(c.start - currentTime) < 1.2 && !seenCaptions.has(c.text)) {
-                    seenCaptions.add(c.text);
-                    appendTranscriptLine('YouTube Video Spoken', c.text, false);
-                  }
-                });
-              }, 500);
-            }
-          })
-          .catch(() => { /* silent fallback to DOM observer */ });
+                if (videoSyncInterval) clearInterval(videoSyncInterval);
+                videoSyncInterval = setInterval(() => {
+                  if (isPaused || !video) return;
+                  const currentTime = video.currentTime;
+                  cues.forEach(c => {
+                    if (Math.abs(c.start - currentTime) < 1.5 && !seenCaptions.has(c.text)) {
+                      seenCaptions.add(c.text);
+                      appendTranscriptLine('YouTube Video Spoken', c.text, false);
+                    }
+                  });
+                }, 400);
+              }
+            })
+            .catch(() => {
+              if (!url.includes('kind=asr')) {
+                fetchCues(`https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&kind=asr&fmt=json3`);
+              }
+            });
+        };
+
+        fetchCues(`https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&fmt=json3`);
       }
     }
 
-    // 2. DOM Subtitle & TextTrack Observer
+    // 2. Native HTML5 Video textTracks API Listener
+    if (video && video.textTracks) {
+      try {
+        for (let i = 0; i < video.textTracks.length; i++) {
+          const track = video.textTracks[i];
+          track.mode = 'showing';
+          track.oncuechange = () => {
+            if (isPaused) return;
+            const activeCues = track.activeCues;
+            if (activeCues) {
+              for (let j = 0; j < activeCues.length; j++) {
+                const txt = activeCues[j].text?.replace(/<[^>]*>/g, '').trim();
+                if (txt && !seenCaptions.has(txt)) {
+                  seenCaptions.add(txt);
+                  appendTranscriptLine('Video Subtitle', txt, false);
+                }
+              }
+            }
+          };
+        }
+      } catch (_) {}
+    }
+
+    // 3. DOM Subtitle & Caption Element Mutation Observer
     const captionContainer = document.querySelector('.ytp-caption-window-container') || document.querySelector('.captions-text') || document.body;
     if (!captionContainer) return null;
 
     const observer = new MutationObserver(() => {
       if (isPaused) return;
-      const segments = document.querySelectorAll('.ytp-caption-segment, .caption-visual-line, .ytp-caption-window-bottom');
+      const segments = document.querySelectorAll('.ytp-caption-segment, .caption-visual-line, .ytp-caption-window-bottom, .caption-text');
       segments.forEach((seg) => {
         const text = seg.textContent.trim();
         if (text && text.length > 2 && !seenCaptions.has(text)) {
@@ -586,6 +630,10 @@
 
   stopBtn.addEventListener('click', () => {
     clearInterval(timerInterval);
+    if (recognitionWatchdog) {
+      clearInterval(recognitionWatchdog);
+      recognitionWatchdog = null;
+    }
     if (videoSyncInterval) {
       clearInterval(videoSyncInterval);
       videoSyncInterval = null;
