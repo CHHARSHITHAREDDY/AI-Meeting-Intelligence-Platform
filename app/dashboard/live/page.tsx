@@ -30,6 +30,90 @@ function avatarColor(name: string) {
   return colors[h];
 }
 
+/* ─── Video Tile Components ─────────────────────────────────────────────────── */
+const LocalVideoTile = React.memo(({ stream, camOn, name }: { stream: MediaStream | null; camOn: boolean; name: string }) => {
+  const vRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const videoEl = vRef.current;
+    if (!videoEl) return;
+
+    if (stream && camOn) {
+      if (videoEl.srcObject !== stream) {
+        videoEl.srcObject = stream;
+        videoEl.play().catch(() => {});
+      }
+    } else if (videoEl.srcObject) {
+      videoEl.srcObject = null;
+    }
+  }, [stream, camOn]);
+
+  if (!camOn || !stream) {
+    return (
+      <div className="relative w-full h-full min-h-[160px] rounded-xl bg-zinc-900 flex flex-col items-center justify-center space-y-2 border border-zinc-800 p-4 select-none">
+        <div className="w-14 h-14 rounded-full bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 font-bold text-lg shadow-inner">
+          {initials(name)}
+        </div>
+        <span className="text-xs font-bold text-white">{name} (You)</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-full min-h-[160px] rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+      <video ref={vRef} autoPlay playsInline muted className="w-full h-full object-cover rounded-xl" />
+      <div className="absolute bottom-2.5 left-2.5 px-2 py-1 rounded-md bg-black/70 backdrop-blur-md border border-zinc-800 text-[10px] text-white font-mono flex items-center gap-1.5 z-10 select-none">
+        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+        <span>{name} (You)</span>
+      </div>
+    </div>
+  );
+});
+
+const RemoteVideoTile = React.memo(({ stream, name }: { stream?: MediaStream; name: string }) => {
+  const vRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    if (vRef.current && stream) {
+      if (vRef.current.srcObject !== stream) {
+        vRef.current.srcObject = stream;
+        vRef.current.play().catch(() => {});
+      }
+    }
+  }, [stream]);
+
+  if (!stream) {
+    return (
+      <div className="relative w-full h-full min-h-[160px] rounded-xl overflow-hidden bg-zinc-900/90 border border-zinc-800/80 flex flex-col items-center justify-center space-y-2 p-4 text-center">
+        <div
+          className="w-14 h-14 rounded-full border border-white/20 flex items-center justify-center text-white text-lg font-bold uppercase shadow-lg"
+          style={{ backgroundColor: avatarColor(name) }}
+        >
+          {initials(name)}
+        </div>
+        <h4 className="text-xs font-semibold text-zinc-200">{name}</h4>
+        <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+          Connected
+        </span>
+        <div className="absolute bottom-2.5 left-2.5 px-2 py-1 rounded-md bg-black/70 backdrop-blur-md border border-zinc-800 text-[10px] text-white font-mono flex items-center gap-1.5 z-10">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span>{name}</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-full min-h-[160px] rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+      <video ref={vRef} autoPlay playsInline className="w-full h-full object-cover rounded-xl" />
+      <div className="absolute bottom-2.5 left-2.5 px-2 py-1 rounded-md bg-black/70 backdrop-blur-md border border-zinc-800 text-[10px] text-white font-mono flex items-center gap-1.5 z-10">
+        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+        <span>{name}</span>
+      </div>
+    </div>
+  );
+});
+
 /* ─── Main Page ─────────────────────────────────────────────────────────────── */
 export default function LiveMeetingPage() {
   /* meeting state */
@@ -48,7 +132,6 @@ export default function LiveMeetingPage() {
   /* camera & webcam state */
   const [camOn, setCamOn] = useState(true);
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
 
   /* transcript + insights */
@@ -72,15 +155,12 @@ export default function LiveMeetingPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const prevTranscriptCountRef = useRef(0);
 
-  const setVideoRef = useCallback((node: HTMLVideoElement | null) => {
-    videoRef.current = node;
-    if (node && mediaStreamRef.current) {
-      node.srcObject = mediaStreamRef.current;
-      node.play().catch(() => {});
-    }
-  }, []);
-
   const startCamera = useCallback(async () => {
+    if (mediaStreamRef.current && mediaStreamRef.current.getVideoTracks().some(t => t.readyState === 'live' && t.enabled)) {
+      setMediaStream(mediaStreamRef.current);
+      setCamOn(true);
+      return;
+    }
     try {
       let stream: MediaStream;
       try {
@@ -90,13 +170,10 @@ export default function LiveMeetingPage() {
       }
       mediaStreamRef.current = stream;
       setMediaStream(stream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(() => {});
-      }
       setCamOn(true);
     } catch (err: any) {
       console.warn('Camera access notice:', err?.message || err);
+      setCamOn(false);
     }
   }, []);
 
@@ -106,9 +183,6 @@ export default function LiveMeetingPage() {
       mediaStreamRef.current = null;
     }
     setMediaStream(null);
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
     setCamOn(false);
   }, []);
 
@@ -181,19 +255,19 @@ export default function LiveMeetingPage() {
         if (!isMounted || !data) return;
 
         if (Array.isArray(data.transcriptEntries) && data.transcriptEntries.length > 0) {
-          setTranscript(data.transcriptEntries);
+          setTranscript(prev => prev.length === data.transcriptEntries.length ? prev : data.transcriptEntries);
         }
         if (data.insights) {
-          setInsights(data.insights);
+          setInsights(prev => JSON.stringify(prev) === JSON.stringify(data.insights) ? prev : data.insights);
         }
         if (Array.isArray(data.participants) && data.participants.length > 0) {
-          setParticipants(data.participants);
+          setParticipants(prev => JSON.stringify(prev) === JSON.stringify(data.participants) ? prev : data.participants);
         }
         if (data.title && data.title !== 'Live AI Meeting') {
-          setTitle(data.title);
+          setTitle(prev => prev === data.title ? prev : data.title);
         }
         if (data.status === 'live' || data.status === 'ended') {
-          setMeetingStatus(data.status);
+          setMeetingStatus(prev => prev === data.status ? prev : data.status);
         }
       } catch (err) {
         /* ignore polling errors */
@@ -231,9 +305,10 @@ export default function LiveMeetingPage() {
             if (!currentList.includes(hostName) && hostName !== 'You') {
               currentList.unshift(hostName);
             }
-            setParticipants(Array.from(new Set(currentList)));
+            const nextList = Array.from(new Set(currentList));
+            setParticipants(prev => JSON.stringify(prev) === JSON.stringify(nextList) ? prev : nextList);
           }
-          if (data.meeting.title) setTitle(data.meeting.title);
+          if (data.meeting.title) setTitle(prev => prev === data.meeting.title ? prev : data.meeting.title);
         }
       } catch (err) {
         console.warn('Room sync error:', err);
@@ -344,12 +419,10 @@ export default function LiveMeetingPage() {
   const isLive = meetingStatus === 'live';
 
   useEffect(() => {
-    if (isLive) {
+    if (camOn) {
       startCamera();
-    } else {
-      stopCamera();
     }
-  }, [isLive, startCamera, stopCamera]);
+  }, [camOn, startCamera]);
 
   /* ─── Actions ───────────────────────────────────────────────────────────── */
   const createMeeting = async () => {
@@ -747,82 +820,32 @@ export default function LiveMeetingPage() {
             </div>
 
             {/* Multi-Participant WebRTC Video Grid Container */}
-            <div className={`w-full aspect-video rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 p-2 grid gap-2 shadow-2xl ${
-              participants.length > 2 ? 'grid-cols-2 grid-rows-2' : participants.length === 2 ? 'grid-cols-2' : 'grid-cols-1'
-            }`}>
-              {participants.length === 0 ? (
-                <div className="relative w-full h-full rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 flex flex-col items-center justify-center space-y-3 p-6 text-center">
-                  {camOn ? (
-                    <video
-                      ref={setVideoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-full object-cover rounded-xl"
-                    />
-                  ) : (
-                    <>
-                      <div className="w-16 h-16 rounded-full bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 text-xl font-bold">
-                        {initials(hostName)}
-                      </div>
-                      <h3 className="text-sm font-bold text-white">{hostName}</h3>
-                    </>
-                  )}
-                  <div className="absolute bottom-3 left-3 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md border border-zinc-800 text-[11px] text-white font-mono flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>{hostName} (You)</span>
-                  </div>
-                </div>
-              ) : (
-                participants.map((pName) => {
-                  const isSelf = pName.toLowerCase() === hostName.toLowerCase() || pName === 'You';
-                  return (
-                    <div key={pName} className="relative w-full h-full min-h-[160px] rounded-xl overflow-hidden bg-zinc-900/90 border border-zinc-800/80 flex items-center justify-center">
-                      {isSelf && camOn ? (
-                        <video
-                          ref={setVideoRef}
-                          autoPlay
-                          playsInline
-                          muted
-                          className="w-full h-full object-cover rounded-xl"
-                        />
-                      ) : remoteStreams[pName] ? (
-                        <video
-                          ref={(node) => {
-                            if (node && remoteStreams[pName]) {
-                              node.srcObject = remoteStreams[pName];
-                              node.play().catch(() => {});
-                            }
-                          }}
-                          autoPlay
-                          playsInline
-                          className="w-full h-full object-cover rounded-xl"
-                        />
-                      ) : (
-                        <div className="flex flex-col items-center justify-center space-y-2 text-center p-4">
-                          <div
-                            className="w-14 h-14 rounded-full border border-white/20 flex items-center justify-center text-white text-lg font-bold uppercase shadow-lg"
-                            style={{ backgroundColor: avatarColor(pName) }}
-                          >
-                            {initials(pName)}
-                          </div>
-                          <h4 className="text-xs font-semibold text-zinc-200">{pName}</h4>
-                          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                            WebRTC Stream Connected
-                          </span>
-                        </div>
-                      )}
+            {(() => {
+              const isLocalUser = (name: string) => {
+                if (!name) return true;
+                const n = name.trim().toLowerCase();
+                const h = hostName.trim().toLowerCase();
+                return n === h || n === 'you' || n === 'host';
+              };
+              const remoteParticipants = participants.filter(p => !isLocalUser(p));
+              const gridLayoutClass = remoteParticipants.length >= 3
+                ? 'grid-cols-2 grid-rows-2'
+                : remoteParticipants.length >= 1
+                  ? 'grid-cols-2'
+                  : 'grid-cols-1';
 
-                      {/* Participant Badge */}
-                      <div className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded-md bg-black/70 backdrop-blur-md border border-zinc-800 text-[10px] text-white font-mono flex items-center gap-1.5 z-10">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        <span>{pName} {isSelf ? '(You)' : ''}</span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+              return (
+                <div className={`w-full aspect-video rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 p-2 grid gap-2 shadow-2xl ${gridLayoutClass}`}>
+                  {/* Permanent Local User Tile */}
+                  <LocalVideoTile key="local-user-tile" stream={mediaStream} camOn={camOn} name={hostName} />
+
+                  {/* Remote Participants Only */}
+                  {remoteParticipants.map((pName) => (
+                    <RemoteVideoTile key={`remote-${pName}`} stream={remoteStreams[pName]} name={pName} />
+                  ))}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Side Drawer: Live Transcript & Real-Time Intelligence */}
