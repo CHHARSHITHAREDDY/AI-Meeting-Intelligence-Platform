@@ -497,6 +497,10 @@
           Click ▶ Start to begin live audio recording.
         </div>
       </div>
+      <div class="manual-input-row" style="display: flex; gap: 6px; margin-top: 8px; flex-shrink: 0;">
+        <input id="manualInput" class="manual-input" placeholder="Type or speak a line..." style="flex: 1; background: #12172A; border: 1px solid #232B45; color: #f8fafc; font-size: 10.5px; padding: 5px 8px; border-radius: 6px; outline: none; font-family: inherit;" />
+        <button id="manualSendBtn" class="manual-send-btn" style="background: linear-gradient(135deg, #6366F1, #06B6D4); border: none; color: #fff; font-size: 10.5px; font-weight: 700; padding: 5px 12px; border-radius: 6px; cursor: pointer;">Send</button>
+      </div>
     </div>
 
     <!-- Insights Section -->
@@ -564,6 +568,25 @@
   const chatMessages = shadow.getElementById('chatMessages');
   const chatInput = shadow.getElementById('chatInput');
   const chatSendBtn = shadow.getElementById('chatSendBtn');
+
+  const manualInput = shadow.getElementById('manualInput');
+  const manualSendBtn = shadow.getElementById('manualSendBtn');
+
+  function handleManualSend() {
+    const text = manualInput ? manualInput.value.trim() : '';
+    if (!text) return;
+    const speaker = (speakerNameInput ? speakerNameInput.value.trim() : '') || 'You';
+    appendTranscriptLine(speaker, text, false);
+    pushTranscriptToBackend(speaker, text);
+    if (manualInput) manualInput.value = '';
+  }
+
+  if (manualSendBtn) manualSendBtn.addEventListener('click', handleManualSend);
+  if (manualInput) {
+    manualInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleManualSend();
+    });
+  }
 
   let selectedAudioSource = 'mic'; // 'mic' | 'comp' | 'both'
 

@@ -1,7 +1,7 @@
-// Enable side panel on extension icon click
+// Disable auto-opening side panel on extension icon click so action opens popup/widget (Image 2)
 if (typeof chrome !== 'undefined' && chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
   chrome.sidePanel
-    .setPanelBehavior({ openPanelOnActionClick: true })
+    .setPanelBehavior({ openPanelOnActionClick: false })
     .catch((error) => console.log('[Weave Extension] Side panel setup notice:', error?.message || error));
 }
 
@@ -51,11 +51,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     return true; // Keep the message channel open for the async sendResponse above.
   }
 
-  // CUE_API_BINARY: used for the audio-chunk transcription pipeline. The
-  // content script decodes/resamples audio to a 16kHz mono WAV ArrayBuffer
-  // client-side (browsers can decode their own MediaRecorder output; the
-  // server has no ffmpeg/webm decoder), base64-encodes it for message-passing,
-  // and we forward the raw bytes to the backend as application/octet-stream.
+  // CUE_API_BINARY: used for the audio-chunk transcription pipeline.
   const { path, base64 } = request;
   (async () => {
     try {
