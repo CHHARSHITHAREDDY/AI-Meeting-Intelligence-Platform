@@ -45,38 +45,49 @@ export async function transcribeAudio(audioInput: Buffer | Float32Array, fileNam
       // Step 1: Save raw uploaded media buffer to disk
       fs.writeFileSync(tempInputPath, audioInput);
 
-      // Step 2: Extract audio track to 16kHz 16-bit mono PCM WAV using FFmpeg
-      const ffmpegPath = getFFmpegExecutablePath();
-      if (ffmpegPath) {
-        try {
-          console.log(`[FFmpeg Pipeline] Converting media to 16kHz 16-bit mono PCM WAV using binary: ${ffmpegPath}...`);
-          const ffmpegCmd = `"${ffmpegPath}" -y -i "${tempInputPath}" -vn -acodec pcm_s16le -ar 16000 -ac 1 "${tempWavPath}"`;
-          execSync(ffmpegCmd, {
-            stdio: ['ignore', 'ignore', 'pipe'],
-            timeout: 180000,
-          });
+      // If the input is already a WAV file (extension chunk pipeline sends 16kHz mono WAV),
+      // copy it directly to tempWavPath and skip FFmpeg entirely — no conversion needed.
+      const isInputWav = audioInput.length >= 12 &&
+        audioInput.toString('ascii', 0, 4) === 'RIFF' &&
+        audioInput.toString('ascii', 8, 12) === 'WAVE';
 
-          if (fs.existsSync(tempWavPath) && fs.statSync(tempWavPath).size > 44) {
-            console.log('[FFmpeg Pipeline] WAV file created successfully. Extracting PCM audio samples...');
-            const wavBuffer = fs.readFileSync(tempWavPath);
-            audioSamples = parseWav(wavBuffer);
+      if (isInputWav) {
+        fs.copyFileSync(tempInputPath, tempWavPath);
+        console.log('[Whisper Pipeline] Input is already a WAV — skipped FFmpeg conversion.');
+        audioSamples = parseWav(audioInput);
+      } else {
+        // Step 2: Extract audio track to 16kHz 16-bit mono PCM WAV using FFmpeg
+        const ffmpegPath = getFFmpegExecutablePath();
+        if (ffmpegPath) {
+          try {
+            console.log(`[FFmpeg Pipeline] Converting media to 16kHz 16-bit mono PCM WAV using binary: ${ffmpegPath}...`);
+            const ffmpegCmd = `"${ffmpegPath}" -y -i "${tempInputPath}" -vn -acodec pcm_s16le -ar 16000 -ac 1 "${tempWavPath}"`;
+            execSync(ffmpegCmd, {
+              stdio: ['ignore', 'ignore', 'pipe'],
+              timeout: 180000,
+            });
+
+            if (fs.existsSync(tempWavPath) && fs.statSync(tempWavPath).size > 44) {
+              console.log('[FFmpeg Pipeline] WAV file created successfully. Extracting PCM audio samples...');
+              const wavBuffer = fs.readFileSync(tempWavPath);
+              audioSamples = parseWav(wavBuffer);
+            }
+          } catch (ffmpegErr: any) {
+            console.warn('[FFmpeg Pipeline] FFmpeg conversion warning:', ffmpegErr.message);
           }
-        } catch (ffmpegErr: any) {
-          console.warn('[FFmpeg Pipeline] FFmpeg conversion warning:', ffmpegErr.message);
         }
-      }
 
-      // Step 3: Direct WAV input handling if FFmpeg was skipped
-      if (!audioSamples) {
-        const isWav = audioInput.toString('ascii', 0, 4) === 'RIFF' && audioInput.toString('ascii', 8, 12) === 'WAVE';
-        if (isWav) {
-          console.log('[Whisper Pipeline] Direct WAV file detected. Parsing PCM samples...');
-          audioSamples = parseWav(audioInput);
+        // Step 3: Direct WAV input handling if FFmpeg was skipped
+        if (!audioSamples) {
+          if (isInputWav) {
+            console.log('[Whisper Pipeline] Direct WAV file detected. Parsing PCM samples...');
+            audioSamples = parseWav(audioInput);
+          }
         }
       }
     }
 
-    // Step 4: Groq / OpenAI Whisper API call if key is available
+    // Step 4a: Groq / OpenAI Whisper API call if key is available
     const groqApiKey = process.env.GROQ_API_KEY;
     const openaiApiKey = process.env.OPENAI_API_KEY;
 
@@ -85,7 +96,7 @@ export async function transcribeAudio(audioInput: Buffer | Float32Array, fileNam
         try {
           const isGroq = groqApiKey && groqApiKey.trim() !== '';
           const apiKey = isGroq ? groqApiKey : openaiApiKey;
-          const apiEndpoint = isGroq 
+          const apiEndpoint = isGroq
             ? 'https://api.groq.com/openai/v1/audio/transcriptions'
             : 'https://api.openai.com/v1/audio/transcriptions';
           const modelName = isGroq ? 'whisper-large-v3-turbo' : 'whisper-1';
@@ -115,6 +126,43 @@ export async function transcribeAudio(audioInput: Buffer | Float32Array, fileNam
           }
         } catch (apiErr: any) {
           console.warn('[Whisper API] Cloud Whisper API call failed:', apiErr.message);
+        }
+      }
+    }
+
+    // Step 4b: NVIDIA Parakeet-CTC ASR via NVIDIA NIM (uses existing NVIDIA_API_KEY)
+    const nvidiaApiKey = process.env.NVIDIA_API_KEY;
+    if (nvidiaApiKey && nvidiaApiKey.trim() !== '') {
+      // Use the WAV file on disk, or fall back to the original input buffer
+      const wavSource = fs.existsSync(tempWavPath) ? tempWavPath : tempInputPath;
+      if (fs.existsSync(wavSource)) {
+        try {
+          console.log('[NVIDIA ASR] Sending WAV to NVIDIA Parakeet-CTC ASR...');
+          const wavBuf = fs.readFileSync(wavSource);
+          const formData = new FormData();
+          const blob = new Blob([new Uint8Array(wavBuf)], { type: 'audio/wav' });
+          formData.append('audio', blob, 'audio.wav');
+          formData.append('model', 'nvidia/parakeet-ctc-1.1b');
+          formData.append('response_format', 'text');
+
+          const res = await fetch('https://ai.api.nvidia.com/v1/audio/transcriptions', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${nvidiaApiKey}` },
+            body: formData,
+          });
+
+          if (res.ok) {
+            const rawText = await res.text();
+            if (rawText && rawText.trim().length > 0) {
+              console.log('[NVIDIA ASR] Parakeet-CTC transcription completed!');
+              return rawText.trim();
+            }
+          } else {
+            const errText = await res.text();
+            console.warn(`[NVIDIA ASR] API error ${res.status}:`, errText);
+          }
+        } catch (nvidiaErr: any) {
+          console.warn('[NVIDIA ASR] NVIDIA Parakeet ASR call failed:', nvidiaErr.message);
         }
       }
     }
