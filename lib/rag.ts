@@ -244,8 +244,29 @@ ${contextSnippet}
 Recent Conversation History:
 ${memoryText}`;
 
+  const nvidiaApiKey = process.env.NVIDIA_API_KEY;
   const llamaApiKey = process.env.LLAMA_API_KEY;
   const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+
+  // 1. Try NVIDIA Nemotron / NIM API
+  if (nvidiaApiKey && nvidiaApiKey.trim() !== '') {
+    try {
+      const client = new OpenAI({ apiKey: nvidiaApiKey, baseURL: 'https://integrate.api.nvidia.com/v1' });
+      const completion = await client.chat.completions.create({
+        model: 'meta/llama-3.1-70b-instruct',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: query }
+        ],
+        max_tokens: 800,
+        temperature: 0.2,
+      });
+      const responseText = completion.choices[0]?.message?.content || '';
+      if (responseText.trim() !== '') return responseText;
+    } catch (err: any) {
+      console.warn('[RAG Engine] NVIDIA Nemotron API notice:', err.message);
+    }
+  }
 
   // 1. Try Llama API
   if (llamaApiKey && llamaApiKey !== 'YOUR_LLAMA_API_KEY' && llamaApiKey.trim() !== '') {

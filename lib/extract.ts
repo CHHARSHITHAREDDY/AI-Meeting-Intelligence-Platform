@@ -1,3 +1,4 @@
+import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { MeetingAnalysis } from './db';
 import { FinalMeetingSummaries } from './liveMeeting';
@@ -58,13 +59,37 @@ function parseJsonResponse(text: string): any | null {
 }
 
 /**
- * Shared single-call structured extraction (LlamaCloud -> Anthropic), used by
- * the type-specific extractors below so each one only needs its own
- * prompt+schema and heuristic fallback, not another copy of the API fallback
- * chain. LlamaCloud is tried first because it's the only backend that
- * actually works with the configured LLAMA_API_KEY (see lib/llamaCloud.ts).
+ * Shared single-call structured extraction (NVIDIA Nemotron -> LlamaCloud -> Anthropic), used by
+ * the type-specific extractors below.
  */
 async function runStructuredExtraction(transcript: string, systemPrompt: string, schema: object): Promise<any | null> {
+  const nvidiaApiKey = process.env.NVIDIA_API_KEY;
+  if (nvidiaApiKey && nvidiaApiKey.trim() !== '') {
+    try {
+      console.log('[Extract Insights] Using NVIDIA Nemotron / NIM API for structured extraction...');
+      const nvidiaClient = new OpenAI({
+        apiKey: nvidiaApiKey,
+        baseURL: 'https://integrate.api.nvidia.com/v1',
+      });
+
+      const response = await nvidiaClient.chat.completions.create({
+        model: 'meta/llama-3.1-70b-instruct',
+        temperature: 0.2,
+        max_tokens: 3000,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Transcript:\n\n${transcript}` },
+        ],
+      });
+
+      const text = response.choices[0]?.message?.content || '';
+      const parsed = parseJsonResponse(text);
+      if (parsed) return parsed;
+    } catch (err: any) {
+      console.warn('[Extract Insights] NVIDIA Nemotron API notice:', err.message);
+    }
+  }
+
   const llamaResult = await runLlamaCloudExtraction(transcript, schema);
   if (llamaResult) return llamaResult;
 
@@ -368,6 +393,11 @@ const MEETING_SCHEMA = {
 };
 
 export async function extractMeetingInsights(transcript: string): Promise<MeetingAnalysis> {
+<<<<<<< HEAD
+=======
+  const nvidiaApiKey = process.env.NVIDIA_API_KEY;
+  const llamaApiKey = process.env.LLAMA_API_KEY;
+>>>>>>> 96777e4 (feat: add Google-style floating interactive media dock, animated badges, and Nemotron AI integration)
   const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
 
   const systemPrompt = `You are a professional meeting intelligence analyst.
@@ -415,6 +445,7 @@ You must respond with ONLY a valid, parseable JSON object matching this schema:
 
 Ensure all JSON keys and values are properly formatted. Do not include any text before or after the JSON.`;
 
+<<<<<<< HEAD
   // 1. LlamaCloud Extract — the only AI backend that actually works with the
   // configured LLAMA_API_KEY (see lib/llamaCloud.ts). An earlier version of
   // this function called api.llama-api.com with this key, which always
@@ -426,6 +457,258 @@ Ensure all JSON keys and values are properly formatted. Do not include any text 
   if (raw) {
     console.log('[Extract Insights] LlamaCloud extraction succeeded.');
     return normalizeMeetingAnalysis(raw);
+=======
+  // 1. Try NVIDIA Nemotron / NIM API first if key is present
+  if (nvidiaApiKey && nvidiaApiKey.trim() !== '') {
+    try {
+      console.log('[Extract Insights] Performing structured extraction using NVIDIA Nemotron / NIM API...');
+      const nvidiaClient = new OpenAI({
+        apiKey: nvidiaApiKey,
+        baseURL: 'https://integrate.api.nvidia.com/v1',
+      });
+
+      const response = await nvidiaClient.chat.completions.create({
+        model: 'meta/llama-3.1-70b-instruct',
+        temperature: 0.2,
+        max_tokens: 3000,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Here is the meeting transcript:\n\n${transcript}` },
+        ],
+      });
+
+      const text = response.choices[0]?.message?.content || '';
+      let cleanJsonText = text.trim();
+      if (cleanJsonText.startsWith('```json')) cleanJsonText = cleanJsonText.slice(7);
+      else if (cleanJsonText.startsWith('```')) cleanJsonText = cleanJsonText.slice(3);
+      if (cleanJsonText.endsWith('```')) cleanJsonText = cleanJsonText.slice(0, -3);
+      cleanJsonText = cleanJsonText.trim();
+
+      const startIdx = cleanJsonText.indexOf('{');
+      const endIdx = cleanJsonText.lastIndexOf('}');
+      if (startIdx !== -1 && endIdx !== -1) {
+        cleanJsonText = cleanJsonText.substring(startIdx, endIdx + 1);
+      }
+
+      const parsed: MeetingAnalysis = JSON.parse(cleanJsonText);
+      if (parsed.decisions) {
+        parsed.decisions = parsed.decisions.map((d, i) => ({ ...d, id: d.id || `dec-${i + 1}` }));
+      } else {
+        parsed.decisions = [];
+      }
+      if (parsed.actionItems) {
+        parsed.actionItems = parsed.actionItems.map((a, i) => ({ ...a, id: a.id || `act-${i + 1}`, status: a.status || 'pending' }));
+      } else {
+        parsed.actionItems = [];
+      }
+      if (parsed.risks) {
+        parsed.risks = parsed.risks.map((r, i) => ({ ...r, id: r.id || `risk-${i + 1}` }));
+      } else {
+        parsed.risks = [];
+      }
+      if (parsed.notes) {
+        parsed.notes = parsed.notes.map(n => typeof n === 'string' ? n : JSON.stringify(n));
+      } else {
+        parsed.notes = [];
+      }
+
+      console.log('[Extract Insights] NVIDIA Nemotron extraction succeeded!');
+      return parsed;
+    } catch (err: any) {
+      console.warn('[Extract Insights] NVIDIA Nemotron API error, trying next provider:', err.message);
+    }
+  }
+
+  // 1. Try LlamaCloud Extraction API first if key is present
+  if (llamaApiKey && llamaApiKey !== 'YOUR_LLAMA_API_KEY' && llamaApiKey.trim() !== '') {
+    try {
+      console.log('[Extract Insights] Performing structured extraction using LlamaCloud API...');
+      
+      // Step A: Fetch project ID dynamically
+      let projectId = 'f8c2f134-1828-4029-b3a5-778e2b70f421'; // Default project fallback
+      try {
+        console.log('[Extract Insights] Fetching LlamaCloud projects...');
+        const projRes = await fetch('https://api.cloud.llamaindex.ai/api/v1/projects', {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${llamaApiKey}` }
+        });
+        if (projRes.ok) {
+          const projects = await projRes.json();
+          if (projects && projects.length > 0) {
+            projectId = projects[0].id;
+            console.log('[Extract Insights] Found project ID:', projectId);
+          }
+        }
+      } catch (err: any) {
+        console.warn('[Extract Insights] Failed to fetch projects list, using default project ID:', err.message);
+      }
+
+      // Step B: Upload transcript text file
+      console.log('[Extract Insights] Uploading transcript to LlamaCloud...');
+      const formData = new FormData();
+      const blob = new Blob([transcript], { type: 'text/plain' });
+      formData.append('file', blob, 'transcript.txt');
+      formData.append('purpose', 'extract');
+
+      const uploadRes = await fetch('https://api.cloud.llamaindex.ai/api/v1/beta/files', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${llamaApiKey}` },
+        body: formData
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error(`Upload failed: ${uploadRes.status} - ${await uploadRes.text()}`);
+      }
+
+      const uploadData = await uploadRes.json();
+      const fileId = uploadData.id;
+      console.log('[Extract Insights] File uploaded successfully. File ID:', fileId);
+
+      // Wait a short moment to ensure registration on LlamaCloud
+      await new Promise(r => setTimeout(r, 1000));
+
+      // Step C: Trigger structured data extraction job
+      console.log('[Extract Insights] Submitting extraction job...');
+      const extractBody = {
+        file_input: fileId,
+        configuration: {
+          tier: 'agentic',
+          version: '2026-03-31',
+          extraction_target: 'per_doc',
+          data_schema: {
+            type: 'object',
+            properties: {
+              summary: {
+                type: 'string',
+                description: 'An executive summary of the meeting, high-level overview of key topics and outcomes (2-3 sentences).'
+              },
+              decisions: {
+                type: 'array',
+                description: 'List of decisions reached in the meeting.',
+                items: {
+                  type: 'object',
+                  properties: {
+                    decision: { type: 'string', description: 'The decision made.' },
+                    decider: { type: 'string', description: 'Who made the decision.' },
+                    context: { type: 'string', description: 'Context or reasoning behind the decision.' }
+                  },
+                  required: ['decision', 'decider', 'context']
+                }
+              },
+              actionItems: {
+                type: 'array',
+                description: 'List of action items or tasks assigned to people.',
+                items: {
+                  type: 'object',
+                  properties: {
+                    task: { type: 'string', description: 'The specific task description.' },
+                    assignee: { type: 'string', description: 'Who is responsible for the task.' },
+                    dueDate: { type: 'string', description: 'Due date in YYYY-MM-DD format (estimate if not explicitly stated).' }
+                  },
+                  required: ['task', 'assignee', 'dueDate']
+                }
+              },
+              risks: {
+                type: 'array',
+                description: 'List of risks or warnings discussed.',
+                items: {
+                  type: 'object',
+                  properties: {
+                    risk: { type: 'string', description: 'Description of the risk identified.' },
+                    impact: { type: 'string', enum: ['low', 'medium', 'high'], description: 'Impact level of the risk.' },
+                    mitigation: { type: 'string', description: 'How the risk will be mitigated or resolved.' }
+                  },
+                  required: ['risk', 'impact', 'mitigation']
+                }
+              },
+              notes: {
+                type: 'array',
+                description: 'List of important key notes, warnings, guidelines, or deadlines mentioned.',
+                items: { type: 'string' }
+              }
+            },
+            required: ['summary', 'decisions', 'actionItems', 'risks', 'notes']
+          }
+        }
+      };
+
+      const extractRes = await fetch(`https://api.cloud.llamaindex.ai/api/v2/extract?project_id=${projectId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${llamaApiKey}`
+        },
+        body: JSON.stringify(extractBody)
+      });
+
+      if (!extractRes.ok) {
+        throw new Error(`Job submission failed: ${extractRes.status} - ${await extractRes.text()}`);
+      }
+
+      const extractJob = await extractRes.json();
+      const jobId = extractJob.id;
+      console.log('[Extract Insights] Job submitted successfully. Job ID:', jobId);
+
+      // Step D: Poll for extraction results
+      let attempts = 0;
+      let extractResult: any = null;
+
+      while (attempts < 15) {
+        await new Promise(r => setTimeout(r, 2000));
+        console.log(`[Extract Insights] Polling LlamaCloud job status (attempt ${attempts + 1})...`);
+        
+        const statusRes = await fetch(`https://api.cloud.llamaindex.ai/api/v2/extract/${jobId}`, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${llamaApiKey}` }
+        });
+
+        if (!statusRes.ok) {
+          throw new Error(`Job status check failed: ${statusRes.status} - ${await statusRes.text()}`);
+        }
+
+        const statusData = await statusRes.json();
+        const status = statusData.status?.toUpperCase();
+
+        if (status === 'COMPLETED' || status === 'SUCCESS') {
+          extractResult = statusData.extract_result;
+          console.log('[Extract Insights] Structured extraction completed successfully!');
+          break;
+        } else if (status === 'FAILED') {
+          throw new Error(`LlamaCloud extraction job failed on server side: ${statusData.error_message}`);
+        }
+        attempts++;
+      }
+
+      if (extractResult) {
+        const parsed: MeetingAnalysis = {
+          summary: extractResult.summary || 'Summary not available.',
+          decisions: (extractResult.decisions || []).map((d: any, idx: number) => ({
+            id: d.id || `dec-${idx + 1}`,
+            decision: d.decision,
+            decider: d.decider || 'Team',
+            context: d.context || 'Aligned on during sync.'
+          })),
+          actionItems: (extractResult.actionItems || []).map((a: any, idx: number) => ({
+            id: a.id || `act-${idx + 1}`,
+            task: a.task,
+            assignee: a.assignee || 'Unassigned',
+            dueDate: a.dueDate || new Date(Date.now() + 7*24*3600*1000).toISOString().split('T')[0],
+            status: a.status || 'pending'
+          })),
+          risks: (extractResult.risks || []).map((r: any, idx: number) => ({
+            id: r.id || `risk-${idx + 1}`,
+            risk: r.risk,
+            impact: r.impact || 'medium',
+            mitigation: r.mitigation || 'Monitor closely.'
+          })),
+          notes: extractResult.notes || []
+        };
+        return parsed;
+      }
+    } catch (err: any) {
+      console.error('[Extract Insights] LlamaCloud extraction pipeline failed:', err.message);
+    }
+>>>>>>> 96777e4 (feat: add Google-style floating interactive media dock, animated badges, and Nemotron AI integration)
   }
   console.warn('[Extract Insights] LlamaCloud extraction unavailable, falling back...');
 
@@ -661,6 +944,11 @@ const FINAL_SUMMARY_SCHEMA = {
 };
 
 export async function generateFinalSummaries(transcript: string): Promise<FinalMeetingSummaries> {
+<<<<<<< HEAD
+=======
+  const nvidiaApiKey = process.env.NVIDIA_API_KEY;
+  const llamaApiKey = process.env.LLAMA_API_KEY;
+>>>>>>> 96777e4 (feat: add Google-style floating interactive media dock, animated badges, and Nemotron AI integration)
   const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
   const trimmed = (transcript || '').trim();
 
@@ -695,9 +983,49 @@ export async function generateFinalSummaries(transcript: string): Promise<FinalM
     return null;
   }
 
+<<<<<<< HEAD
   const llamaResult = await runLlamaCloudExtraction(trimmed, FINAL_SUMMARY_SCHEMA);
   if (llamaResult && llamaResult.executive && llamaResult.technical && llamaResult.minutes) {
     return llamaResult as FinalMeetingSummaries;
+=======
+  if (nvidiaApiKey && nvidiaApiKey.trim() !== '') {
+    try {
+      const client = new OpenAI({ apiKey: nvidiaApiKey, baseURL: 'https://integrate.api.nvidia.com/v1' });
+      const completion = await client.chat.completions.create({
+        model: 'meta/llama-3.1-70b-instruct',
+        messages: [
+          { role: 'system', content: finalSummarySystemPrompt },
+          { role: 'user', content: `Meeting transcript:\n\n${trimmed}` },
+        ],
+        max_tokens: 1200,
+        temperature: 0.2,
+      });
+      const text = completion.choices[0]?.message?.content || '';
+      const parsed = parseFinalSummaryJson(text);
+      if (parsed) return parsed;
+    } catch (err: any) {
+      console.error('[Final Summaries] NVIDIA Nemotron API generation failed:', err.message);
+    }
+  }
+
+  if (llamaApiKey && llamaApiKey !== 'YOUR_LLAMA_API_KEY' && llamaApiKey.trim() !== '') {
+    try {
+      const client = new OpenAI({ apiKey: llamaApiKey, baseURL: 'https://api.llama-api.com' });
+      const completion = await client.chat.completions.create({
+        model: 'llama3.1-70b',
+        messages: [
+          { role: 'system', content: finalSummarySystemPrompt },
+          { role: 'user', content: `Meeting transcript:\n\n${trimmed}` },
+        ],
+        max_tokens: 1200,
+      });
+      const text = completion.choices[0]?.message?.content || '';
+      const parsed = parseFinalSummaryJson(text);
+      if (parsed) return parsed;
+    } catch (err: any) {
+      console.error('[Final Summaries] Llama API generation failed:', err.message);
+    }
+>>>>>>> 96777e4 (feat: add Google-style floating interactive media dock, animated badges, and Nemotron AI integration)
   }
 
   if (anthropicApiKey && anthropicApiKey !== 'YOUR_ANTHROPIC_API_KEY' && anthropicApiKey.trim() !== '') {
