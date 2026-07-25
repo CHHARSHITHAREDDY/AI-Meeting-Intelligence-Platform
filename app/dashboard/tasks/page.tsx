@@ -45,9 +45,10 @@ export default function TasksPage() {
 
         const extractedTasks: TaskItem[] = [];
         meetingsData.forEach(meeting => {
-          if (meeting.status === 'completed' && meeting.analysis?.actionItems) {
+          if ((meeting.status === 'completed' || meeting.status === 'live') && meeting.analysis?.actionItems) {
             meeting.analysis.actionItems.forEach((a, idx) => {
               const itemId = a.id || `act-${idx + 1}`;
+              const taskText = a.task || (a as any).detail || (a as any).title || 'Live Action Item';
 
               // Avatar initials
               const owner = a.assignee || 'Team';
@@ -61,7 +62,7 @@ export default function TasksPage() {
 
               // Priority calculation based on task keywords
               let priority: 'High' | 'Medium' | 'Low' = 'Medium';
-              const lowerTask = a.task.toLowerCase();
+              const lowerTask = taskText.toLowerCase();
               if (
                 lowerTask.includes('critical') || 
                 lowerTask.includes('immediate') || 
@@ -84,7 +85,7 @@ export default function TasksPage() {
                 id: `${meeting.id}-${itemId}`,
                 dbId: itemId,
                 meetingId: meeting.id,
-                task: a.task,
+                task: taskText,
                 assignee: owner,
                 avatarText: avatarText,
                 dueDate: a.dueDate || 'No due date',

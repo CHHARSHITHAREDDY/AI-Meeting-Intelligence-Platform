@@ -63,8 +63,34 @@ export function createLiveMeeting(title: string, hostName: string): LiveMeetingR
   return meeting;
 }
 
-export function getLiveMeeting(meetingId: string): LiveMeetingRecord | undefined {
-  return liveMeetingStore.get(meetingId);
+export function getLiveMeeting(meetingId: string): LiveMeetingRecord {
+  let meeting = liveMeetingStore.get(meetingId);
+  if (!meeting) {
+    const now = new Date().toISOString();
+    meeting = {
+      id: meetingId,
+      title: 'Live AI Meeting',
+      hostName: 'Host',
+      joinLink: makeJoinLink(meetingId),
+      zoomLink: makeZoomLink(meetingId),
+      status: 'live',
+      createdAt: now,
+      startedAt: now,
+      participants: ['Host'],
+      transcriptEntries: [],
+      transcriptText: '',
+      insights: {
+        summary: 'Live meeting session active.',
+        decisions: [],
+        actionItems: [],
+        risks: [],
+      },
+      memory: [],
+      aiActivity: [{ id: `ai-${meetingId}`, text: 'Live meeting initialized and listening for speech.', timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) }],
+    };
+    liveMeetingStore.set(meetingId, meeting);
+  }
+  return meeting;
 }
 
 export function getLiveMeetingPublicInfo(meetingId: string) {

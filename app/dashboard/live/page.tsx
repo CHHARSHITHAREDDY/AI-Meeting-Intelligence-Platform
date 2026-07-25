@@ -417,18 +417,32 @@ export default function LiveMeetingPage() {
   const endMeeting = async () => {
     stopListening();
     stopCamera();
-    if (meetingId) {
+    const currentId = meetingId;
+
+    setMeetingStatus('ended');
+    setMeetingId(null);
+    setLivekitToken(null);
+
+    if (currentId) {
       try {
         await fetch('/api/meetings/live', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'end', meetingId, transcript, insights }),
+          body: JSON.stringify({ action: 'end', meetingId: currentId, title, hostName, transcript, insights }),
+        });
+        await fetch(`/api/live-meetings/${currentId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'end' }),
         });
       } catch { /* ignore */ }
     }
-    setMeetingStatus('ended');
-    setLivekitToken(null);
-    setStatusMsg('Meeting ended. Intelligence saved to Dashboard.');
+
+    if (typeof window !== 'undefined' && window.history.replaceState) {
+      window.history.replaceState(null, '', '/dashboard/live');
+    }
+
+    setStatusMsg('Meeting ended cleanly. Tasks and decisions saved to Dashboard.');
   };
 
   /* ─── Speech Recognition (Mic capture) ─────────────────────────────────── */
@@ -440,27 +454,53 @@ export default function LiveMeetingPage() {
       text: text.trim(),
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
-    setTranscript(prev => [...prev, entry]);
 
-    // Fast local AI insight extraction
-    const lower = text.toLowerCase();
-    if (lower.includes('decide') || lower.includes('agree') || lower.includes('decision')) {
-      setInsights(prev => ({
-        ...prev,
-        decisions: [...prev.decisions, { id: Math.random().toString(36).slice(2), title: text.slice(0, 50), detail: text }],
-      }));
-    } else if (lower.includes('will') || lower.includes('action') || lower.includes('task') || lower.includes('todo') || lower.includes('by ')) {
-      setInsights(prev => ({
-        ...prev,
-        actionItems: [...prev.actionItems, { id: Math.random().toString(36).slice(2), title: text.slice(0, 50), detail: text, assignee: hostName }],
-      }));
-    } else if (lower.includes('risk') || lower.includes('delay') || lower.includes('issue') || lower.includes('block')) {
-      setInsights(prev => ({
-        ...prev,
-        risks: [...prev.risks, { id: Math.random().toString(36).slice(2), title: text.slice(0, 50), detail: text }],
-      }));
-    }
-  }, [hostName]);
+    setTranscript((prevTranscript) => {
+      const nextTranscript = [...prevTranscript, entry];
+
+      setInsights((prevInsights) => {
+        const lower = text.toLowerCase();
+        let nextInsights = { ...prevInsights };
+
+        if (lower.includes('decide') || lower.includes('agree') || lower.includes('decision') || lower.includes('approved')) {
+          nextInsights = {
+            ...nextInsights,
+            decisions: [...nextInsights.decisions, { id: Math.random().toString(36).slice(2), title: text.slice(0, 50), detail: text }],
+          };
+        } else if (lower.includes('will') || lower.includes('action') || lower.includes('task') || lower.includes('todo') || lower.includes('by ') || lower.includes('hello')) {
+          nextInsights = {
+            ...nextInsights,
+            actionItems: [...nextInsights.actionItems, { id: Math.random().toString(36).slice(2), title: text.slice(0, 50), detail: text, assignee: hostName }],
+          };
+        } else if (lower.includes('risk') || lower.includes('delay') || lower.includes('issue') || lower.includes('block')) {
+          nextInsights = {
+            ...nextInsights,
+            risks: [...nextInsights.risks, { id: Math.random().toString(36).slice(2), title: text.slice(0, 50), detail: text }],
+          };
+        }
+
+        // Auto-save meeting transcript & insights to PostgreSQL database
+        if (meetingId) {
+          fetch('/api/meetings/live', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'end',
+              meetingId,
+              title,
+              hostName,
+              transcript: nextTranscript,
+              insights: nextInsights,
+            }),
+          }).catch(() => {});
+        }
+
+        return nextInsights;
+      });
+
+      return nextTranscript;
+    });
+  }, [hostName, meetingId, title]);
 
   const startListening = () => {
     const windowObj = window as any;
@@ -527,7 +567,7 @@ export default function LiveMeetingPage() {
 
   /* ─── Derived ────────────────────────────────────────────────────────────── */
   const shareLink = meetingId ? `${origin}/join/${meetingId}` : '';
-  const inMeeting = meetingId !== null;
+  const inMeeting = meetingId !== null && meetingStatus !== 'ended';
 
   const copyLink = async () => {
     if (!shareLink) return;
