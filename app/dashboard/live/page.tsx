@@ -157,10 +157,34 @@ export default function LiveMeetingPage() {
     }
   }, [transcript]);
 
-  // Auto-scroll transcript
+  // Poll live room participants and room state every 2 seconds
   useEffect(() => {
-    transcriptEnd.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [transcript, interim]);
+    if (!meetingId || meetingStatus === 'ended') return;
+
+    const syncRoom = async () => {
+      try {
+        const res = await fetch(`/api/meetings/live?meetingId=${meetingId}`);
+        const data = await res.json();
+        if (data.success && data.meeting) {
+          if (data.meeting.participants && Array.isArray(data.meeting.participants)) {
+            // Ensure local hostName is included in participant list
+            const currentList = data.meeting.participants;
+            if (!currentList.includes(hostName) && hostName !== 'You') {
+              currentList.unshift(hostName);
+            }
+            setParticipants(Array.from(new Set(currentList)));
+          }
+          if (data.meeting.title) setTitle(data.meeting.title);
+        }
+      } catch (err) {
+        console.warn('Room sync error:', err);
+      }
+    };
+
+    syncRoom();
+    const interval = setInterval(syncRoom, 2000);
+    return () => clearInterval(interval);
+  }, [meetingId, meetingStatus, hostName]);
 
   const isLive = meetingStatus === 'live';
 
@@ -520,31 +544,70 @@ export default function LiveMeetingPage() {
               </button>
             </div>
 
-            {/* LiveKit WebRTC / Local Camera Video Grid Container */}
-            <div className="w-full aspect-video rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 relative shadow-2xl flex flex-col items-center justify-center">
-              {camOn ? (
-                <video
-                  ref={setVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover rounded-2xl"
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center space-y-3 p-6 text-center">
-                  <div className="w-20 h-20 rounded-full bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 text-2xl font-bold">
-                    {initials(hostName)}
+            {/* Multi-Participant WebRTC Video Grid Container */}
+            <div className={`w-full aspect-video rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 p-2 grid gap-2 shadow-2xl ${
+              participants.length > 2 ? 'grid-cols-2 grid-rows-2' : participants.length === 2 ? 'grid-cols-2' : 'grid-cols-1'
+            }`}>
+              {participants.length === 0 ? (
+                <div className="relative w-full h-full rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 flex flex-col items-center justify-center space-y-3 p-6 text-center">
+                  {camOn ? (
+                    <video
+                      ref={setVideoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover rounded-xl"
+                    />
+                  ) : (
+                    <>
+                      <div className="w-16 h-16 rounded-full bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 text-xl font-bold">
+                        {initials(hostName)}
+                      </div>
+                      <h3 className="text-sm font-bold text-white">{hostName}</h3>
+                    </>
+                  )}
+                  <div className="absolute bottom-3 left-3 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md border border-zinc-800 text-[11px] text-white font-mono flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>{hostName} (You)</span>
                   </div>
-                  <h3 className="text-lg font-bold text-white">{hostName}</h3>
-                  <p className="text-xs text-zinc-400 font-mono">Camera Muted · WebRTC Active</p>
                 </div>
-              )}
+              ) : (
+                participants.map((pName) => {
+                  const isSelf = pName.toLowerCase() === hostName.toLowerCase() || pName === 'You';
+                  return (
+                    <div key={pName} className="relative w-full h-full min-h-[160px] rounded-xl overflow-hidden bg-zinc-900/90 border border-zinc-800/80 flex items-center justify-center">
+                      {isSelf && camOn ? (
+                        <video
+                          ref={setVideoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          className="w-full h-full object-cover rounded-xl"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center space-y-2 text-center p-4">
+                          <div
+                            className="w-14 h-14 rounded-full border border-white/20 flex items-center justify-center text-white text-lg font-bold uppercase shadow-lg"
+                            style={{ backgroundColor: avatarColor(pName) }}
+                          >
+                            {initials(pName)}
+                          </div>
+                          <h4 className="text-xs font-semibold text-zinc-200">{pName}</h4>
+                          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                            WebRTC Active
+                          </span>
+                        </div>
+                      )}
 
-              {/* Overlay Participant Badge */}
-              <div className="absolute bottom-4 left-4 px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-zinc-800 text-xs text-white font-mono flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>{hostName} (You)</span>
-              </div>
+                      {/* Participant Badge */}
+                      <div className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded-md bg-black/70 backdrop-blur-md border border-zinc-800 text-[10px] text-white font-mono flex items-center gap-1.5 z-10">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>{pName} {isSelf ? '(You)' : ''}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 

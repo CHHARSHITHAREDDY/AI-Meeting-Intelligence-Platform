@@ -1,41 +1,30 @@
 (function () {
-  const existingHost = document.getElementById('weave-widget-host');
+  const existingHost = document.getElementById('cue-widget-host');
   if (existingHost) {
-    existingHost.style.display = existingHost.style.display === 'none' ? 'block' : 'none';
+    existingHost.style.display = 'block';
     return;
   }
 
   const BACKEND_URL = 'http://localhost:3000';
 
-  // 1. Create Host Element & Shadow DOM (HIDDEN BY DEFAULT - ONLY VISIBLE ON EXPLICIT USER TOGGLE)
+  // 1. Create Host Element & Shadow DOM
   const host = document.createElement('div');
-  host.id = 'weave-widget-host';
+  host.id = 'cue-widget-host';
   host.style.position = 'fixed';
   host.style.top = '20px';
   host.style.right = '20px';
   host.style.zIndex = '2147483647';
-  host.style.width = '420px';
-  host.style.height = '540px';
-  host.style.minWidth = '220px';
-  host.style.minHeight = '70px';
+  host.style.width = '380px';
+  host.style.height = '500px';
+  host.style.minWidth = '190px';
+  host.style.minHeight = '65px';
   host.style.resize = 'both';
   host.style.overflow = 'hidden';
-  host.style.borderRadius = '16px';
-  host.style.display = 'none'; // STRICTLY HIDDEN UNTIL USER CLICKS INJECT IN POPUP
-  host.style.boxShadow = '0 16px 48px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(99, 102, 241, 0.3)';
+  host.style.borderRadius = '14px';
+  host.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(99, 102, 241, 0.3)';
 
   document.body.appendChild(host);
   const shadow = host.attachShadow({ mode: 'open' });
-
-  // Listen for toggle message from popup.js
-  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
-    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-      if (msg.action === 'TOGGLE_WIDGET') {
-        host.style.display = host.style.display === 'none' ? 'block' : 'none';
-        sendResponse({ visible: host.style.display === 'block' });
-      }
-    });
-  }
 
   // 2. Inject Encapsulated Styles
   const style = document.createElement('style');
@@ -697,7 +686,7 @@
     }).then((res) => {
       if (res.ok && res.data && res.data.meeting) {
         meetingId = res.data.meeting.id;
-        callApi(`/api/live-meetings/${meetingId}`, 'PATCH', { action: 'start' }).catch(() => {});
+        callApi(`/api/live-meetings/${meetingId}`, 'PATCH', { action: 'start' }).catch(() => { });
       }
       return meetingId;
     }).catch(() => null);
@@ -1011,7 +1000,7 @@
           setTimeout(() => {
             try {
               if (recognitionInstance) recognitionInstance.start();
-            } catch (_) {}
+            } catch (_) { }
           }, 200);
         }
       };
@@ -1026,7 +1015,7 @@
       if (recognitionWatchdog) clearInterval(recognitionWatchdog);
       recognitionWatchdog = setInterval(() => {
         if (recognitionInstance && !isPaused && !micPermissionDenied) {
-          try { instance.start(); } catch (_) {}
+          try { instance.start(); } catch (_) { }
         }
       }, 5000);
 
@@ -1121,7 +1110,7 @@
             }
           };
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // 3. DOM Subtitle & Caption Element Mutation Observer (Meet/Zoom/Teams/generic)
@@ -1299,7 +1288,7 @@
       tabAudioStream = null;
     }
     if (chunkAudioCtx) {
-      try { chunkAudioCtx.close(); } catch (_) {}
+      try { chunkAudioCtx.close(); } catch (_) { }
       chunkAudioCtx = null;
     }
   }
@@ -1400,11 +1389,11 @@
       videoSyncInterval = null;
     }
     if (recognitionInstance) {
-      try { recognitionInstance.stop(); } catch (_) {}
+      try { recognitionInstance.stop(); } catch (_) { }
       recognitionInstance = null;
     }
     if (captionObserver) {
-      try { captionObserver.disconnect(); } catch (_) {}
+      try { captionObserver.disconnect(); } catch (_) { }
       captionObserver = null;
     }
     stopTabAudioTranscription();
