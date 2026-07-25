@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { MeetingAnalysis } from './db';
+import { FinalMeetingSummaries } from './liveMeeting';
 
 export async function extractMeetingInsights(transcript: string): Promise<MeetingAnalysis> {
   const llamaApiKey = process.env.LLAMA_API_KEY;
@@ -244,7 +246,7 @@ Ensure all JSON keys and values are properly formatted. Do not include any text 
       console.log('[Extract Insights] Falling back to Anthropic (Claude)...');
       const anthropic = new Anthropic({ apiKey: anthropicApiKey });
       const response = await anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20240620',
+        model: 'claude-[#3-5-sonnet-20240620]',
         max_tokens: 3000,
         system: systemPrompt,
         messages: [{ role: 'user', content: `Here is the meeting transcript:\n\n${transcript}` }],
@@ -457,12 +459,132 @@ function localHeuristicParser(transcript: string): MeetingAnalysis {
     nextSteps.push("Follow up on identified meeting milestones in the next team sync.");
   }
 
+  // Unresolved Questions Extraction
+  const unresolvedQuestions: string[] = [];
+  lines.forEach((line) => {
+    const textClean = cleanLine(line);
+    if ((textClean.includes('?') || /^(how|what|who|why|when|where|can we|should we)/i.test(textClean)) && unresolvedQuestions.length < 5) {
+      unresolvedQuestions.push(textClean);
+    }
+  });
+
+  // Speaker Analytics Calculation
+  const speakerMap = new Map<string, number>();
+  let totalWords = 0;
+  lineDetails.forEach(({ speaker, text }) => {
+    const words = text.split(/\s+/).filter(Boolean).length;
+    speakerMap.set(speaker, (speakerMap.get(speaker) || 0) + words);
+    totalWords += words;
+  });
+
+  const speakerAnalytics = Array.from(speakerMap.entries()).map(([name, count]) => ({
+    name,
+    wordCount: count,
+    talkTimePercent: totalWords > 0 ? Math.round((count / totalWords) * 100) : 0
+  })).sort((a, b) => b.talkTimePercent - a.talkTimePercent);
+
+  // Meeting Efficiency Score
+  const efficiencyScore = Math.min(100, Math.max(50, Math.round(70 + decisions.length * 8 + actionItems.length * 5 - risks.length * 3)));
+
   return {
     summary,
     keyDiscussionPoints,
     decisions,
     actionItems,
     risks,
-    nextSteps
+    nextSteps,
+    notes: [],
+    unresolvedQuestions,
+    speakerAnalytics,
+    efficiencyScore
   };
+}
+
+/**
+ * Generates the three end-of-meeting summary variants (Executive Summary,
+ * Technical Summary, Meeting Minutes) from the full transcript. Called once
+ * when a live session ends/playback finishes, not on every incremental update.
+ */
+export async function generateFinalSummaries(transcript: string): Promise<FinalMeetingSummaries> {
+  const llamaApiKey = process.env.LLAMA_API_KEY;
+  const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+  const trimmed = (transcript || '').trim();
+
+  if (!trimmed) {
+    return {
+      executive: 'No transcript was captured for this session.',
+      technical: 'No transcript was captured for this session.',
+      minutes: 'No transcript was captured for this session.',
+    };
+  }
+
+  const finalSummarySystemPrompt = `You are a meeting intelligence analyst. Respond with ONLY a valid JSON object (no markdown fences, no commentary) matching:
+{
+  "executive": "A concise executive summary for leadership/stakeholders: outcomes, decisions, and business impact (3-5 sentences).",
+  "technical": "A technical summary for the engineering/implementation team: architecture, implementation details, technical tradeoffs discussed (3-6 sentences).",
+  "minutes": "Formal meeting minutes: attendees mentioned, agenda topics covered, decisions made, and action items assigned, formatted as a short structured list using \\n for line breaks."
+}`;
+
+  function parseFinalSummaryJson(text: string): FinalMeetingSummaries | null {
+    let clean = text.trim();
+    if (clean.startsWith('```json')) clean = clean.slice(7);
+    else if (clean.startsWith('```')) clean = clean.slice(3);
+    if (clean.endsWith('```')) clean = clean.slice(0, -3);
+    clean = clean.trim();
+    const startIdx = clean.indexOf('{');
+    const endIdx = clean.lastIndexOf('}');
+    if (startIdx !== -1 && endIdx !== -1) clean = clean.substring(startIdx, endIdx + 1);
+    try {
+      const parsed = JSON.parse(clean);
+      if (parsed.executive && parsed.technical && parsed.minutes) return parsed as FinalMeetingSummaries;
+    } catch (_) {}
+    return null;
+  }
+
+  if (llamaApiKey && llamaApiKey !== 'YOUR_LLAMA_API_KEY' && llamaApiKey.trim() !== '') {
+    try {
+      const client = new OpenAI({ apiKey: llamaApiKey, baseURL: 'https://api.llama-api.com' });
+      const completion = await client.chat.completions.create({
+        model: 'llama3.1-70b',
+        messages: [
+          { role: 'system', content: finalSummarySystemPrompt },
+          { role: 'user', content: `Meeting transcript:\n\n${trimmed}` },
+        ],
+        max_tokens: 1200,
+      });
+      const text = completion.choices[0]?.message?.content || '';
+      const parsed = parseFinalSummaryJson(text);
+      if (parsed) return parsed;
+    } catch (err: any) {
+      console.error('[Final Summaries] Llama API generation failed:', err.message);
+    }
+  }
+
+  if (anthropicApiKey && anthropicApiKey !== 'YOUR_ANTHROPIC_API_KEY' && anthropicApiKey.trim() !== '') {
+    try {
+      const anthropic = new Anthropic({ apiKey: anthropicApiKey });
+      const response = await anthropic.messages.create({
+        model: 'claude-3-5-sonnet-20240620',
+        max_tokens: 2000,
+        system: finalSummarySystemPrompt,
+        messages: [{ role: 'user', content: `Meeting transcript:\n\n${trimmed}` }],
+      });
+      const text = response.content[0].type === 'text' ? response.content[0].text : '';
+      const parsed = parseFinalSummaryJson(text);
+      if (parsed) return parsed;
+    } catch (err: any) {
+      console.error('[Final Summaries] Anthropic generation failed:', err.message);
+    }
+  }
+
+  // Offline heuristic fallback - derive the three summaries directly from the transcript text.
+  const sentences = (trimmed.match(/[^.!?]+[.!?]+/g) || [trimmed]).map((s) => s.trim()).filter(Boolean);
+  const lines = trimmed.split('\n').map((l) => l.trim()).filter(Boolean);
+  const speakers = Array.from(new Set(lines.map((l) => l.match(/^\[?\d{0,2}:?\d{0,2}\]?\s*([^:]{1,40}):/)?.[1]?.trim()).filter(Boolean)));
+
+  const executive = `Executive Summary: ${sentences.slice(0, 3).join(' ') || trimmed.slice(0, 240)}`;
+  const technical = `Technical Summary: The discussion covered ${sentences.length} distinct points across ${lines.length || 1} transcript entries. Key technical themes: ${sentences.slice(3, 6).join(' ') || 'general implementation and process discussion.'}`;
+  const minutes = `Meeting Minutes\nAttendees: ${speakers.length > 0 ? speakers.join(', ') : 'Not explicitly identified'}\nTopics Covered:\n${sentences.slice(0, 5).map((s) => `- ${s}`).join('\n') || '- General discussion'}`;
+
+  return { executive, technical, minutes };
 }

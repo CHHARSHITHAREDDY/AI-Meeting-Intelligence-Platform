@@ -74,6 +74,12 @@ export interface Risk {
   mitigation: string;
 }
 
+export interface SpeakerMetric {
+  name: string;
+  talkTimePercent: number;
+  wordCount: number;
+}
+
 export interface MeetingAnalysis {
   summary: string;
   keyDiscussionPoints?: string[];
@@ -84,6 +90,9 @@ export interface MeetingAnalysis {
   notes?: string[];
   chunks?: any[];
   suggestedPrompts?: string[];
+  unresolvedQuestions?: string[];
+  efficiencyScore?: number;
+  speakerAnalytics?: SpeakerMetric[];
 }
 
 export interface Meeting {
@@ -191,4 +200,3 @@ export async function deleteMeeting(id: string, userId: string): Promise<void> {
   await initDb();
   await pool.query('DELETE FROM meetings WHERE id = $1 AND user_id = $2', [id, userId]);
 }
-

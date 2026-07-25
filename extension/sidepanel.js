@@ -12,6 +12,7 @@ let currentMeetingId = null;
 let liveTranscriptLines = [];
 let currentInsights = { summary: '', decisions: [], actionItems: [], risks: [] };
 let activeFilter = 'all';
+let lastFinalKey = '';
 
 const BACKEND_URL = 'http://localhost:3000';
 
@@ -27,15 +28,87 @@ const transcriptFeed = document.getElementById('transcriptFeed');
 const livePulse = document.getElementById('livePulse');
 const insightList = document.getElementById('insightList');
 const audioSource = document.getElementById('audioSource');
+const speakerNameInput = document.getElementById('speakerNameInput');
 const manualInput = document.getElementById('manualInput');
 const sendBtn = document.getElementById('sendBtn');
+const chatTabBtn = document.getElementById('chatTabBtn');
+const chatPanel = document.getElementById('chatPanel');
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const chatSendBtn = document.getElementById('chatSendBtn');
+
+// ─── Backend Bridge (relayed through background.js — see extension/background.js) ───
+function callApi(path, method, body) {
+  return new Promise((resolve) => {
+    if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+      resolve({ ok: false, error: 'chrome.runtime unavailable' });
+      return;
+    }
+    try {
+      chrome.runtime.sendMessage({ type: 'CUE_API', path, method, body }, (response) => {
+        if (chrome.runtime.lastError) { resolve({ ok: false, error: chrome.runtime.lastError.message }); return; }
+        resolve(response || { ok: false });
+      });
+    } catch (err) {
+      resolve({ ok: false, error: err?.message || String(err) });
+    }
+  });
+}
+
+let apiQueue = Promise.resolve();
+function enqueue(fn) {
+  apiQueue = apiQueue.then(fn, fn);
+  return apiQueue;
+}
+
+let meetingCreationPromise = null;
+function ensureLiveMeeting() {
+  if (currentMeetingId) return Promise.resolve(currentMeetingId);
+  if (meetingCreationPromise) return meetingCreationPromise;
+
+  meetingCreationPromise = callApi('/api/live-meetings', 'POST', {
+    title: `Cue Sidepanel Session ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+    hostName: (speakerNameInput?.value || 'You').trim() || 'You',
+  }).then((res) => {
+    if (res.ok && res.data && res.data.meeting) {
+      currentMeetingId = res.data.meeting.id;
+      callApi(`/api/live-meetings/${currentMeetingId}`, 'PATCH', { action: 'start' }).catch(() => {});
+    }
+    return currentMeetingId;
+  }).catch(() => null);
+
+  return meetingCreationPromise;
+}
+
+function pushTranscriptToBackend(speaker, text) {
+  enqueue(async () => {
+    const id = await ensureLiveMeeting();
+    if (!id) return;
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const res = await callApi(`/api/live-meetings/${id}`, 'POST', { text, speaker, timestamp });
+    if (res.ok && res.data && res.data.meeting) {
+      currentInsights = res.data.meeting.insights;
+      renderInsights();
+    }
+  });
+}
 
 // Tab Filter Buttons
 document.querySelectorAll('.tab-btn').forEach((btn) => {
   btn.addEventListener('click', (e) => {
+    const tab = e.currentTarget.getAttribute('data-tab') || 'all';
+    if (tab === 'chat') {
+      document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+      e.currentTarget.classList.add('active');
+      insightList.style.display = 'none';
+      chatPanel.classList.add('active');
+      return;
+    }
     document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
     e.currentTarget.classList.add('active');
-    activeFilter = e.currentTarget.getAttribute('data-tab') || 'all';
+    insightList.style.display = 'flex';
+    chatPanel.classList.remove('active');
+    activeFilter = tab;
     renderInsights();
   });
 });
@@ -65,15 +138,15 @@ function stopTimer() {
   timerInterval = null;
 }
 
-// Append transcript item to UI feed
+// Append transcript item to UI feed (deduped + timestamped)
 function appendTranscriptUI(speaker, text, isInterim = false) {
+  if (!text || !text.trim()) return;
+  text = text.trim();
   const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  // Remove placeholder info if present
   const placeholder = transcriptFeed.querySelector('.placeholder-info');
   if (placeholder) placeholder.remove();
 
-  // Handle interim live line
   let interimEl = transcriptFeed.querySelector('.interim-line');
   if (isInterim) {
     if (!interimEl) {
@@ -93,8 +166,12 @@ function appendTranscriptUI(speaker, text, isInterim = false) {
     return;
   }
 
-  // Remove interim element
   if (interimEl) interimEl.remove();
+
+  // Prevent duplicate transcript entries
+  const dedupeKey = `${speaker}::${text.toLowerCase()}`;
+  if (dedupeKey === lastFinalKey) return;
+  lastFinalKey = dedupeKey;
 
   const el = document.createElement('div');
   el.className = 'transcript-line';
@@ -110,9 +187,13 @@ function appendTranscriptUI(speaker, text, isInterim = false) {
   if (!liveTranscriptLines.includes(text)) {
     liveTranscriptLines.push(text);
   }
+
+  if (speaker !== 'System') {
+    pushTranscriptToBackend(speaker, text);
+  }
 }
 
-// Render AI insights
+// Render AI insights (structured: timestamp/confidence/owner/deadline/priority/severity/mitigation)
 function renderInsights() {
   const decisions = currentInsights.decisions || [];
   const actionItems = currentInsights.actionItems || [];
@@ -121,6 +202,10 @@ function renderInsights() {
   const totalCount = decisions.length + actionItems.length + risks.length;
   const allBtn = document.querySelector('.tab-btn[data-tab="all"]');
   if (allBtn) allBtn.textContent = `All (${totalCount})`;
+
+  const summaryCard = currentInsights.summary
+    ? `<div class="insight-item insight-summary"><strong>✨ LIVE SUMMARY</strong><span class="insight-field">${currentInsights.summary}</span></div>`
+    : '';
 
   let filtered = [];
   if (activeFilter === 'all') {
@@ -138,31 +223,88 @@ function renderInsights() {
   }
 
   if (filtered.length === 0) {
-    insightList.innerHTML = `
+    insightList.innerHTML = summaryCard + `
       <div style="font-size: 11px; color: #94A3B8; text-align: center; padding: 12px 0;">
-        ${isListening ? 'Recording audio... Click "Stop & Analyze" to generate transcript & insights.' : 'No insights recorded yet.'}
+        ${isListening ? 'Recording audio... insights will appear here as they are detected.' : 'No insights recorded yet.'}
       </div>
     `;
     return;
   }
 
-  const classMap = {
-    decision: 'insight-decision',
-    task: 'insight-task',
-    risk: 'insight-risk',
-  };
+  const classMap = { decision: 'insight-decision', task: 'insight-task', risk: 'insight-risk' };
 
-  insightList.innerHTML = filtered
-    .map(
-      (item) => `
-    <div class="insight-item ${classMap[item.type] || 'insight-task'}">
-      <strong>[${item.label}] ${item.title || item.task || item.decision || item.risk}</strong>
-      <span>${item.detail || item.context || item.mitigation || (item.assignee ? `Assigned to ${item.assignee}` : '')}</span>
-    </div>
-  `
-    )
+  insightList.innerHTML = summaryCard + filtered
+    .slice().reverse()
+    .map((item) => {
+      let fields = '';
+      if (item.type === 'decision') {
+        fields = `Timestamp: <b>${item.timestamp || '—'}</b> · Confidence: <b>${item.confidence != null ? item.confidence + '%' : '—'}</b>`;
+      } else if (item.type === 'task') {
+        fields = `Owner: <b>${item.assignee || 'Unassigned'}</b> · Deadline: <b>${item.dueDate || 'Not specified'}</b> · Priority: <b>${item.priority || 'medium'}</b> · <b>${item.timestamp || ''}</b>`;
+      } else {
+        fields = `Severity: <b>${item.severity || 'medium'}</b> · Mitigation: <b>${item.mitigation || 'Monitor closely'}</b> · <b>${item.timestamp || ''}</b>`;
+      }
+      return `
+        <div class="insight-item ${classMap[item.type] || 'insight-task'}">
+          <strong>[${item.label}] ${item.title || item.task || item.decision || item.risk}</strong>
+          <span class="insight-field">${fields}</span>
+        </div>
+      `;
+    })
     .join('');
 }
+
+function renderFinalSummaries(finalSummaries) {
+  if (!finalSummaries) return;
+  const el = document.createElement('div');
+  el.className = 'insight-item insight-summary';
+  el.innerHTML = `
+    <strong>📋 EXECUTIVE SUMMARY</strong><span class="insight-field">${finalSummaries.executive}</span>
+    <strong>🔧 TECHNICAL SUMMARY</strong><span class="insight-field">${finalSummaries.technical}</span>
+    <strong>🗒️ MEETING MINUTES</strong><span class="insight-field" style="white-space:pre-wrap;">${finalSummaries.minutes}</span>
+  `;
+  insightList.prepend(el);
+}
+
+// ─── AI Chat ───────────────────────────────────────────────────────────────
+function addChatBubble(role, text) {
+  if (chatMessages.children[0]?.textContent?.includes('Ask about decisions')) {
+    chatMessages.innerHTML = '';
+  }
+  const el = document.createElement('div');
+  el.className = `chat-msg ${role === 'user' ? 'chat-msg-user' : 'chat-msg-ai'}`;
+  el.textContent = text;
+  chatMessages.appendChild(el);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return el;
+}
+
+async function sendChatMessage() {
+  const text = (chatInput.value || '').trim();
+  if (!text) return;
+  chatInput.value = '';
+  chatSendBtn.disabled = true;
+  addChatBubble('user', text);
+  const thinkingEl = addChatBubble('ai', '…thinking');
+
+  const id = await ensureLiveMeeting();
+  if (!id) {
+    thinkingEl.textContent = 'Could not reach the AI backend. Is the dashboard server running on http://localhost:3000?';
+    chatSendBtn.disabled = false;
+    return;
+  }
+
+  const res = await callApi(`/api/live-meetings/${id}/chat`, 'POST', { message: text });
+  thinkingEl.textContent = (res.ok && res.data && res.data.reply)
+    ? res.data.reply
+    : 'Sorry, I could not process that question right now. Please try again in a moment.';
+  chatSendBtn.disabled = false;
+}
+
+chatSendBtn?.addEventListener('click', sendChatMessage);
+chatInput?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); sendChatMessage(); }
+});
 
 // Optional live browser speech engine for real-time preview
 function startBrowserSpeech() {
@@ -186,8 +328,9 @@ function startBrowserSpeech() {
         else interim += textStr;
       }
 
-      if (interim.trim()) appendTranscriptUI('Speaker', interim.trim(), true);
-      if (finalStr.trim()) appendTranscriptUI('Speaker', finalStr.trim(), false);
+      const speakerName = (speakerNameInput?.value || 'You').trim() || 'You';
+      if (interim.trim()) appendTranscriptUI(speakerName, interim.trim(), true);
+      if (finalStr.trim()) appendTranscriptUI(speakerName, finalStr.trim(), false);
     };
 
     instance.onerror = () => {};
@@ -210,6 +353,9 @@ startBtn.addEventListener('click', () => {
   isPaused = false;
   audioChunks = [];
   liveTranscriptLines = [];
+  lastFinalKey = '';
+  currentMeetingId = null;
+  meetingCreationPromise = null;
 
   statusBadge.className = 'status-badge recording';
   statusText.textContent = 'RECORDING AUDIO';
@@ -220,13 +366,14 @@ startBtn.addEventListener('click', () => {
   transcriptFeed.innerHTML = `
     <div class="placeholder-info" style="font-size: 11px; color: #34D399; text-align: center; padding: 12px; border: 1px dashed #34D399; border-radius: 8px; background: rgba(52, 211, 153, 0.05);">
       🎙️ <strong>Recording Session Active</strong><br />
-      Speak into your mic or play audio. When finished, click <strong>Stop & Analyze</strong> for Whisper STT + LlamaCloud extraction!
+      Speak into your mic or play audio. Live transcript & AI insights update continuously below.
     </div>
   `;
 
   currentInsights = { summary: '', decisions: [], actionItems: [], risks: [] };
   startTimer();
   renderInsights();
+  ensureLiveMeeting();
 
   // 2. Non-blocking audio stream acquisition
   const mode = audioSource ? audioSource.value : 'tab_and_mic';
@@ -240,12 +387,12 @@ startBtn.addEventListener('click', () => {
           mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
           mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) audioChunks.push(e.data); };
           mediaRecorder.start(1000);
-          console.log('[Extension] Tab audio capture active.');
+          console.log('[Extension] Tab MediaRecorder active.');
         } catch (e) {
-          console.warn('[Extension] Tab MediaRecorder error:', e);
+          console.log('[Extension] Tab MediaRecorder notice:', e?.message || e);
         }
       } else {
-        console.warn('[Extension] tabCapture stream unavailable, falling back to getUserMedia.');
+        console.log('[Extension] tabCapture stream unavailable, falling back to getUserMedia.');
         requestUserMediaAudio();
       }
     });
@@ -269,11 +416,11 @@ function requestUserMediaAudio() {
           mediaRecorder.start(1000);
           console.log('[Extension] Microphone MediaRecorder active.');
         } catch (e) {
-          console.warn('[Extension] Microphone MediaRecorder error:', e);
+          console.log('[Extension] Microphone MediaRecorder notice:', e?.message || e);
         }
       })
       .catch((err) => {
-        console.warn('[Extension] getUserMedia note:', err);
+        console.log('[Extension] getUserMedia notice:', err?.name || err?.message || err);
       });
   }
 }
@@ -293,6 +440,71 @@ pauseBtn.addEventListener('click', () => {
     pauseBtn.innerHTML = '<span>⏸</span> Pause';
   }
 });
+
+// ─── Client-side WAV encoding so the recorded audio blob is ACTUALLY
+// transcribed by the real Whisper pipeline server-side (lib/whisper.ts only
+// decodes WAV/raw PCM — it has no ffmpeg/webm decoder, so posting the raw
+// webm blob silently falls back to a canned mock transcript). Browsers can
+// decode their own MediaRecorder output via the Web Audio API, so we do the
+// decode + resample + PCM16 WAV encode here before uploading.
+function downsampleTo16kMono(audioBuffer) {
+  const numChannels = audioBuffer.numberOfChannels;
+  const length = audioBuffer.length;
+  const sampleRate = audioBuffer.sampleRate;
+  const mono = new Float32Array(length);
+  for (let ch = 0; ch < numChannels; ch++) {
+    const data = audioBuffer.getChannelData(ch);
+    for (let i = 0; i < length; i++) mono[i] += data[i] / numChannels;
+  }
+  if (Math.round(sampleRate) === 16000) return mono;
+  const ratio = sampleRate / 16000;
+  const newLength = Math.max(1, Math.round(mono.length / ratio));
+  const result = new Float32Array(newLength);
+  for (let i = 0; i < newLength; i++) {
+    result[i] = mono[Math.min(mono.length - 1, Math.floor(i * ratio))];
+  }
+  return result;
+}
+
+function encodeWavPcm16(samples, sampleRate) {
+  const buffer = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buffer);
+  const writeString = (offset, str) => { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); };
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + samples.length * 2, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, samples.length * 2, true);
+  let offset = 44;
+  for (let i = 0; i < samples.length; i++) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    offset += 2;
+  }
+  return buffer;
+}
+
+async function convertRecordingToWavBlob(webmBlob) {
+  const arrayBuf = await webmBlob.arrayBuffer();
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  const ctx = new AudioCtx();
+  try {
+    const decoded = await ctx.decodeAudioData(arrayBuf.slice(0));
+    const mono16k = downsampleTo16kMono(decoded);
+    const wavBuffer = encodeWavPcm16(mono16k, 16000);
+    return new Blob([wavBuffer], { type: 'audio/wav' });
+  } finally {
+    try { ctx.close(); } catch (_) {}
+  }
+}
 
 // STOP & ANALYZE (Transcribe with Whisper + LlamaCloud Extraction)
 stopBtn.addEventListener('click', async () => {
@@ -317,11 +529,21 @@ stopBtn.addEventListener('click', async () => {
     micStream = null;
   }
 
+  // Fetch the end-of-session Executive/Technical/Minutes summaries from the
+  // live-meeting session that's been tracking this recording in real time.
+  if (currentMeetingId) {
+    callApi(`/api/live-meetings/${currentMeetingId}`, 'PATCH', { action: 'end' }).then((res) => {
+      if (res.ok && res.data && res.data.meeting) {
+        renderFinalSummaries(res.data.meeting.finalSummaries);
+      }
+    }).catch(() => {});
+  }
+
   // Show processing placeholder
   const procEl = document.createElement('div');
   procEl.className = 'placeholder-info';
   procEl.style.cssText = 'font-size: 11px; color: #a5b4fc; text-align: center; padding: 12px; border: 1px dashed #6366F1; border-radius: 8px; background: rgba(99, 102, 241, 0.08); margin-top: 10px;';
-  procEl.innerHTML = `⏳ <strong>Transcribing & Analyzing Audio...</strong><br />Running Whisper STT and LlamaCloud extraction engine. Please wait a moment...`;
+  procEl.innerHTML = `⏳ <strong>Transcribing & Analyzing Audio...</strong><br />Running Whisper STT and AI extraction engine. Please wait a moment...`;
   transcriptFeed.appendChild(procEl);
   transcriptFeed.scrollTop = transcriptFeed.scrollHeight;
 
@@ -332,12 +554,20 @@ stopBtn.addEventListener('click', async () => {
     let res = null;
 
     if (audioChunks.length > 0) {
-      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-      console.log(`[Extension] Recorded Audio Blob Size: ${audioBlob.size} bytes`);
+      const rawBlob = new Blob(audioChunks, { type: 'audio/webm' });
+      console.log(`[Extension] Recorded Audio Blob Size: ${rawBlob.size} bytes`);
+
+      let uploadBlob = rawBlob;
+      let uploadName = `extension-rec-${Date.now()}.webm`;
+      try {
+        uploadBlob = await convertRecordingToWavBlob(rawBlob);
+        uploadName = `extension-rec-${Date.now()}.wav`;
+      } catch (convErr) {
+        console.log('[Extension] WAV conversion notice (falling back to raw blob):', convErr?.message || convErr);
+      }
 
       const formData = new FormData();
-      const fileName = `extension-rec-${Date.now()}.webm`;
-      formData.append('file', audioBlob, fileName);
+      formData.append('file', uploadBlob, uploadName);
       formData.append('title', `Extension Meeting ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
 
       res = await fetch(`${BACKEND_URL}/api/upload`, {
@@ -365,7 +595,6 @@ stopBtn.addEventListener('click', async () => {
     if (res && res.ok) {
       const data = await res.json();
       console.log('[Extension] Meeting created & analyzed:', data);
-      currentMeetingId = data.id;
 
       // Update Transcript feed with Whisper transcription
       if (data.transcript && data.transcript.trim()) {
@@ -375,13 +604,14 @@ stopBtn.addEventListener('click', async () => {
         transcriptFeed.appendChild(transcriptContainer);
       }
 
-      // Update Insights panel with LlamaCloud extractions
+      // Merge the deep post-meeting LlamaCloud/Anthropic extraction into the
+      // live, structured insights that have been building throughout the call.
       if (data.analysis) {
         currentInsights = {
-          summary: data.analysis.summary || '',
-          decisions: (data.analysis.decisions || []).map((d, i) => ({ id: `d-${i}`, title: d.decision, detail: d.context })),
-          actionItems: (data.analysis.actionItems || []).map((a, i) => ({ id: `a-${i}`, title: a.task, detail: a.assignee ? `Assigned to ${a.assignee}` : '' })),
-          risks: (data.analysis.risks || []).map((r, i) => ({ id: `r-${i}`, title: r.risk, detail: r.mitigation })),
+          summary: data.analysis.summary || currentInsights.summary,
+          decisions: (data.analysis.decisions || []).map((d, i) => ({ id: `d-${i}`, title: d.decision, detail: d.context, timestamp: '—', confidence: 90 })),
+          actionItems: (data.analysis.actionItems || []).map((a, i) => ({ id: `a-${i}`, title: a.task, assignee: a.assignee, dueDate: a.dueDate, priority: 'medium' })),
+          risks: (data.analysis.risks || []).map((r, i) => ({ id: `r-${i}`, title: r.risk, severity: r.impact || 'medium', mitigation: r.mitigation })),
         };
         renderInsights();
       }
@@ -406,7 +636,7 @@ stopBtn.addEventListener('click', async () => {
     }
 
   } catch (err) {
-    console.error('Audio processing note:', err);
+    console.log('Audio processing notice:', err?.message || err);
     if (procEl) procEl.remove();
 
     const errBanner = document.createElement('div');
@@ -427,7 +657,7 @@ async function handleManualSend() {
   const val = manualInput.value.trim();
   if (!val) return;
 
-  appendTranscriptUI('You', val, false);
+  appendTranscriptUI((speakerNameInput?.value || 'You').trim() || 'You', val, false);
   manualInput.value = '';
 }
 

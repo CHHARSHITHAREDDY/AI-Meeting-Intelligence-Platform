@@ -1,4 +1,4 @@
-import { LiveMeetingInsights, LiveTranscriptEntry } from './liveMeeting';
+import { FinalMeetingSummaries, LiveMeetingInsights, LiveTranscriptEntry } from './liveMeeting';
 
 export type LiveMeetingStatus = 'scheduled' | 'live' | 'ended';
 
@@ -18,6 +18,7 @@ export interface LiveMeetingRecord {
   insights: LiveMeetingInsights;
   memory: string[];
   aiActivity: Array<{ id: string; text: string; timestamp: string }>;
+  finalSummaries?: FinalMeetingSummaries;
 }
 
 const liveMeetingStore = new Map<string, LiveMeetingRecord>();
@@ -162,6 +163,14 @@ export function addAiActivity(meetingId: string, text: string): LiveMeetingRecor
   const meeting = liveMeetingStore.get(meetingId);
   if (!meeting) return undefined;
   meeting.aiActivity = [{ id: `activity-${Date.now()}`, text, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) }, ...meeting.aiActivity].slice(0, 8);
+  liveMeetingStore.set(meetingId, meeting);
+  return meeting;
+}
+
+export function setFinalSummaries(meetingId: string, summaries: FinalMeetingSummaries): LiveMeetingRecord | undefined {
+  const meeting = liveMeetingStore.get(meetingId);
+  if (!meeting) return undefined;
+  meeting.finalSummaries = summaries;
   liveMeetingStore.set(meetingId, meeting);
   return meeting;
 }

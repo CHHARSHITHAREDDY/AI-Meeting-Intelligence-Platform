@@ -5,9 +5,14 @@
   "description": "Floating draggable & resizable real-time audio recorder, transcript stream & meeting intelligence assistant.",
   "permissions": [
     "activeTab",
+    "tabCapture",
     "storage",
-    "scripting"
+    "scripting",
+    "sidePanel"
   ],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
   "host_permissions": [
     "http://localhost:3000/*",
     "<all_urls>"

@@ -1,0 +1,104 @@
+# Implementation Plan - Upgrade AI Insights & Chat to Retrieval-Augmented Generation (RAG)
+
+This plan details the technical architecture, pipeline stages, and step-by-step implementation to transition the application's AI extraction and chat generation into a full **Retrieval-Augmented Generation (RAG)** system.
+
+---
+
+## Architecture Overview: RAG Pipeline
+
+```mermaid
+flowchart TD
+    A[Meeting Video/Audio Transcript] --> B[Semantic Chunking Engine]
+    B --> C[Timestamped Text Chunks]
+    C --> D[Vector Embedding Generator\n@xenova/transformers]
+    D --> E[Vector Index & Metadata Storage\nPostgreSQL]
+    
+    F[User Query / Chat Prompt] --> G[Query Vector Embedding]
+    G --> H[Cosine Similarity Vector Search]
+    E --> H
+    H --> I[Top K Relevant Context Chunks]
+    I --> J[Context-Augmented Prompt Builder]
+    J --> K[LLM / Smart RAG Generation Engine]
+    K --> L[Grounded Answer + Citation Timestamps]
+```
+
+---
+
+## Technical Requirements & Features
+
+### 1. Document Chunking & Timestamp Metadata (`lib/ragChunker.ts`)
+- **Semantic Windowing**: Split long meeting transcripts into overlapping chunks (300-500 tokens with 50-token overlap).
+- **Metadata Tagging**: Each chunk retains timestamp range (`[02:10 - 04:30]`), speaker tags (`Sarah (PM)`), and meeting ID.
+
+### 2. Local Vector Embedding Pipeline (`lib/ragEmbeddings.ts`)
+- **Zero API Key Requirement**: Use `@xenova/transformers` (`Xenova/all-MiniLM-L6-v2` or `bge-small-en-v1.5`) running locally in Node.js.
+- **Fast Execution**: Computes 384-dimensional dense vector embeddings for each transcript chunk in milliseconds.
+
+### 3. Vector Storage & Cosine Similarity Search (`lib/ragStore.ts` & `lib/db.ts`)
+- **PostgreSQL Vector Table**: Add `meeting_chunks` table storing `id`, `meeting_id`, `start_time`, `end_time`, `content`, and `embedding` vector array.
+- **Similarity Search**: Perform cosine similarity $\cos(\theta) = \frac{\mathbf{A} \cdot \mathbf{B}}{\|\mathbf{A}\| \|\mathbf{B}\|}$ to return top $K$ ($K=4$) most relevant semantic context snippets.
+
+### 4. RAG Chat Generation Engine (`app/api/meetings/[id]/chat/route.ts`)
+- Replace raw transcript dumping with vector retrieval:
+  1. Embed incoming user question.
+  2. Retrieve top-4 vector matching transcript chunks.
+  3. Construct a RAG prompt containing only the retrieved context chunks.
+  4. Generate grounded response with exact timestamp citations.
+
+### 5. RAG Meeting Extraction Pipeline (`lib/extract.ts`)
+- Use multi-query RAG retrieval for key decision, task, and risk extraction:
+  - Query 1: *"What decisions were made and agreed upon?"* $\rightarrow$ Retrieve decision chunks.
+  - Query 2: *"What action items, tasks, and deadlines were assigned?"* $\rightarrow$ Retrieve task chunks.
+  - Query 3: *"What risks, technical issues, or concerns were highlighted?"* $\rightarrow$ Retrieve risk chunks.
+- Feed retrieved sections into targeted structured generation prompts.
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Zero External Dependency RAG**:
+> The embedding pipeline will run locally using `@xenova/transformers` (`all-MiniLM-L6-v2`), meaning RAG vector search operates **100% locally and free** without requiring external vector database subscriptions (like Pinecone) or paid embedding API keys.
+
+> [!TIP]
+> **Exact Timecode Citations**:
+> Responses generated via RAG will automatically cite exact timestamp ranges (e.g. `[03:10 - 04:00]`), allowing users to click and jump directly to the video segment.
+
+---
+
+## Proposed Changes
+
+### Core RAG Library Layer
+
+#### [NEW] [ragChunker.ts](file:///c:/Users/LENOVO/AI-Meeting-Intelligence-Platform/lib/ragChunker.ts)
+- Parse transcripts into structured chunks with start/end timecodes and token overlaps.
+
+#### [NEW] [ragEmbeddings.ts](file:///c:/Users/LENOVO/AI-Meeting-Intelligence-Platform/lib/ragEmbeddings.ts)
+- Initialize local embedding pipeline using `@xenova/transformers`.
+
+#### [NEW] [ragStore.ts](file:///c:/Users/LENOVO/AI-Meeting-Intelligence-Platform/lib/ragStore.ts)
+- Vector indexing, chunk persistence, and vector cosine similarity search functions.
+
+#### [MODIFY] [db.ts](file:///c:/Users/LENOVO/AI-Meeting-Intelligence-Platform/lib/db.ts)
+- Update PostgreSQL schema to create `meeting_chunks` vector table during `initDb()`.
+
+---
+
+### Generation & API Layer
+
+#### [MODIFY] [route.ts](file:///c:/Users/LENOVO/AI-Meeting-Intelligence-Platform/app/api/meetings/%5Bid%5D/chat/route.ts)
+- Upgrade Chat route to embed query, perform vector search, and run RAG augmented generation.
+
+#### [MODIFY] [extract.ts](file:///c:/Users/LENOVO/AI-Meeting-Intelligence-Platform/lib/extract.ts)
+- Upgrade meeting extraction pipeline to use chunked RAG retrieval queries before LLM/fallback generation.
+
+---
+
+## Verification Plan
+
+### Automated Tests & Builds
+- Run `npm run build` to verify clean compilation of all RAG modules and Next.js routes.
+
+### Manual Verification
+1. Upload/ingest a meeting transcript and verify `meeting_chunks` are chunked and vector embedded.
+2. Ask questions on **Chat with AI** (e.g., *"What is the launch date?"*) and confirm RAG retrieves the top vector matches and returns accurate answers with timecode citations.
