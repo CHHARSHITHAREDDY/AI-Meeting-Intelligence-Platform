@@ -74,12 +74,21 @@ export interface Risk {
   mitigation: string;
 }
 
+export interface SpeakerMetric {
+  name: string;
+  talkTimePercent: number;
+  wordCount: number;
+}
+
 export interface MeetingAnalysis {
   summary: string;
   decisions: Decision[];
   actionItems: ActionItem[];
   risks: Risk[];
   notes?: string[];
+  unresolvedQuestions?: string[];
+  efficiencyScore?: number;
+  speakerAnalytics?: SpeakerMetric[];
 }
 
 export interface Meeting {

@@ -518,11 +518,41 @@ function localHeuristicParser(transcript: string): MeetingAnalysis {
     notes.push("Aligned on team deliverables and milestones.");
   }
 
+  // Unresolved Questions Extraction
+  const unresolvedQuestions: string[] = [];
+  lines.forEach((line) => {
+    const textClean = cleanLine(line);
+    if ((textClean.includes('?') || /^(how|what|who|why|when|where|can we|should we)/i.test(textClean)) && unresolvedQuestions.length < 5) {
+      unresolvedQuestions.push(textClean);
+    }
+  });
+
+  // Speaker Analytics Calculation
+  const speakerMap = new Map<string, number>();
+  let totalWords = 0;
+  lineDetails.forEach(({ speaker, text }) => {
+    const words = text.split(/\s+/).filter(Boolean).length;
+    speakerMap.set(speaker, (speakerMap.get(speaker) || 0) + words);
+    totalWords += words;
+  });
+
+  const speakerAnalytics = Array.from(speakerMap.entries()).map(([name, count]) => ({
+    name,
+    wordCount: count,
+    talkTimePercent: totalWords > 0 ? Math.round((count / totalWords) * 100) : 0
+  })).sort((a, b) => b.talkTimePercent - a.talkTimePercent);
+
+  // Meeting Efficiency Score
+  const efficiencyScore = Math.min(100, Math.max(50, Math.round(70 + decisions.length * 8 + actionItems.length * 5 - risks.length * 3)));
+
   return {
     summary,
     decisions,
     actionItems,
     risks,
-    notes
+    notes,
+    unresolvedQuestions,
+    speakerAnalytics,
+    efficiencyScore
   };
 }
