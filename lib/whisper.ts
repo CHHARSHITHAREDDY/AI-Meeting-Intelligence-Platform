@@ -53,7 +53,7 @@ export async function transcribeAudio(audioInput: Buffer | Float32Array, fileNam
           const ffmpegCmd = `"${ffmpegPath}" -y -i "${tempInputPath}" -vn -acodec pcm_s16le -ar 16000 -ac 1 "${tempWavPath}"`;
           execSync(ffmpegCmd, {
             stdio: ['ignore', 'ignore', 'pipe'],
-            timeout: 90000,
+            timeout: 180000,
           });
 
           if (fs.existsSync(tempWavPath) && fs.statSync(tempWavPath).size > 44) {
@@ -76,34 +76,45 @@ export async function transcribeAudio(audioInput: Buffer | Float32Array, fileNam
       }
     }
 
-    // Step 4: OpenAI Whisper API call if key is available
+    // Step 4: Groq / OpenAI Whisper API call if key is available
+    const groqApiKey = process.env.GROQ_API_KEY;
     const openaiApiKey = process.env.OPENAI_API_KEY;
-    if (openaiApiKey && openaiApiKey !== 'YOUR_OPENAI_API_KEY' && openaiApiKey.trim() !== '') {
+
+    if ((groqApiKey && groqApiKey.trim() !== '') || (openaiApiKey && openaiApiKey !== 'YOUR_OPENAI_API_KEY' && openaiApiKey.trim() !== '')) {
       if (fs.existsSync(tempWavPath)) {
         try {
-          console.log('[Whisper API] Sending extracted WAV to OpenAI Whisper API...');
+          const isGroq = groqApiKey && groqApiKey.trim() !== '';
+          const apiKey = isGroq ? groqApiKey : openaiApiKey;
+          const apiEndpoint = isGroq 
+            ? 'https://api.groq.com/openai/v1/audio/transcriptions'
+            : 'https://api.openai.com/v1/audio/transcriptions';
+          const modelName = isGroq ? 'whisper-large-v3-turbo' : 'whisper-1';
+
+          console.log(`[Whisper API] Sending WAV to ${isGroq ? 'Groq' : 'OpenAI'} Whisper API (${modelName})...`);
           const wavBuffer = fs.readFileSync(tempWavPath);
           const formData = new FormData();
           const blob = new Blob([new Uint8Array(wavBuffer)], { type: 'audio/wav' });
           formData.append('file', blob, 'meeting_audio.wav');
-          formData.append('model', 'whisper-1');
+          formData.append('model', modelName);
           formData.append('response_format', 'text');
 
-          const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+          const res = await fetch(apiEndpoint, {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${openaiApiKey}` },
+            headers: { 'Authorization': `Bearer ${apiKey}` },
             body: formData,
           });
 
           if (res.ok) {
             const rawText = await res.text();
             if (rawText && rawText.trim().length > 0) {
-              console.log('[Whisper API] OpenAI Whisper transcription completed!');
+              console.log(`[Whisper API] ${isGroq ? 'Groq' : 'OpenAI'} Whisper transcription completed successfully!`);
               return formatWhisperTranscript(rawText);
             }
+          } else {
+            console.warn(`[Whisper API] API error ${res.status}:`, await res.text());
           }
         } catch (apiErr: any) {
-          console.warn('[Whisper API] OpenAI Whisper API call failed:', apiErr.message);
+          console.warn('[Whisper API] Cloud Whisper API call failed:', apiErr.message);
         }
       }
     }
@@ -132,9 +143,16 @@ export async function transcribeAudio(audioInput: Buffer | Float32Array, fileNam
       }
     }
 
-    // Step 6: Formatted speech transcript overview for media recording
-    console.log(`[Whisper Pipeline] Media processing completed for session "${cleanTitle}". Generating speech transcript...`);
-    return `[00:05] Speaker 1: Welcome to the session for ${cleanTitle}. Today we are reviewing key discussion topics, project deliverables, and strategic execution priorities.\n[00:35] Speaker 2: Understood. Let's ensure all key decisions, action items, and potential risks identified during this session are documented.`;
+    // No usable audio could be extracted (ffmpeg conversion failed/timed out,
+    // or the local Whisper model produced no text). Fail loudly instead of
+    // returning a canned placeholder transcript — a fabricated transcript
+    // would silently flow into extractMeetingInsights() and produce a
+    // "summary" that has nothing to do with the actual recording.
+    throw new Error(
+      audioSamples
+        ? 'Local Whisper produced no speech text for this recording (audio may be silent, too short, or unsupported).'
+        : 'Could not extract audio from this file — ffmpeg conversion failed or timed out. Try a shorter clip or a standard format (mp3/wav/mp4).'
+    );
 
   } finally {
     // Cleanup temporary files on disk
@@ -149,10 +167,19 @@ export async function transcribeAudio(audioInput: Buffer | Float32Array, fileNam
 
 // Format raw Whisper speech output into timestamped dialogue lines [MM:SS] Speaker X: Text
 function formatWhisperTranscript(rawText: string): string {
-  const sentences = rawText
-    .split(/(?<=[.!?])\s+/)
+  let sentences = rawText
+    .split(/(?<=[.!?])\s+|\n+/)
     .map(s => s.trim())
     .filter(s => s.length > 0);
+
+  if (sentences.length <= 1 && rawText.length > 80) {
+    // Fallback: split long text without punctuation by clauses or word counts
+    const words = rawText.trim().split(/\s+/);
+    sentences = [];
+    for (let i = 0; i < words.length; i += 15) {
+      sentences.push(words.slice(i, i + 15).join(' '));
+    }
+  }
 
   if (sentences.length === 0) return rawText;
 
@@ -164,7 +191,7 @@ function formatWhisperTranscript(rawText: string): string {
     const speakerName = `Speaker ${(idx % 2) + 1}`;
 
     formattedLines.push(`[${timeStr}] ${speakerName}: ${sentence}`);
-    currentSeconds += Math.max(10, Math.floor(sentence.split(' ').length * 0.4));
+    currentSeconds += Math.max(8, Math.floor(sentence.split(' ').length * 0.45));
   });
 
   return formattedLines.join('\n');

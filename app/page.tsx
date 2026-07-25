@@ -5,13 +5,23 @@ import Link from 'next/link';
 import { 
   ArrowRight, 
   Play, 
+  Pause,
+  SkipBack,
+  SkipForward,
   Sparkles, 
   Terminal, 
-  ChevronDown 
+  ChevronDown,
+  Volume2,
+  Mic,
+  Radio,
+  CheckCircle2,
+  AlertTriangle,
+  RefreshCw
 } from 'lucide-react';
 
 export default function LandingPage() {
   const [stage, setStage] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(true);
   const [alexText, setAlexText] = useState('');
   const [samText, setSamText] = useState('');
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
@@ -22,6 +32,18 @@ export default function LandingPage() {
 
   const fullAlexText = "We need to finalize the Q3 roadmap by Friday.";
   const fullSamText = "I can commit to the API refactor, but the dashboard will spill over.";
+
+  const handlePlayPause = () => {
+    setIsPlaying(prev => !prev);
+  };
+
+  const handleNextStage = () => {
+    setStage(prev => (prev >= 4 ? 0 : prev + 1));
+  };
+
+  const handlePrevStage = () => {
+    setStage(prev => (prev <= 0 ? 4 : prev - 1));
+  };
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -150,6 +172,7 @@ void main() {
   }, []);
 
   useEffect(() => {
+    if (!isPlaying) return;
     let timer: NodeJS.Timeout;
     if (stage === 0) {
       setAlexText(''); setSamText('');
@@ -176,7 +199,7 @@ void main() {
       timer = setTimeout(() => setStage(0), 5500);
     }
     return () => clearTimeout(timer);
-  }, [stage]);
+  }, [stage, isPlaying]);
 
   const tickerItems = [
     "Who committed to what?", "Endless status meetings", "Decisions lost in slack",
@@ -294,23 +317,117 @@ void main() {
                   Watch Demo
                 </Link>
               </div>
+
+              {/* FLOATING 3D GLASSMORPHISM MEDIA CONTROLS DOCK */}
+              <div className="mt-6 inline-flex items-center gap-3 p-3 rounded-2xl bg-[#12172A]/90 border border-[#232B45] shadow-2xl backdrop-blur-xl animate-float-slow">
+                <div className="flex items-center gap-2 pl-2 pr-3 border-r border-[#232B45]">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isPlaying ? 'bg-[#5de6ff]' : 'bg-amber-400'} opacity-75`} />
+                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isPlaying ? 'bg-[#5de6ff]' : 'bg-amber-400'}`} />
+                  </span>
+                  <span className="text-xs font-mono text-[#F8FAFC] font-bold tracking-wider uppercase">
+                    {isPlaying ? 'Live Demo Sync' : 'Paused'}
+                  </span>
+                </div>
+
+                {/* Media Control Action Buttons */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handlePrevStage}
+                    className="p-2.5 rounded-xl bg-[#181b25] border border-[#232B45] hover:border-[#6366F1] text-[#94A3B8] hover:text-white transition-all cursor-pointer shadow hover:scale-105"
+                    title="Previous Audio Segment"
+                  >
+                    <SkipBack className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={handlePlayPause}
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#6366F1] via-[#8083ff] to-[#EC4899] text-white text-xs font-bold shadow-lg shadow-[#6366F1]/30 hover:scale-105 transition-transform cursor-pointer flex items-center gap-2"
+                    title={isPlaying ? "Pause Demo Stream" : "Play Demo Stream"}
+                  >
+                    {isPlaying ? (
+                      <>
+                        <Pause className="w-4 h-4 fill-white" />
+                        <span>Pause</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4 fill-white" />
+                        <span>Play</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={handleNextStage}
+                    className="p-2.5 rounded-xl bg-[#181b25] border border-[#232B45] hover:border-[#6366F1] text-[#94A3B8] hover:text-white transition-all cursor-pointer shadow hover:scale-105"
+                    title="Next Audio Segment"
+                  >
+                    <SkipForward className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Live Equalizer Indicator */}
+                <div className="flex items-end gap-1 h-5 px-3 border-l border-[#232B45]">
+                  {[1,2,3,4,5].map(i => (
+                    <div key={i} className={`w-1 bg-[#5de6ff] rounded-full soundwave-bar soundwave-bar-${i} h-full ${!isPlaying ? 'animate-none opacity-30' : ''}`} />
+                  ))}
+                </div>
+              </div>
             </div>
 
-            {/* Right Column: Live Recording Card */}
-            <div className="lg:col-span-5 flex justify-center">
-              <div className="w-full max-w-md bg-[#12172A] border border-[#232B45] rounded-2xl p-6 shadow-2xl backdrop-blur-xl relative">
+            {/* Right Column: Live Recording Card with Floating Objects */}
+            <div className="lg:col-span-5 flex justify-center relative">
+
+              {/* Floating Object 1: Top-Left Floating Action Item Badge */}
+              <div className="absolute -top-6 -left-4 sm:-left-8 z-20 bg-[#181b25]/90 border border-[#34D399]/40 rounded-2xl p-3 shadow-2xl backdrop-blur-xl animate-float-slow hidden sm:flex items-center gap-3 text-xs text-[#F8FAFC]">
+                <div className="w-8 h-8 rounded-xl bg-[#34D399]/20 border border-[#34D399]/40 flex items-center justify-center text-[#34D399]">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-mono tracking-wider text-[#34D399] font-bold block">Action Detected</span>
+                  <span className="font-semibold text-white">API refactor by Friday</span>
+                </div>
+              </div>
+
+              {/* Floating Object 2: Bottom-Right Floating Risk Alert Badge */}
+              <div className="absolute -bottom-6 -right-4 sm:-right-8 z-20 bg-[#181b25]/90 border border-[#EC4899]/40 rounded-2xl p-3 shadow-2xl backdrop-blur-xl animate-float-delayed hidden sm:flex items-center gap-3 text-xs text-[#F8FAFC]">
+                <div className="w-8 h-8 rounded-xl bg-[#EC4899]/20 border border-[#EC4899]/40 flex items-center justify-center text-[#EC4899]">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-mono tracking-wider text-[#EC4899] font-bold block">Risk Highlighted</span>
+                  <span className="font-semibold text-white">Q3 Dashboard delay</span>
+                </div>
+              </div>
+
+              {/* Main Live Card Container */}
+              <div className="w-full max-w-md bg-[#12172A] border border-[#232B45] rounded-2xl p-6 shadow-2xl backdrop-blur-xl relative z-10">
                 <div className="absolute -inset-0.5 bg-gradient-to-tr from-[#c0c1ff]/20 to-[#5de6ff]/20 rounded-2xl blur-xl -z-10" />
 
-                {/* Card Header */}
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#232B45]">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#34D399] animate-live-pulse" />
-                    <span className="text-xs font-semibold uppercase tracking-wider text-[#94A3B8] font-mono">Live Recording</span>
+                {/* Card Header (Integrated Clean Media Header) */}
+                <div className="flex items-center justify-between mb-5 pb-4 border-b border-[#232B45]">
+                  <div className="flex items-center gap-2.5">
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isPlaying ? 'bg-[#34D399]' : 'bg-amber-400'} opacity-75`} />
+                      <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isPlaying ? 'bg-[#34D399]' : 'bg-amber-400'}`} />
+                    </span>
+                    <div>
+                      <span className="text-xs font-semibold uppercase tracking-wider text-[#94A3B8] font-mono block">
+                        Live Recording
+                      </span>
+                      <span className="text-[10px] text-[#5de6ff] font-mono font-medium">
+                        {isPlaying ? '● Audio Stream Active' : '⏸ Stream Paused'}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-end gap-1 h-5 overflow-hidden">
-                    {[1,2,3,4,5].map(i => (
-                      <div key={i} className={`w-1 bg-[#5de6ff] rounded-full soundwave-bar soundwave-bar-${i} h-full`} />
-                    ))}
+
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-end gap-1 h-5 overflow-hidden">
+                      {[1,2,3,4,5].map(i => (
+                        <div key={i} className={`w-1 bg-[#5de6ff] rounded-full soundwave-bar soundwave-bar-${i} h-full ${!isPlaying ? 'animate-none opacity-30' : ''}`} />
+                      ))}
+                    </div>
                   </div>
                 </div>
 

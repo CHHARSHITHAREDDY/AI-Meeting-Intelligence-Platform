@@ -155,6 +155,18 @@ body {
 }
 .animate-float { animation: float 4s ease-in-out infinite; }
 
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(1deg); }
+}
+.animate-float-slow { animation: float-slow 5s ease-in-out infinite; }
+
+@keyframes float-delayed {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(10px) rotate(-1deg); }
+}
+.animate-float-delayed { animation: float-delayed 6s ease-in-out infinite 1.5s; }
+
 @keyframes pulse-slow {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 0.8; }

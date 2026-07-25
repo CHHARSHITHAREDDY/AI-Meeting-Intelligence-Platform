@@ -35,9 +35,29 @@ import {
   Globe,
   Settings,
   Sliders,
-  ExternalLink
+  ExternalLink,
+  GraduationCap,
+  BookOpen,
+  Layers,
+  HelpCircle,
+  Code2,
+  Terminal,
+  Package,
+  Plug,
+  Mic2,
+  History,
+  Link2
 } from 'lucide-react';
-import { Meeting, ActionItem } from '@/lib/db';
+import { Meeting, ActionItem, MindmapNode } from '@/lib/db';
+import { ContentType } from '@/lib/classify';
+
+const CONTENT_TYPE_META: Record<ContentType, { label: string; icon: React.ReactNode }> = {
+  meeting: { label: 'Meeting', icon: <FileCheck className="w-3 h-3" /> },
+  lecture: { label: 'Lecture', icon: <GraduationCap className="w-3 h-3" /> },
+  coding: { label: 'Coding Session', icon: <Code2 className="w-3 h-3" /> },
+  podcast: { label: 'Podcast', icon: <Mic2 className="w-3 h-3" /> },
+  general: { label: 'General', icon: <FileText className="w-3 h-3" /> },
+};
 
 interface ChatMessage {
   id: string;
@@ -84,6 +104,10 @@ export default function MeetingIntelligenceSaaSPage() {
   // Transcript Filtering & Features
   const [transcriptSearch, setTranscriptSearch] = useState('');
   const [selectedSpeaker, setSelectedSpeaker] = useState<string>('all');
+
+  // Lecture: Flashcards & Quiz interactive state
+  const [flippedFlashcards, setFlippedFlashcards] = useState<Set<number>>(new Set());
+  const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
 
   // AI Copilot Chat State
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -162,6 +186,24 @@ export default function MeetingIntelligenceSaaSPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // Delete meeting recording
+  const handleDeleteMeeting = async (meetingId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this recording?')) return;
+    try {
+      const res = await fetch(`/api/meetings/${meetingId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setMeetings(prev => prev.filter(m => m.id !== meetingId));
+        if (activeMeeting?.id === meetingId) {
+          const remaining = meetings.filter(m => m.id !== meetingId);
+          setActiveMeeting(remaining[0] || null);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to delete meeting:', err);
+    }
+  };
 
   // ---------------------------------------------------------------------------
   // REALTIME AUDIO RECORDING ENGINE
@@ -321,6 +363,8 @@ export default function MeetingIntelligenceSaaSPage() {
         setShowUploadModal(false);
         setActiveMeeting(processedMeeting);
         initChatForMeeting(processedMeeting);
+        setFlippedFlashcards(new Set());
+        setQuizAnswers({});
 
         fetchMeetings();
         setTimeout(() => setUploadStatus('idle'), 1500);
@@ -449,6 +493,7 @@ export default function MeetingIntelligenceSaaSPage() {
   };
 
   const parsedTranscript = getParsedTranscriptLines();
+  const uniqueSpeakers = Array.from(new Set(parsedTranscript.map(t => t.speaker)));
 
   const filteredTranscript = parsedTranscript.filter(item => {
     const matchesSearch = item.text.toLowerCase().includes(transcriptSearch.toLowerCase()) ||
@@ -613,7 +658,16 @@ export default function MeetingIntelligenceSaaSPage() {
                           Click to open →
                         </span>
                       </div>
-                      <span className="text-[11px] font-mono text-[#5DE6FF] shrink-0 font-bold ml-2">{m.duration || '1 min'}</span>
+                      <div className="flex items-center space-x-2 shrink-0">
+                        <span className="text-[11px] font-mono text-[#5DE6FF] font-bold">{m.duration || '1 min'}</span>
+                        <button
+                          onClick={(e) => handleDeleteMeeting(m.id, e)}
+                          className="p-1 text-[#94A3B8] hover:text-rose-400 hover:bg-rose-500/10 rounded transition"
+                          title="Delete recording"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                     <p className="text-xs text-[#94A3B8] font-mono">
                       {new Date(m.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · {m.duration || '1 min'} · Sandeep B
@@ -662,7 +716,16 @@ export default function MeetingIntelligenceSaaSPage() {
                           Click to open →
                         </span>
                       </div>
-                      <span className="text-[11px] font-mono text-[#5DE6FF] shrink-0 font-bold ml-2">{m.duration || '1 min'}</span>
+                      <div className="flex items-center space-x-2 shrink-0">
+                        <span className="text-[11px] font-mono text-[#5DE6FF] font-bold">{m.duration || '1 min'}</span>
+                        <button
+                          onClick={(e) => handleDeleteMeeting(m.id, e)}
+                          className="p-1 text-[#94A3B8] hover:text-rose-400 hover:bg-rose-500/10 rounded transition"
+                          title="Delete recording"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                     <p className="text-xs text-[#94A3B8] font-mono">
                       {new Date(m.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · Sandeep B

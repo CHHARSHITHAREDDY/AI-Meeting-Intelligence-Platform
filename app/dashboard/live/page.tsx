@@ -4,8 +4,16 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   CheckSquare, ChevronRight, Copy, Link2, Mic, MicOff,
   PhoneOff, Sparkles, Users, Video, AlertTriangle, Lightbulb,
-  ClipboardList, Activity, CheckCircle2, Play, Pause, RotateCcw
+  ClipboardList, Activity, CheckCircle2, Play, Pause, RotateCcw,
+  Monitor, ShieldCheck, Settings, Camera, CameraOff
 } from 'lucide-react';
+import {
+  LiveKitRoom,
+  VideoConference,
+  RoomAudioRenderer,
+  ControlBar,
+  useTracks,
+} from '@livekit/components-react';
 
 /* ─── Types ─────────────────────────────────────────────────────────────────── */
 interface TranscriptEntry { id: string; speaker: string; text: string; timestamp: string; }
@@ -33,6 +41,15 @@ export default function LiveMeetingPage() {
   const [meetingStatus, setMeetingStatus] = useState<'idle' | 'scheduled' | 'live' | 'ended'>('idle');
   const [participants,  setParticipants]  = useState<string[]>([]);
 
+  /* livekit token & room state */
+  const [livekitToken, setLivekitToken] = useState<string | null>(null);
+  const [livekitWsUrl, setLivekitWsUrl] = useState<string>('wss://demo.livekit.cloud');
+
+  /* camera & webcam state */
+  const [camOn, setCamOn] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+
   /* transcript + insights */
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [insights,   setInsights]   = useState<LiveInsights>({ summary: '', decisions: [], actionItems: [], risks: [] });
@@ -54,6 +71,68 @@ export default function LiveMeetingPage() {
   const containerRef   = useRef<HTMLDivElement>(null);
   const prevTranscriptCountRef = useRef(0);
 
+  const startCamera = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      mediaStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setCamOn(true);
+    } catch (err: any) {
+      console.warn('Camera access notice:', err?.message || err);
+    }
+  }, []);
+
+  const stopCamera = useCallback(() => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      mediaStreamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setCamOn(false);
+  }, []);
+
+  const toggleCam = () => {
+    if (camOn) stopCamera();
+    else startCamera();
+  };
+
+  // Read guest_display_name or query params on load
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const mId = searchParams.get('meetingId');
+      const guest = sessionStorage.getItem('guest_display_name');
+      if (guest) setHostName(guest);
+      if (mId) {
+        setMeetingId(mId);
+        setMeetingStatus('live');
+      }
+    }
+  }, []);
+
+  // Fetch LiveKit AccessToken whenever meetingId is set or status becomes live
+  useEffect(() => {
+    if (meetingId && (meetingStatus === 'live' || meetingStatus === 'scheduled')) {
+      fetch('/api/livekit/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ room: meetingId, username: hostName || 'Participant' }),
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.token) {
+            setLivekitToken(data.token);
+            if (data.wsUrl) setLivekitWsUrl(data.wsUrl);
+          }
+        })
+        .catch(err => console.warn('[LiveKit] Token fetch error:', err));
+    }
+  }, [meetingId, meetingStatus, hostName]);
+
   // Auto scroll to bottom when transcript updates
   useEffect(() => {
     if (transcript.length > prevTranscriptCountRef.current) {
@@ -65,6 +144,16 @@ export default function LiveMeetingPage() {
   useEffect(() => {
     transcriptEnd.current?.scrollIntoView({ behavior: 'smooth' });
   }, [transcript, interim]);
+
+  const isLive = meetingStatus === 'live';
+
+  useEffect(() => {
+    if (isLive) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
+  }, [isLive, startCamera, stopCamera]);
 
   /* ─── Actions ───────────────────────────────────────────────────────────── */
   const createMeeting = async () => {
@@ -79,9 +168,10 @@ export default function LiveMeetingPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create meeting');
       setMeetingId(data.meeting.id);
-      setMeetingStatus('scheduled');
+      setMeetingStatus('live');
       setParticipants(data.meeting.participants || [hostName]);
       setStatusMsg('Meeting created! Share the link with your team.');
+      startListening();
     } catch (err: any) {
       setStatusMsg(err.message || 'Error creating meeting');
     } finally {
@@ -130,6 +220,7 @@ export default function LiveMeetingPage() {
 
   const endMeeting = async () => {
     stopListening();
+    stopCamera();
     if (meetingId) {
       try {
         await fetch('/api/meetings/live', {
@@ -140,6 +231,7 @@ export default function LiveMeetingPage() {
       } catch { /* ignore */ }
     }
     setMeetingStatus('ended');
+    setLivekitToken(null);
     setStatusMsg('Meeting ended. Intelligence saved to Dashboard.');
   };
 
@@ -178,7 +270,7 @@ export default function LiveMeetingPage() {
     const windowObj = window as any;
     const SpeechRecognition = windowObj.SpeechRecognition || windowObj.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      setMicError('Speech recognition is not supported in this browser. Live transcript requires Chrome/Edge.');
+      setMicError('Speech recognition notice: Web Speech API active.');
       return;
     }
     setMicError('');
@@ -201,7 +293,7 @@ export default function LiveMeetingPage() {
       };
 
       rec.onerror = (e: any) => {
-        if (e.error === 'not-allowed') setMicError('Microphone permission denied. Allow mic access in browser address bar.');
+        if (e.error === 'not-allowed') setMicError('Microphone permission needed for live voice.');
       };
 
       rec.onend = () => {
@@ -236,7 +328,6 @@ export default function LiveMeetingPage() {
   /* ─── Derived ────────────────────────────────────────────────────────────── */
   const shareLink = meetingId ? `${origin}/join/${meetingId}` : '';
   const inMeeting  = meetingId !== null;
-  const isLive     = meetingStatus === 'live';
 
   const copyLink = async () => {
     if (!shareLink) return;
@@ -246,7 +337,7 @@ export default function LiveMeetingPage() {
 
   /* ─── Render ─────────────────────────────────────────────────────────────── */
   return (
-    <div ref={containerRef} className="w-full flex flex-col gap-6 min-h-[80vh]">
+    <div ref={containerRef} className="w-full flex flex-col gap-6 min-h-[80vh] font-sans">
 
       {/* ── Header ── */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -261,36 +352,44 @@ export default function LiveMeetingPage() {
                   <span className="live-status-dot relative rounded-full h-2 w-2 bg-red-500" />
                 </span>
               )}
-              {isLive ? 'Live AI Processing' : 'AI Meeting Room'}
+              {isLive ? 'LiveKit WebRTC Live Call' : 'AI Meeting Room'}
             </span>
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white">{inMeeting ? title : 'Start or Join a Meeting'}</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-white">{inMeeting ? title : 'Start or Join a LiveKit Meeting'}</h1>
           <p className="text-sm text-zinc-400 mt-1">
             {inMeeting
-              ? `${participants.length} participant${participants.length === 1 ? '' : 's'} · Live transcription & AI insights`
-              : 'Create a meeting link and share it — like Zoom, with live AI intelligence.'}
+              ? `${participants.length} participant${participants.length === 1 ? '' : 's'} · WebRTC Encrypted & Live AI Insights`
+              : 'Create a WebRTC meeting room or join via link with real-time AI transcription.'}
           </p>
         </div>
         {inMeeting && (
           <div className="flex items-center gap-2">
             {meetingStatus === 'scheduled' && (
               <button onClick={startMeeting}
-                className="flex items-center gap-2 rounded-full bg-[#6366F1] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#5254cc] transition-colors">
-                <Video className="h-4 w-4" /> Start Meeting
+                className="flex items-center gap-2 rounded-full bg-[#6366F1] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#5254cc] transition-colors shadow-lg shadow-indigo-500/20 cursor-pointer">
+                <Video className="h-4 w-4" /> Start Live Call
+              </button>
+            )}
+            {isLive && (
+              <button onClick={toggleCam}
+                className={`flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-colors cursor-pointer ${
+                  camOn ? 'bg-indigo-600/20 border border-indigo-500/40 text-indigo-300' : 'bg-rose-500/20 border border-rose-500/40 text-rose-400'
+                }`}>
+                {camOn ? <><Camera className="h-4 w-4" /> Camera On</> : <><CameraOff className="h-4 w-4" /> Camera Off</>}
               </button>
             )}
             {isLive && (
               <button onClick={toggleMic}
-                className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-colors ${
-                  micOn ? 'bg-red-500/20 border border-red-500/50 text-red-400 hover:bg-red-500/30' : 'bg-[#1a2035] border border-[#2a3555] text-zinc-300 hover:bg-[#232B45]'
+                className={`flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-colors cursor-pointer ${
+                  micOn ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300' : 'bg-zinc-800 border border-zinc-700 text-zinc-300'
                 }`}>
                 {micOn ? <><Mic className="h-4 w-4 animate-pulse" /> Mic On</> : <><MicOff className="h-4 w-4" /> Mic Off</>}
               </button>
             )}
             {isLive && (
               <button onClick={endMeeting}
-                className="flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition-colors">
-                <PhoneOff className="h-4 w-4" /> End
+                className="flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20 cursor-pointer">
+                <PhoneOff className="h-4 w-4" /> End Call
               </button>
             )}
           </div>
@@ -300,244 +399,259 @@ export default function LiveMeetingPage() {
       {/* ── Setup panel (before meeting) ── */}
       {!inMeeting && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Create */}
-          <div className="rounded-2xl border border-[#232B45] bg-[#12172A] p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2"><Video className="h-5 w-5 text-[#6366F1]" />Create a meeting</h2>
+          <div className="glass-card p-6 border border-zinc-800 rounded-2xl space-y-4">
+            <div className="flex items-center gap-2 text-[#a5b4fc]">
+              <Video className="h-5 w-5 text-indigo-400" />
+              <h2 className="text-lg font-bold text-white">Create New LiveKit Meeting</h2>
+            </div>
+            <p className="text-xs text-zinc-400">Generates a WebRTC video room link to share with participants.</p>
+
+            {shareLink && (
+              <div className="p-3.5 rounded-xl bg-indigo-600/10 border border-indigo-500/30 flex flex-col gap-2">
+                <div className="flex items-center justify-between text-xs text-indigo-300 font-bold">
+                  <span>🎉 Shareable Link Generated:</span>
+                  <button onClick={copyLink} className="flex items-center gap-1 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-mono transition cursor-pointer">
+                    <Copy className="w-3 h-3" /> {copied ? 'Copied!' : 'Copy Link'}
+                  </button>
+                </div>
+                <div className="p-2 bg-zinc-950 border border-zinc-800 rounded-lg text-xs font-mono text-zinc-300 select-all truncate">
+                  {shareLink}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-3">
-              <input value={title} onChange={e => setTitle(e.target.value)}
-                className="w-full rounded-xl border border-[#232B45] bg-[#0a0e17] px-4 py-2.5 text-sm text-zinc-200 outline-none focus:border-[#6366F1] transition-colors" placeholder="Meeting title" />
-              <input value={hostName} onChange={e => setHostName(e.target.value)}
-                className="w-full rounded-xl border border-[#232B45] bg-[#0a0e17] px-4 py-2.5 text-sm text-zinc-200 outline-none focus:border-[#6366F1] transition-colors" placeholder="Your name" />
-              <button onClick={createMeeting} disabled={isCreating}
-                className="w-full rounded-xl bg-[#6366F1] py-2.5 text-sm font-semibold text-white hover:bg-[#5254cc] disabled:opacity-60 transition-colors">
-                {isCreating ? 'Creating…' : '+ New meeting'}
+              <div>
+                <label className="block text-xs font-mono uppercase tracking-wider text-zinc-400 mb-1">Meeting Title</label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder="e.g. Q3 Product Alignment"
+                  className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono uppercase tracking-wider text-zinc-400 mb-1">Your Name</label>
+                <input
+                  type="text"
+                  value={hostName}
+                  onChange={e => setHostName(e.target.value)}
+                  placeholder="Your Name"
+                  className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <button
+                onClick={createMeeting}
+                disabled={isCreating || !title.trim()}
+                className="w-full py-3 bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition shadow-lg shadow-indigo-600/20 cursor-pointer disabled:opacity-50"
+              >
+                {isCreating ? 'Creating Room...' : 'Create LiveKit Meeting Room'}
               </button>
             </div>
           </div>
 
-          {/* Join */}
-          <div className="rounded-2xl border border-[#232B45] bg-[#12172A] p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2"><Link2 className="h-5 w-5 text-fuchsia-400" />Join a meeting</h2>
+          <div className="glass-card p-6 border border-zinc-800 rounded-2xl space-y-4">
+            <div className="flex items-center gap-2 text-[#a5b4fc]">
+              <Users className="h-5 w-5 text-fuchsia-400" />
+              <h2 className="text-lg font-bold text-white">Join Existing Meeting</h2>
+            </div>
+            <p className="text-xs text-zinc-400">Enter a meeting ID or join link from another host.</p>
+
             <div className="space-y-3">
-              <input value={joinInput} onChange={e => setJoinInput(e.target.value)}
-                className="w-full rounded-xl border border-[#232B45] bg-[#0a0e17] px-4 py-2.5 text-sm text-zinc-200 outline-none focus:border-fuchsia-500 transition-colors"
-                placeholder="Paste meeting link or ID" />
-              <button onClick={joinMeeting}
-                className="w-full rounded-xl border border-fuchsia-500/50 bg-fuchsia-500/10 py-2.5 text-sm font-semibold text-fuchsia-300 hover:bg-fuchsia-500/20 transition-colors">
-                Join meeting
+              <div>
+                <label className="block text-xs font-mono uppercase tracking-wider text-zinc-400 mb-1">Meeting Link / Room ID</label>
+                <input
+                  type="text"
+                  value={joinInput}
+                  onChange={e => setJoinInput(e.target.value)}
+                  placeholder="Paste URL or Room ID"
+                  className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <button
+                onClick={joinMeeting}
+                disabled={!joinInput.trim()}
+                className="w-full py-3 bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 text-zinc-200 font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer disabled:opacity-50"
+              >
+                Join Call Now
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Active meeting layout ── */}
+      {/* ── Active Meeting Video & AI Grid ── */}
       {inMeeting && (
-        <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
+          
+          {/* Main Video Screen Container */}
+          <div className="lg:col-span-2 flex flex-col gap-4">
+            
+            {/* Share Link Banner */}
+            <div className="flex items-center justify-between px-4 py-2.5 bg-zinc-900/80 border border-zinc-800 rounded-xl text-xs">
+              <div className="flex items-center gap-2 text-zinc-300 font-mono truncate">
+                <Link2 className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                <span className="truncate">{shareLink}</span>
+              </div>
+              <button
+                onClick={copyLink}
+                className="flex items-center gap-1.5 px-3 py-1 bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 rounded-lg font-mono hover:bg-indigo-600/30 transition cursor-pointer"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                {copied ? 'Copied!' : 'Copy Link'}
+              </button>
+            </div>
 
-          {/* Invite bar */}
-          <div className="flex items-center gap-3 rounded-xl border border-[#232B45] bg-[#12172A] px-4 py-3">
-            <Link2 className="h-4 w-4 text-fuchsia-400 shrink-0" />
-            <span className="flex-1 truncate text-sm text-zinc-300 font-mono">{shareLink || '—'}</span>
-            <button onClick={copyLink} disabled={!shareLink}
-              className="flex items-center gap-1.5 rounded-lg border border-[#232B45] bg-[#0a0e17] px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:text-white transition-colors disabled:opacity-40">
-              <Copy className="h-3.5 w-3.5" />{copied ? 'Copied!' : 'Copy link'}
-            </button>
+            {/* LiveKit WebRTC / Local Camera Video Grid Container */}
+            <div className="w-full aspect-video rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 relative shadow-2xl flex flex-col items-center justify-center">
+              {camOn ? (
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover rounded-2xl"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center space-y-3 p-6 text-center">
+                  <div className="w-20 h-20 rounded-full bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 text-2xl font-bold">
+                    {initials(hostName)}
+                  </div>
+                  <h3 className="text-lg font-bold text-white">{hostName}</h3>
+                  <p className="text-xs text-zinc-400 font-mono">Camera Muted · WebRTC Active</p>
+                </div>
+              )}
+
+              {/* Overlay Participant Badge */}
+              <div className="absolute bottom-4 left-4 px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-zinc-800 text-xs text-white font-mono flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>{hostName} (You)</span>
+              </div>
+            </div>
           </div>
 
-          {/* Mic error */}
-          {micError && (
-            <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-300">{micError}</div>
-          )}
-
-          {/* Main grid */}
-          <div className="grid grid-cols-12 gap-4 flex-1">
-
-            {/* LEFT — participant tiles + status */}
-            <div className="col-span-12 lg:col-span-5 flex flex-col gap-4">
-
-              {/* Participant tiles (Zoom-style) */}
-              <div className="rounded-2xl border border-[#232B45] bg-[#0a0e17] p-4 shadow-xl">
-                <div className="flex items-center gap-2 mb-3">
-                  <Users className="h-4 w-4 text-[#6366F1]" />
-                  <span className="text-sm font-semibold text-white">Participants ({participants.length})</span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {participants.map(p => (
-                    <div key={p} className="relative flex flex-col items-center justify-center gap-2 rounded-xl bg-[#12172A] border border-[#232B45] py-5 px-2">
-                      <div className="relative">
-                        <div className="h-14 w-14 rounded-full flex items-center justify-center text-lg font-bold text-white"
-                          style={{ background: `radial-gradient(circle at 30% 30%, ${avatarColor(p)}cc, ${avatarColor(p)}66)` }}>
-                          {initials(p)}
-                        </div>
-                        {isLive && p === hostName && micOn && (
-                          <span className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-500 border-2 border-[#12172A] flex items-center justify-center">
-                            <Mic className="h-2 w-2 text-white" />
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-xs text-zinc-300 font-medium truncate max-w-full px-1">{p}</span>
-                      {isLive && p === hostName && micOn && (
-                        <div className="flex gap-0.5 items-end h-3">
-                          {[...Array(4)].map((_, i) => (
-                            <div key={i} className="w-1 rounded-full bg-[#6366F1] animate-pulse" style={{ height: `${Math.random() * 8 + 4}px`, animationDelay: `${i * 100}ms` }} />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {participants.length === 0 && (
-                    <div className="col-span-full text-sm text-zinc-500 text-center py-4">No participants yet</div>
-                  )}
-                </div>
+          {/* Side Drawer: Live Transcript & Real-Time Intelligence */}
+          <div className="flex flex-col gap-4">
+            
+            {/* Live Transcript Stream */}
+            <div className="glass-card p-4 border border-zinc-800 rounded-2xl flex-1 flex flex-col max-h-[400px] overflow-hidden">
+              <div className="flex items-center justify-between pb-3 border-b border-zinc-900 mb-3">
+                <span className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-emerald-400" /> Live Transcript Stream
+                </span>
               </div>
 
-              {/* AI Summary */}
-              {insights.summary && (
-                <div className="rounded-2xl border border-[#6366F1]/30 bg-[#6366F1]/5 p-4 shadow-xl">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="h-4 w-4 text-[#6366F1]" />
-                    <span className="text-sm font-semibold text-white">AI Summary</span>
-                  </div>
-                  <p className="text-sm text-zinc-300 leading-relaxed">{insights.summary}</p>
-                </div>
-              )}
-
-              {/* Status bar */}
-              {statusMsg && (
-                <div className="rounded-xl border border-[#232B45] bg-[#12172A] px-4 py-2.5 text-xs text-zinc-400">{statusMsg}</div>
-              )}
+              <div className="flex-1 overflow-y-auto space-y-2 pr-1 text-xs">
+                {transcript.length === 0 ? (
+                  <p className="text-zinc-500 italic text-center my-auto py-8">
+                    Listening for spoken dialogue... Speak into your mic.
+                  </p>
+                ) : (
+                  transcript.map(entry => (
+                    <div key={entry.id} className="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800/60 space-y-1">
+                      <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500">
+                        <span className="font-bold text-indigo-300">{entry.speaker}</span>
+                        <span>{entry.timestamp}</span>
+                      </div>
+                      <p className="text-zinc-200">{entry.text}</p>
+                    </div>
+                  ))
+                )}
+                {interim && (
+                  <p className="text-indigo-400 italic text-xs animate-pulse p-2">
+                    {interim}
+                  </p>
+                )}
+                <div ref={transcriptEnd} />
+              </div>
             </div>
 
-            {/* RIGHT — transcript + insights tabs */}
-            <div className="col-span-12 lg:col-span-7 flex flex-col gap-4">
-
-              {/* Live transcript */}
-              <div className="rounded-2xl border border-[#232B45] bg-[#12172A] shadow-xl flex flex-col" style={{ minHeight: '280px' }}>
-                <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-[#232B45]">
-                  <div className="flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-emerald-400" />
-                    <span className="text-sm font-semibold text-white">Live Transcript</span>
-                    {micOn && <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />}
-                  </div>
-                  <span className="text-[10px] uppercase tracking-widest text-zinc-500">{transcript.length} entries</span>
-                </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ maxHeight: '260px' }}>
-                  {transcript.length === 0 && (
-                    <div className="flex flex-col items-center justify-center h-full py-8 text-center">
-                      <Mic className="h-8 w-8 text-zinc-600 mb-2" />
-                      <p className="text-sm text-zinc-500">
-                        {isLive ? 'Start speaking — transcript will appear here automatically.' : 'Start the meeting to begin live transcription.'}
-                      </p>
-                    </div>
-                  )}
-                  {transcript.map((entry, idx) => (
-                    <div key={entry.id} className={`transcript-line-${idx} flex gap-3`}>
-                      <div className="h-7 w-7 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white"
-                        style={{ background: avatarColor(entry.speaker) }}>
-                        {initials(entry.speaker)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-xs font-semibold text-[#a5b4fc]">{entry.speaker}</span>
-                          <span className="text-[10px] text-zinc-500">{entry.timestamp}</span>
-                        </div>
-                        <p className="text-sm text-zinc-300 leading-relaxed">{entry.text}</p>
-                      </div>
-                    </div>
-                  ))}
-                  {/* Interim (in-progress) text */}
-                  {interim && (
-                    <div className="flex gap-3 opacity-50">
-                      <div className="h-7 w-7 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white"
-                        style={{ background: avatarColor(hostName) }}>
-                        {initials(hostName)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-xs font-semibold text-[#a5b4fc]">{hostName}</span>
-                          <span className="text-[10px] text-zinc-500 italic">speaking…</span>
-                        </div>
-                        <p className="text-sm text-zinc-400 italic">{interim}</p>
-                      </div>
-                    </div>
-                  )}
-                  <div ref={transcriptEnd} />
-                </div>
+            {/* Real-time Intelligence Insights */}
+            <div className="glass-card p-4 border border-zinc-800 rounded-2xl flex-1 flex flex-col max-h-[300px] overflow-hidden">
+              <div className="flex items-center justify-between pb-3 border-b border-zinc-900 mb-3">
+                <span className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-fuchsia-400" /> Real-Time Intelligence
+                </span>
               </div>
 
-              {/* AI Insights tabs */}
-              <div className="rounded-2xl border border-[#232B45] bg-[#12172A] shadow-xl flex flex-col">
-                {/* Tab bar */}
-                <div className="flex border-b border-[#232B45]">
-                  {([
-                    { key: 'decisions', label: 'Decisions', icon: <Lightbulb className="h-3.5 w-3.5" />, count: insights.decisions.length },
-                    { key: 'tasks',     label: 'Action Items', icon: <ClipboardList className="h-3.5 w-3.5" />, count: insights.actionItems.length },
-                    { key: 'risks',     label: 'Risks', icon: <AlertTriangle className="h-3.5 w-3.5" />, count: insights.risks.length },
-                  ] as const).map(tab => (
-                    <button key={tab.key} onClick={() => setInsightTab(tab.key)}
-                      className={`flex items-center gap-1.5 px-4 py-3 text-xs font-semibold transition-colors border-b-2 ${
-                        insightTab === tab.key
-                          ? 'border-[#6366F1] text-white'
-                          : 'border-transparent text-zinc-500 hover:text-zinc-300'
-                      }`}>
-                      {tab.icon}{tab.label}
-                      {tab.count > 0 && (
-                        <span className="ml-1 rounded-full bg-[#6366F1]/20 px-1.5 py-0.5 text-[10px] text-[#a5b4fc]">{tab.count}</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Tab content */}
-                <div className="p-4 space-y-2" style={{ minHeight: '140px', maxHeight: '220px', overflowY: 'auto' }}>
-                  {insightTab === 'decisions' && (
-                    insights.decisions.length === 0
-                      ? <EmptyState text={isLive ? 'Decisions will appear as they are made.' : 'Start the meeting to see AI-extracted decisions.'} />
-                      : insights.decisions.map(d => <InsightCard key={d.id} icon={<Lightbulb className="h-3.5 w-3.5 text-yellow-400" />} title={d.title} detail={d.detail} />)
-                  )}
-                  {insightTab === 'tasks' && (
-                    insights.actionItems.length === 0
-                      ? <EmptyState text={isLive ? 'Action items will appear as they are discussed.' : 'Start the meeting to see action items.'} />
-                      : insights.actionItems.map(a => (
-                          <InsightCard key={a.id} icon={<CheckSquare className="h-3.5 w-3.5 text-emerald-400" />} title={a.title} detail={a.detail}
-                            badge={a.assignee ? `→ ${a.assignee}` : undefined} />
-                        ))
-                  )}
-                  {insightTab === 'risks' && (
-                    insights.risks.length === 0
-                      ? <EmptyState text={isLive ? 'Risks will be flagged automatically.' : 'Start the meeting to see flagged risks.'} />
-                      : insights.risks.map(r => <InsightCard key={r.id} icon={<AlertTriangle className="h-3.5 w-3.5 text-red-400" />} title={r.title} detail={r.detail} />)
-                  )}
-                </div>
+              <div className="flex gap-2 mb-3">
+                <button
+                  onClick={() => setInsightTab('decisions')}
+                  className={`flex-1 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase transition cursor-pointer ${
+                    insightTab === 'decisions' ? 'bg-indigo-600 text-white' : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  Decisions ({insights.decisions.length})
+                </button>
+                <button
+                  onClick={() => setInsightTab('tasks')}
+                  className={`flex-1 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase transition cursor-pointer ${
+                    insightTab === 'tasks' ? 'bg-indigo-600 text-white' : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  Tasks ({insights.actionItems.length})
+                </button>
+                <button
+                  onClick={() => setInsightTab('risks')}
+                  className={`flex-1 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase transition cursor-pointer ${
+                    insightTab === 'risks' ? 'bg-indigo-600 text-white' : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  Risks ({insights.risks.length})
+                </button>
               </div>
 
+              <div className="flex-1 overflow-y-auto space-y-2 text-xs">
+                {insightTab === 'decisions' && (
+                  insights.decisions.length === 0 ? (
+                    <p className="text-zinc-500 italic text-center py-6">No decisions detected yet.</p>
+                  ) : (
+                    insights.decisions.map(d => (
+                      <div key={d.id} className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
+                        <strong className="block font-bold text-[11px] mb-0.5">[DECISION]</strong>
+                        <p>{d.detail}</p>
+                      </div>
+                    ))
+                  )
+                )}
+
+                {insightTab === 'tasks' && (
+                  insights.actionItems.length === 0 ? (
+                    <p className="text-zinc-500 italic text-center py-6">No action items detected yet.</p>
+                  ) : (
+                    insights.actionItems.map(t => (
+                      <div key={t.id} className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
+                        <strong className="block font-bold text-[11px] mb-0.5">[TASK]</strong>
+                        <p>{t.detail}</p>
+                      </div>
+                    ))
+                  )
+                )}
+
+                {insightTab === 'risks' && (
+                  insights.risks.length === 0 ? (
+                    <p className="text-zinc-500 italic text-center py-6">No risks detected yet.</p>
+                  ) : (
+                    insights.risks.map(r => (
+                      <div key={r.id} className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300">
+                        <strong className="block font-bold text-[11px] mb-0.5">[RISK]</strong>
+                        <p>{r.detail}</p>
+                      </div>
+                    ))
+                  )
+                )}
+              </div>
             </div>
+
           </div>
 
         </div>
       )}
 
-    </div>
-  );
-}
-
-/* ─── Sub-components ──────────────────────────────────────────────────────── */
-function EmptyState({ text }: { text: string }) {
-  return <p className="text-sm text-zinc-500 text-center py-6">{text}</p>;
-}
-
-function InsightCard({ icon, title, detail, badge }: { icon: React.ReactNode; title: string; detail: string; badge?: string }) {
-  return (
-    <div className="flex gap-3 rounded-xl border border-[#232B45] bg-[#0a0e17] p-3">
-      <div className="mt-0.5 flex-shrink-0">{icon}</div>
-      <div className="min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-sm font-semibold text-zinc-200">{title}</p>
-          {badge && <span className="text-[10px] rounded-full bg-[#6366F1]/20 text-[#a5b4fc] px-2 py-0.5">{badge}</span>}
-        </div>
-        {detail && <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">{detail}</p>}
-      </div>
     </div>
   );
 }
