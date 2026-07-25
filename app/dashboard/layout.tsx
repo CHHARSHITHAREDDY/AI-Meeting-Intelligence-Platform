@@ -50,10 +50,10 @@ export default function DashboardLayout({
       .toUpperCase();
   };
 
-  // Distinct hrefs & keys so only 1 item is highlighted when active
+  // Sidebar Items: "Meetings" directly navigates to /dashboard/live (Start/Join LiveKit Meeting Room)
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', exact: true, icon: 'dashboard' },
-    { name: 'Meetings', href: '/dashboard/meetings', exact: true, icon: 'videocam' },
+    { name: 'Meetings', href: '/dashboard/live', exact: false, icon: 'videocam' },
     { name: 'Upload Meeting', href: '/dashboard/upload', exact: true, icon: 'cloud_upload' },
     { name: 'Company Memory', href: '/dashboard/memory', exact: true, icon: 'database' },
     { name: 'Analytics', href: '/dashboard/graph', exact: false, icon: 'analytics' },
@@ -111,12 +111,10 @@ export default function DashboardLayout({
               ? pathname === item.href
               : pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
 
-            // Map /dashboard/upload to /dashboard?upload=true to immediately open file upload modal
-            const targetHref = item.href === '/dashboard/upload'
-              ? '/dashboard?upload=true'
-              : ['/dashboard/meetings', '/dashboard/memory'].includes(item.href)
-                ? '/dashboard'
-                : item.href;
+            // Map /dashboard/memory to /dashboard
+            const targetHref = item.href === '/dashboard/memory'
+              ? '/dashboard'
+              : item.href;
 
             return (
               <li key={item.name}>
@@ -156,7 +154,7 @@ export default function DashboardLayout({
           </Link>
 
           <Link
-            href="/dashboard?upload=true"
+            href="/dashboard/live"
             className="w-full btn-primary-cta py-3 rounded-lg flex items-center justify-center text-[14px] cursor-pointer"
           >
             <span className="material-symbols-outlined mr-2 text-[20px]">add</span>
