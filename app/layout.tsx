@@ -3,8 +3,8 @@ import './globals.css';
 import Providers from './providers';
 
 export const metadata: Metadata = {
-  title: 'Cue Intelligence | AI Meeting Intelligence Platform',
-  description: 'Beyond transcripts. Cue captures decisions, predicts risks, and builds your organization\'s memory in real-time.',
+  title: 'Weave | Enterprise Meeting Intelligence Platform',
+  description: 'Meetings end. The intelligence doesn\'t. Weave turns raw meeting recordings and live conversations into structured business intelligence: decisions, action items, risks, and a searchable AI copilot.',
 };
 
 export default function RootLayout({

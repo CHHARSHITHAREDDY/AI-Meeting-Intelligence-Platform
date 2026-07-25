@@ -1,30 +1,41 @@
 (function () {
-  const existingHost = document.getElementById('cue-widget-host');
+  const existingHost = document.getElementById('weave-widget-host');
   if (existingHost) {
-    existingHost.style.display = 'block';
+    existingHost.style.display = existingHost.style.display === 'none' ? 'block' : 'none';
     return;
   }
 
   const BACKEND_URL = 'http://localhost:3000';
 
-  // 1. Create Host Element & Shadow DOM
+  // 1. Create Host Element & Shadow DOM (HIDDEN BY DEFAULT - ONLY VISIBLE ON EXPLICIT USER TOGGLE)
   const host = document.createElement('div');
-  host.id = 'cue-widget-host';
+  host.id = 'weave-widget-host';
   host.style.position = 'fixed';
   host.style.top = '20px';
   host.style.right = '20px';
   host.style.zIndex = '2147483647';
-  host.style.width = '380px';
-  host.style.height = '500px';
-  host.style.minWidth = '190px';
-  host.style.minHeight = '65px';
+  host.style.width = '420px';
+  host.style.height = '540px';
+  host.style.minWidth = '220px';
+  host.style.minHeight = '70px';
   host.style.resize = 'both';
   host.style.overflow = 'hidden';
-  host.style.borderRadius = '14px';
-  host.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(99, 102, 241, 0.3)';
+  host.style.borderRadius = '16px';
+  host.style.display = 'none'; // STRICTLY HIDDEN UNTIL USER CLICKS INJECT IN POPUP
+  host.style.boxShadow = '0 16px 48px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(99, 102, 241, 0.3)';
 
   document.body.appendChild(host);
   const shadow = host.attachShadow({ mode: 'open' });
+
+  // Listen for toggle message from popup.js
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+      if (msg.action === 'TOGGLE_WIDGET') {
+        host.style.display = host.style.display === 'none' ? 'block' : 'none';
+        sendResponse({ visible: host.style.display === 'block' });
+      }
+    });
+  }
 
   // 2. Inject Encapsulated Styles
   const style = document.createElement('style');
