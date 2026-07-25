@@ -126,24 +126,39 @@ ${memorySnippet || 'None'}`;
       }
     }
 
-    // 2. Try Llama API
+    // 2. Try LlamaCloud API (llx- keys) or Llama API
     if (llamaApiKey && llamaApiKey !== 'YOUR_LLAMA_API_KEY' && llamaApiKey.trim() !== '') {
       try {
-        const client = new OpenAI({ apiKey: llamaApiKey, baseURL: 'https://api.llama-api.com' });
-        const completion = await client.chat.completions.create({
-          model: 'llama3.1-70b-instruct',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: query }
-          ],
-          max_tokens: 1000,
-        });
-        const reply = completion.choices[0]?.message?.content || '';
-        if (reply.trim() !== '') {
-          return NextResponse.json({
-            reply,
-            referencedMeetings: Array.from(new Set(retrievedChunks.map((c) => c.meetingTitle))),
+        if (llamaApiKey.startsWith('llx-')) {
+          const { runLlamaCloudExtraction } = require('@/lib/rag');
+          const schema = { type: 'object', properties: { answer: { type: 'string' } }, required: ['answer'] };
+          const llamaCloudRes = await runLlamaCloudExtraction(
+            `${systemPrompt}\n\nUser Question: ${query}`,
+            schema
+          );
+          if (llamaCloudRes?.answer && llamaCloudRes.answer.trim() !== '') {
+            return NextResponse.json({
+              reply: llamaCloudRes.answer.trim(),
+              referencedMeetings: Array.from(new Set(retrievedChunks.map((c) => c.meetingTitle))),
+            });
+          }
+        } else {
+          const client = new OpenAI({ apiKey: llamaApiKey, baseURL: 'https://api.llama-api.com' });
+          const completion = await client.chat.completions.create({
+            model: 'llama3.1-70b-instruct',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: query }
+            ],
+            max_tokens: 1000,
           });
+          const reply = completion.choices[0]?.message?.content || '';
+          if (reply.trim() !== '') {
+            return NextResponse.json({
+              reply,
+              referencedMeetings: Array.from(new Set(retrievedChunks.map((c) => c.meetingTitle))),
+            });
+          }
         }
       } catch (err: any) {
         console.warn('[Global Chat] Llama API notice:', err.message);
