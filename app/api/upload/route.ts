@@ -56,8 +56,48 @@ export async function POST(request: NextRequest) {
       fileName = 'audio.pcm';
       const arrayBuffer = await request.arrayBuffer();
       audioInput = new Float32Array(arrayBuffer);
+    } else if (contentType.includes('application/json')) {
+      const body = await request.json();
+      title = body.title || '';
+      const link = body.link || '';
+      if (link && link.trim() !== '') {
+        const videoId = getYoutubeVideoId(link.trim());
+        if (videoId) {
+          console.log('[Upload API] YouTube URL detected:', videoId);
+          if (!title) {
+            title = await fetchYoutubeTitle(videoId);
+          }
+          const segments = await YoutubeTranscript.fetchTranscript(videoId);
+          transcript = segments.map((s: any) => s.text).join(' ');
+          isLinkTranscribed = true;
+          fileName = 'youtube';
+        } else {
+          console.log('[Upload API] Generic media link detected:', link);
+          if (!title) {
+            const urlParts = link.split('/');
+            const lastPart = urlParts[urlParts.length - 1] || 'media';
+            title = lastPart.split('?')[0];
+          }
+          const fileRes = await fetch(link.trim());
+          if (!fileRes.ok) {
+            throw new Error(`Failed to download audio from link: HTTP ${fileRes.status}`);
+          }
+          const arrayBuffer = await fileRes.arrayBuffer();
+          audioInput = Buffer.from(arrayBuffer);
+          fileName = title;
+        }
+      } else {
+        return NextResponse.json({ error: 'No file or link provided in JSON body' }, { status: 400 });
+      }
     } else {
-      const formData = await request.formData();
+      let formData: FormData;
+      try {
+        formData = await request.formData();
+      } catch (err: any) {
+        console.error('[Upload API] FormData parse error:', err);
+        return NextResponse.json({ error: 'Failed to parse form upload data. Please select a valid audio/video file.' }, { status: 400 });
+      }
+
       const file = formData.get('file') as File | null;
       const link = formData.get('link') as string | null;
       title = (formData.get('title') as string) || '';
