@@ -42,28 +42,31 @@ export async function POST(req: NextRequest) {
           title: title || 'Live Call Session',
           date: new Date().toISOString(),
           duration: `${Math.max(1, Math.floor(transcript.length / 2))}m`,
-          participants: [hostName || 'Host'],
-          summary: insights?.summary || 'Live meeting session completed with real-time AI transcription.',
-          decisions: insights?.decisions?.map((d: any) => ({
-            id: d.id,
-            decision: d.detail || d.title,
-            decider: hostName || 'Host',
-            impact: 'high',
-          })) || [],
-          actionItems: insights?.actionItems?.map((a: any) => ({
-            id: a.id,
-            task: a.detail || a.title,
-            assignee: a.assignee || hostName || 'Host',
-            priority: 'high',
-            status: 'pending',
-          })) || [],
-          risks: insights?.risks?.map((r: any) => ({
-            risk: r.detail || r.title,
-            impact: 'medium',
-            mitigation: 'Monitor in next sprint',
-          })) || [],
-          notes: [fullTranscript],
-        });
+          transcript: fullTranscript,
+          status: 'completed',
+          analysis: {
+            summary: insights?.summary || 'Live meeting session completed with real-time AI transcription.',
+            decisions: insights?.decisions?.map((d: any) => ({
+              id: d.id,
+              decision: d.detail || d.title,
+              decider: hostName || 'Host',
+              context: 'Agreed during live session',
+            })) || [],
+            actionItems: insights?.actionItems?.map((a: any) => ({
+              id: a.id,
+              task: a.detail || a.title,
+              assignee: a.assignee || hostName || 'Host',
+              dueDate: 'TBD',
+              status: 'pending',
+            })) || [],
+            risks: insights?.risks?.map((r: any) => ({
+              id: r.id || `risk-${Date.now()}`,
+              risk: r.detail || r.title,
+              impact: 'medium',
+              mitigation: 'Monitor in next sprint',
+            })) || [],
+          }
+        }, fullTranscript);
       }
       return NextResponse.json({ success: true, status: 'ended' });
     }
