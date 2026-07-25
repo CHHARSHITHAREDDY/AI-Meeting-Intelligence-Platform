@@ -1,29 +1,49 @@
 document.getElementById('toggleOverlay')?.addEventListener('click', async () => {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) return;
+    if (!tab?.id) { window.close(); return; }
 
     if (tab.url && (tab.url.startsWith('chrome://') || tab.url.startsWith('edge://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('about:'))) {
       alert('Floating widget cannot be injected into browser internal pages (chrome://, etc.). Please test on a regular web page (e.g. google.com or http://localhost:3000).');
+      window.close();
       return;
     }
 
+    // Step 1: Try to show existing widget directly via inline function (no message passing race condition)
+    let results;
     try {
-      await chrome.scripting.executeScript({
+      results = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        files: ['content.js']
+        func: () => {
+          const host = document.getElementById('weave-widget-host');
+          if (host) {
+            host.style.display = 'block';
+            return true; // widget already existed and is now shown
+          }
+          return false; // widget not yet injected
+        }
       });
-    } catch (err) {
-      console.log('[Popup] Script execution notice:', err?.message || err);
+    } catch (_) {
+      results = null;
+    }
+
+    const alreadyExists = results && results[0] && results[0].result === true;
+
+    // Step 2: If widget didn't exist yet, inject the full content.js which creates it
+    if (!alreadyExists) {
       try {
-        await chrome.tabs.sendMessage(tab.id, { action: 'TOGGLE_WIDGET' });
-      } catch (_) {}
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content.js']
+        });
+      } catch (err) {
+        console.log('[Popup] Script injection notice:', err?.message || err);
+      }
     }
   } catch (err) {
     console.log('[Popup] Toggle overlay error:', err?.message || err);
-  } finally {
-    window.close();
   }
+  window.close();
 });
 
 document.getElementById('openDashboard')?.addEventListener('click', () => {

@@ -25,7 +25,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     const targetTabId = sender?.tab?.id || request.tabId;
     if (chrome.tabCapture && typeof chrome.tabCapture.getMediaStreamId === 'function') {
       try {
-        const options = targetTabId ? { targetTabId } : {};
+        // consumerTabId must equal the tab that will call getUserMedia with this streamId
+        const options = targetTabId ? { targetTabId, consumerTabId: targetTabId } : {};
         chrome.tabCapture.getMediaStreamId(options, (streamId) => {
           if (chrome.runtime.lastError || !streamId) {
             sendResponse({ ok: false, error: chrome.runtime.lastError?.message || 'No stream ID' });

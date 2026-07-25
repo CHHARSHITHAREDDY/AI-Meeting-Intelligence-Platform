@@ -1,8 +1,7 @@
 (function () {
   const existingHost = document.getElementById('weave-widget-host');
   if (existingHost) {
-    const isHidden = existingHost.style.display === 'none' || getComputedStyle(existingHost).display === 'none';
-    existingHost.style.display = isHidden ? 'block' : 'none';
+    existingHost.style.display = 'block';
     return;
   }
 
@@ -534,6 +533,7 @@
 
     <!-- Export & Workflow Toolbar -->
     <div class="export-toolbar">
+      <button id="clearSessionBtn" class="export-btn" title="Clear all transcript, insights and chat data" style="border-color:#ff6b6b; color:#ff6b6b;">🗑️ Clear</button>
       <button id="expEmailBtn" class="export-btn" title="Copy Executive Email Digest">📧 Email Brief</button>
       <button id="expSlackBtn" class="export-btn" title="Copy Slack Formatting">💬 Slack Digest</button>
       <button id="expJiraBtn" class="export-btn" title="Copy Jira/GitHub Tasks">🎟️ Jira/Tasks</button>
@@ -796,13 +796,12 @@
 
     if (interimEl) interimEl.remove();
 
-    // Deduplicate rapid duplicate utterances (within 1 second)
+    // Deduplicate rapid duplicate utterances (within 1.5 seconds)
     const dedupeKey = `${speaker}::${text.toLowerCase()}`;
     const now = Date.now();
     if (dedupeKey === lastFinalKey && (now - lastBlockTime) < 1500) return;
     lastFinalKey = dedupeKey;
 
-    const now = Date.now();
     const canGroup = lastBlockEl && lastBlockSpeaker === speaker && (now - lastBlockTime) < GROUP_WINDOW_MS;
 
     const utteranceHtml = `<div class="transcript-utterance"><span class="utterance-time">${nowClock()}</span><span class="utterance-text">${escapeHtml(text)}</span></div>`;
@@ -1256,8 +1255,11 @@
         }
       }
 
-      // 2. Fallback to getDisplayMedia if tabCapture was not granted
+      // 2. Fallback to getDisplayMedia — show instructions BEFORE the picker opens
       if (!stream) {
+        appendTranscriptLine('System', '📋 A screen-share picker is about to open. Select the tab with audio and make sure to tick ✅ "Share tab audio" (or "Share system audio" for a window/screen). Without that checkbox, no audio will be captured.', false);
+        // Small delay so the instruction is visible before Chrome steals focus
+        await new Promise((r) => setTimeout(r, 400));
         stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
       }
 
@@ -1265,12 +1267,20 @@
       stream.getVideoTracks().forEach((t) => t.stop());
 
       if (audioTracks.length === 0) {
-        appendTranscriptLine('System', '⚠️ No tab audio track was found. Ensure audio is actively playing in the tab.', false);
         stream.getTracks().forEach((t) => t.stop());
+        appendTranscriptLine('System', '⚠️ No audio track was shared. You must tick ✅ "Share tab audio" in the picker. Click ▶ Start again → choose the tab → check the audio box.', false);
         return;
       }
 
       tabAudioStream = new MediaStream(audioTracks);
+      // Notify the user if they close the share picker or stop sharing
+      audioTracks.forEach((t) => {
+        t.onended = () => {
+          chunkActive = false;
+          tabAudioStream = null;
+          appendTranscriptLine('System', '⚠️ Tab audio share stopped. Click ▶ Start again and share the tab audio to resume.', false);
+        };
+      });
       if (!chunkAudioCtx) chunkAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
       chunkActive = true;
       consecutiveSilentTabChunks = 0;
@@ -1418,9 +1428,19 @@
         await new Promise((r) => setTimeout(r, 500));
         continue;
       }
-      const blob = await recordOneChunk(CHUNK_DURATION_MS);
+      // If the stream track died (user closed picker, tab lost focus) — stop loop cleanly
+      const tracks = tabAudioStream ? tabAudioStream.getAudioTracks() : [];
+      if (tracks.length === 0 || tracks.every((t) => t.readyState === 'ended')) {
+        appendTranscriptLine('System', '⚠️ Tab audio stream ended. Select Computer audio source and click Start again to resume.', false);
+        chunkActive = false;
+        break;
+      }
+      let blob = null;
+      try {
+        blob = await recordOneChunk(CHUNK_DURATION_MS);
+      } catch (_) {}
       if (!chunkActive) break;
-      await transcribeChunkAndAppend(blob, 'Computer Audio');
+      if (blob) await transcribeChunkAndAppend(blob, 'Computer Audio');
     }
   }
 
@@ -1430,10 +1450,18 @@
         await new Promise((r) => setTimeout(r, 500));
         continue;
       }
-      const blob = await recordOneStreamChunk(micAudioStream, CHUNK_DURATION_MS);
+      const tracks = micAudioStream ? micAudioStream.getAudioTracks() : [];
+      if (tracks.length === 0 || tracks.every((t) => t.readyState === 'ended')) {
+        micChunkActive = false;
+        break;
+      }
+      let blob = null;
+      try {
+        blob = await recordOneStreamChunk(micAudioStream, CHUNK_DURATION_MS);
+      } catch (_) {}
       if (!micChunkActive) break;
       const speakerName = (speakerNameInput.value || 'You').trim() || 'You';
-      await transcribeChunkAndAppend(blob, speakerName);
+      if (blob) await transcribeChunkAndAppend(blob, speakerName);
     }
   }
 
@@ -1608,13 +1636,43 @@
     livePulse.style.display = 'none';
   });
 
-  // 9. Export & Workflow Toolbar Handlers (driven by structured backend state,
-  // not DOM scraping, so exports stay accurate regardless of how the panel is
-  // currently rendered).
+  // 9. Export & Workflow Toolbar Handlers
+  const clearSessionBtn = shadow.getElementById('clearSessionBtn');
   const expEmailBtn = shadow.getElementById('expEmailBtn');
   const expSlackBtn = shadow.getElementById('expSlackBtn');
   const expJiraBtn = shadow.getElementById('expJiraBtn');
   const expStatsBtn = shadow.getElementById('expStatsBtn');
+
+  clearSessionBtn.addEventListener('click', () => {
+    if (!confirm('Clear all transcript, insights and chat data for this session?')) return;
+
+    // Reset transcript feed
+    transcriptFeed.innerHTML = '<div style="font-size: 10px; color: #9f8f99; text-align: center; margin: auto;">Click ▶ Start to begin live audio recording.</div>';
+
+    // Reset insight list
+    insightList.innerHTML = '<div style="font-size: 10px; color: #9f8f99; text-align: center; margin: auto;">Listening for key decisions & tasks...</div>';
+
+    // Reset chat messages
+    chatMessages.innerHTML = '<div style="font-size: 10px; color: #9f8f99; text-align: center; margin: auto;">Ask about decisions, tasks, risks, or anything said so far.</div>';
+
+    // Reset all internal state
+    lastBlockEl = null;
+    lastBlockSpeaker = null;
+    lastBlockTime = 0;
+    lastFinalKey = '';
+    latestInsights = { summary: '', decisions: [], actionItems: [], risks: [] };
+    meetingId = null;
+    meetingCreationPromise = null;
+    seenCaptions.clear();
+
+    // Clear stored meeting ID
+    try {
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.remove('activeLiveMeetingId');
+      }
+      localStorage.removeItem('active_live_meeting_id');
+    } catch (_) {}
+  });
 
   function getTranscriptLines() {
     return Array.from(transcriptFeed.querySelectorAll('.transcript-block:not(.interim-line)'))
