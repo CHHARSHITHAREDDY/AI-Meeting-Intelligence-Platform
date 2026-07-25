@@ -142,13 +142,16 @@ export default function MeetingIntelligenceSaaSPage() {
       }
     } catch (error) {
       console.error('[SaaS Page] Failed to fetch meetings:', error);
-    } fontally: {
+    } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchMeetings();
+    const handleFocus = () => fetchMeetings();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   // Initialize Chat Messages for active meeting
@@ -412,6 +415,16 @@ export default function MeetingIntelligenceSaaSPage() {
 
     setActiveMeeting(updatedMeeting);
     setMeetings(prev => prev.map(m => m.id === updatedMeeting.id ? updatedMeeting : m));
+
+    try {
+      await fetch(`/api/meetings/${activeMeeting.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actionItems: updatedActions }),
+      });
+    } catch (err) {
+      console.error('Failed to persist action item update:', err);
+    }
   };
 
   // Handle AI Copilot Chat Submit
@@ -526,11 +539,11 @@ export default function MeetingIntelligenceSaaSPage() {
   const earlierMeetings = filteredMeetings.filter(m => !isToday(m.date) && !isYesterday(m.date));
 
   // Extract all action items across meetings for the right panel
-  const allActionItems: { item: ActionItem; meetingTitle: string }[] = [];
+  const allActionItems: { item: ActionItem; meetingTitle: string; uniqueId: string }[] = [];
   meetings.forEach(m => {
     if (m.analysis?.actionItems) {
-      m.analysis.actionItems.forEach(a => {
-        allActionItems.push({ item: a, meetingTitle: m.title });
+      m.analysis.actionItems.forEach((a, idx) => {
+        allActionItems.push({ item: a, meetingTitle: m.title, uniqueId: `${m.id}-${a.id || idx}` });
       });
     }
   });
@@ -872,9 +885,9 @@ export default function MeetingIntelligenceSaaSPage() {
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               <h4 className="font-bold text-white text-sm mb-2">All Action Items ({allActionItems.length})</h4>
               {allActionItems.length > 0 ? (
-                allActionItems.map(({ item, meetingTitle }) => (
+                allActionItems.map(({ item, meetingTitle, uniqueId }) => (
                   <div
-                    key={item.id}
+                    key={uniqueId}
                     onClick={() => handleToggleActionItem(item.id)}
                     className="bg-[#181B25] border border-[#2a4a5e] hover:border-[#6a2153]/50 p-3 rounded-xl space-y-1 cursor-pointer transition"
                   >

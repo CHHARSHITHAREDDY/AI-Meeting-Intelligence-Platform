@@ -201,7 +201,7 @@ export default function TasksPage() {
               <div>
                 <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Total Tasks</p>
                 <h3 className="text-2xl font-bold text-zinc-100 mt-1">
-                  <span className="task-stat-counter" data-target={totalTasks}>0</span>
+                  {totalTasks}
                 </h3>
               </div>
               <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-400">
@@ -213,7 +213,7 @@ export default function TasksPage() {
               <div>
                 <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Pending Tasks</p>
                 <h3 className="text-2xl font-bold text-fuchsia-400 mt-1">
-                  <span className="task-stat-counter" data-target={pendingTasks}>0</span>
+                  {pendingTasks}
                 </h3>
               </div>
               <div className="w-10 h-10 rounded-lg bg-fuchsia-500/10 flex items-center justify-center text-fuchsia-400">
@@ -225,7 +225,7 @@ export default function TasksPage() {
               <div>
                 <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Completed Tasks</p>
                 <h3 className="text-2xl font-bold text-emerald-400 mt-1">
-                  <span className="task-stat-counter" data-target={completedTasks}>0</span>
+                  {completedTasks}
                 </h3>
               </div>
               <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
