@@ -436,6 +436,6 @@ function fallbackGroundedRAG(
     return `Here are the specific statements from "${meeting.title}" regarding "${query}":\n\n${dialogueLines}`;
   }
 
-  // 6. Honest "Information Not Found" Answer (Never fallback to generic meeting summary!)
+  // 6. Honest "Information Not Found" Answer
   return `I couldn't find specific discussion details about "${query}" in this meeting recording.`;
 }

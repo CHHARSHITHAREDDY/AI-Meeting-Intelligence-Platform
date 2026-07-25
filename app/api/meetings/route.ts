@@ -5,25 +5,26 @@ import { getSessionUser } from '@/lib/auth';
 export async function GET(request: NextRequest) {
   try {
     const user = await getSessionUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const userId = user?.userId || (user as any)?.id || 'demo-user';
 
     const { searchParams } = new URL(request.url);
     const start = searchParams.get('start');
     const end = searchParams.get('end');
 
-    // Calendar month/week/day views pass a date range; every other existing
-    // caller omits it and gets the exact same full list as before.
     if (start && end) {
-      const meetings = await getMeetingsByDateRange(user.userId, start, end);
+      const meetings = await getMeetingsByDateRange(userId, start, end);
       return NextResponse.json(meetings);
     }
 
-    const meetings = await getMeetings(user.userId);
-    // Sort meetings by date (newest first)
-    const sorted = [...meetings].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    const meetings = await getMeetings(userId);
+    const demoMeetings = userId !== 'demo-user' ? await getMeetings('demo-user') : [];
+
+    const combinedMap = new Map();
+    [...meetings, ...demoMeetings].forEach((m) => combinedMap.set(m.id, m));
+    const uniqueMeetings = Array.from(combinedMap.values());
+
+    const sorted = uniqueMeetings.sort(
+      (a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime()
     );
     return NextResponse.json(sorted);
   } catch (error) {
@@ -32,10 +33,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Creates a scheduled meeting shell — a real calendar event that doesn't
-// have a recording/transcript yet. Uploading against its id later (see
-// app/api/upload/route.ts's meetingId handling) attaches the recording to
-// this same row instead of creating a duplicate meeting.
 export async function POST(request: NextRequest) {
   try {
     const user = await getSessionUser();
@@ -82,4 +79,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to create scheduled meeting' }, { status: 500 });
   }
 }
-

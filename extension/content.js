@@ -1,7 +1,7 @@
 (function () {
   const existingHost = document.getElementById('weave-widget-host');
   if (existingHost) {
-    existingHost.style.display = existingHost.style.display === 'none' ? 'block' : 'none';
+    existingHost.style.display = 'block';
     return;
   }
 
@@ -21,7 +21,7 @@
   host.style.resize = 'both';
   host.style.overflow = 'hidden';
   host.style.borderRadius = '16px';
-  host.style.display = 'block'; // VISIBLE UPON EXPLICIT USER INJECTION FROM POPUP
+  host.style.display = 'block';
   host.style.boxShadow = '0 16px 48px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(99, 102, 241, 0.3)';
 
   document.body.appendChild(host);
@@ -31,7 +31,8 @@
   if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
     chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       if (msg.action === 'TOGGLE_WIDGET') {
-        host.style.display = host.style.display === 'none' ? 'block' : 'none';
+        const isHidden = host.style.display === 'none' || getComputedStyle(host).display === 'none';
+        host.style.display = isHidden ? 'block' : 'none';
         sendResponse({ status: 'ok', visible: host.style.display !== 'none' });
       } else if (msg.action === 'SHOW_WIDGET') {
         host.style.display = 'block';
@@ -54,13 +55,13 @@
       height: 100%;
       background: rgba(11, 15, 25, 0.96);
       backdrop-filter: blur(20px);
-      color: #F8FAFC;
+      color: #f5e2de;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       display: flex;
       flex-direction: column;
       overflow: hidden;
       border-radius: 16px;
-      border: 1px solid #232B45;
+      border: 1px solid #2a4a5e;
       position: relative;
     }
 
@@ -68,7 +69,7 @@
     .drag-handle {
       padding: 10px 14px;
       background: #0B0F19;
-      border-bottom: 1px solid #232B45;
+      border-bottom: 1px solid #2a4a5e;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -84,7 +85,7 @@
       width: 24px;
       height: 24px;
       border-radius: 6px;
-      background: linear-gradient(135deg, #6366F1, #5DE6FF);
+      background: linear-gradient(135deg, #6a2153, #5DE6FF);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -109,16 +110,16 @@
       font-family: monospace;
       padding: 3px 8px;
       border-radius: 9999px;
-      background: #12172A;
-      color: #94A3B8;
-      border: 1px solid #232B45;
+      background: #1d3a4d;
+      color: #9f8f99;
+      border: 1px solid #2a4a5e;
     }
 
     .status-dot {
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background: #94A3B8;
+      background: #9f8f99;
     }
 
     .status-badge.recording .status-dot {
@@ -138,8 +139,8 @@
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      background: #12172A;
-      border-bottom: 1px solid #232B45;
+      background: #1d3a4d;
+      border-bottom: 1px solid #2a4a5e;
       flex-shrink: 0;
     }
 
@@ -148,7 +149,7 @@
     #speakerNameInput {
       width: 56px;
       background: #0B0F19;
-      border: 1px solid #232B45;
+      border: 1px solid #2a4a5e;
       color: #5DE6FF;
       font-size: 10px;
       font-weight: 700;
@@ -157,13 +158,13 @@
       outline: none;
       font-family: inherit;
     }
-    #speakerNameInput:focus { border-color: #6366F1; }
+    #speakerNameInput:focus { border-color: #6a2153; }
 
     /* Audio Source Selector Bar */
     .audio-source-bar {
       padding: 6px 14px;
       background: #0B0F19;
-      border-bottom: 1px solid #232B45;
+      border-bottom: 1px solid #2a4a5e;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -174,17 +175,17 @@
       font-size: 9px;
       font-weight: 700;
       font-family: monospace;
-      color: #94A3B8;
+      color: #9f8f99;
       letter-spacing: 0.5px;
     }
 
     .source-toggle-group {
       display: flex;
       gap: 3px;
-      background: #12172A;
+      background: #1d3a4d;
       padding: 2px;
       border-radius: 6px;
-      border: 1px solid #232B45;
+      border: 1px solid #2a4a5e;
     }
 
     .source-btn {
@@ -192,7 +193,7 @@
       border: none;
       border-radius: 4px;
       background: transparent;
-      color: #94A3B8;
+      color: #9f8f99;
       font-size: 10px;
       font-weight: 600;
       cursor: pointer;
@@ -202,7 +203,7 @@
     .source-btn:hover { color: #f8fafc; }
 
     .source-btn.active {
-      background: linear-gradient(135deg, #6366F1, #5DE6FF);
+      background: linear-gradient(135deg, #6a2153, #5DE6FF);
       color: #0B0F19;
       font-weight: 800;
       box-shadow: 0 0 8px rgba(93, 230, 255, 0.4);
@@ -219,7 +220,7 @@
       padding: 6px 14px;
       border: none;
       border-radius: 8px;
-      background: linear-gradient(135deg, #6366F1, #5DE6FF);
+      background: linear-gradient(135deg, #6a2153, #5DE6FF);
       color: #0B0F19;
       font-weight: 800;
       font-size: 11px;
@@ -236,9 +237,9 @@
     .btn-icon {
       padding: 6px 10px;
       border-radius: 6px;
-      border: 1px solid #232B45;
-      background: #12172A;
-      color: #c7c4d7;
+      border: 1px solid #2a4a5e;
+      background: #1d3a4d;
+      color: #dfccc5;
       font-size: 11px;
       font-weight: 600;
       cursor: pointer;
@@ -250,7 +251,7 @@
       padding: 6px 10px;
       border-radius: 6px;
       border: none;
-      background: linear-gradient(135deg, #6366F1, #06B6D4);
+      background: linear-gradient(135deg, #6a2153, #06B6D4);
       color: #ffffff;
       font-size: 11px;
       font-weight: 700;
@@ -270,7 +271,7 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      border-bottom: 1px solid #232B45;
+      border-bottom: 1px solid #2a4a5e;
       background: #0B0F19;
     }
 
@@ -278,7 +279,7 @@
       font-size: 10px;
       font-weight: 700;
       font-family: monospace;
-      color: #94A3B8;
+      color: #9f8f99;
       text-transform: uppercase;
       margin-bottom: 6px;
       display: flex;
@@ -298,15 +299,15 @@
     .transcript-block {
       font-size: 11px;
       line-height: 1.4;
-      color: #dfe2ef;
-      background: #12172A;
+      color: #eaeaea;
+      background: #1d3a4d;
       padding: 6px 10px;
       border-radius: 8px;
-      border-left: 3px solid #6366F1;
+      border-left: 3px solid #6a2153;
       border-top: 1px solid rgba(255,255,255,0.03);
     }
 
-    .transcript-block.speaker-System { border-left-color: #94A3B8; opacity: 0.85; font-style: italic; }
+    .transcript-block.speaker-System { border-left-color: #9f8f99; opacity: 0.85; font-style: italic; }
     .transcript-block.speaker-Computer-Audio { border-left-color: #5DE6FF; }
     .transcript-block.interim-line { opacity: 0.65; font-style: italic; border-left-color: #a5b4fc; }
 
@@ -328,9 +329,9 @@
 
     .insight-tabs { display: flex; gap: 4px; }
     .insight-tab-btn {
-      border: 1px solid #232B45;
-      background: #12172A;
-      color: #94A3B8;
+      border: 1px solid #2a4a5e;
+      background: #1d3a4d;
+      color: #9f8f99;
       font-size: 9.5px;
       font-weight: 700;
       font-family: monospace;
@@ -340,7 +341,7 @@
       transition: all 0.2s ease;
     }
     .insight-tab-btn.active {
-      background: linear-gradient(135deg, #6366F1, #06B6D4);
+      background: linear-gradient(135deg, #6a2153, #06B6D4);
       color: #ffffff;
       border-color: transparent;
       box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
@@ -361,14 +362,14 @@
       font-size: 10.5px;
       line-height: 1.35;
     }
-    .insight-item .insight-field { color: #94A3B8; font-size: 9.5px; }
-    .insight-item .insight-field b { color: #dfe2ef; font-weight: 600; }
+    .insight-item .insight-field { color: #9f8f99; font-size: 9.5px; }
+    .insight-item .insight-field b { color: #eaeaea; font-weight: 600; }
 
     .insight-decision { background: rgba(52, 211, 153, 0.08); border-left: 3px solid #34D399; color: #a7f3d0; }
     .insight-task { background: rgba(93, 230, 255, 0.08); border-left: 3px solid #5DE6FF; color: #e0e7ff; }
     .insight-risk { background: rgba(255, 180, 171, 0.08); border-left: 3px solid #ffb4ab; color: #fecdd3; }
     .insight-question { background: rgba(245, 158, 11, 0.08); border-left: 3px solid #f59e0b; color: #fef3c7; }
-    .insight-summary { background: rgba(99, 102, 241, 0.15); border-left: 3px solid #6366F1; color: #f3e8ff; }
+    .insight-summary { background: rgba(99, 102, 241, 0.15); border-left: 3px solid #6a2153; color: #f3e8ff; }
 
     /* Chat Panel */
     .chat-panel { flex: 1; display: none; flex-direction: column; margin-top: 4px; overflow: hidden; }
@@ -376,15 +377,15 @@
     .chat-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 2px; }
     .chat-msg { font-size: 10.5px; line-height: 1.35; padding: 6px 8px; border-radius: 8px; max-width: 92%; }
     .chat-msg-user { align-self: flex-end; background: rgba(99, 102, 241, 0.25); color: #e0e7ff; border: 1px solid rgba(99,102,241,0.4); }
-    .chat-msg-ai { align-self: flex-start; background: #12172A; color: #dfe2ef; border: 1px solid #232B45; white-space: pre-wrap; }
+    .chat-msg-ai { align-self: flex-start; background: #1d3a4d; color: #eaeaea; border: 1px solid #2a4a5e; white-space: pre-wrap; }
     .chat-input-row { display: flex; gap: 4px; margin-top: 6px; flex-shrink: 0; }
     .chat-input {
-      flex: 1; background: #0B0F19; border: 1px solid #232B45; color: #f8fafc;
+      flex: 1; background: #0B0F19; border: 1px solid #2a4a5e; color: #f8fafc;
       font-size: 10.5px; padding: 5px 8px; border-radius: 6px; outline: none; font-family: inherit;
     }
-    .chat-input:focus { border-color: #6366F1; }
+    .chat-input:focus { border-color: #6a2153; }
     .chat-send-btn {
-      background: linear-gradient(135deg, #6366F1, #06B6D4); border: none; color: #fff; font-size: 10px; font-weight: 700;
+      background: linear-gradient(135deg, #6a2153, #06B6D4); border: none; color: #fff; font-size: 10px; font-weight: 700;
       padding: 5px 10px; border-radius: 6px; cursor: pointer;
     }
     .chat-send-btn:disabled { opacity: 0.5; cursor: default; }
@@ -393,7 +394,7 @@
     .export-toolbar {
       padding: 8px 14px;
       background: #0B0F19;
-      border-top: 1px solid #232B45;
+      border-top: 1px solid #2a4a5e;
       display: flex;
       gap: 6px;
       overflow-x: auto;
@@ -401,9 +402,9 @@
     }
     .export-btn {
       padding: 3px 7px;
-      border: 1px solid #232B45;
+      border: 1px solid #2a4a5e;
       border-radius: 4px;
-      background: #181b25;
+      background: #1a3345;
       color: #cbd5e1;
       font-size: 9.5px;
       font-weight: 600;
@@ -412,9 +413,9 @@
       transition: all 0.2s ease;
     }
     .export-btn:hover {
-      background: #232B45;
+      background: #2a4a5e;
       color: #ffffff;
-      border-color: #6366F1;
+      border-color: #6a2153;
     }
 
     /* Resize Handle Watermark */
@@ -423,7 +424,7 @@
       bottom: 2px;
       right: 4px;
       font-size: 9px;
-      color: #94A3B8;
+      color: #9f8f99;
       pointer-events: none;
     }
 
@@ -459,7 +460,7 @@
         <span class="status-dot"></span>
         <span id="statusText">IDLE</span>
       </div>
-      <button id="closeBtn" style="background:none; border:none; color:#94A3B8; cursor:pointer; font-size:12px; font-weight:bold;">✕</button>
+      <button id="closeBtn" style="background:none; border:none; color:#9f8f99; cursor:pointer; font-size:12px; font-weight:bold;">✕</button>
     </div>
 
     <!-- Controls Bar -->
@@ -481,7 +482,7 @@
       <span class="source-label">AUDIO SOURCE:</span>
       <div class="source-toggle-group">
         <button id="srcMicBtn" class="source-btn active" title="Microphone Audio (Live Voice)">🎙️ Mic</button>
-        <button id="srcCompBtn" class="source-btn" title="Computer / Tab Audio (System / Video)">💻 Computer</button>
+        <button id="srcCompBtn" class="source-btn" title="Computer / Tab Audio. In the share picker, choose a DIFFERENT tab than this one for best results — capturing this same tab's own audio is unreliable in Chrome. For this tab specifically, use the Weave side panel instead.">💻 Computer</button>
         <button id="srcBothBtn" class="source-btn" title="Both Mic & Computer Audio">🎙️+💻 Both</button>
       </div>
     </div>
@@ -493,9 +494,13 @@
         <span id="livePulse" style="color:#34D399; display:none;">● STREAMING</span>
       </div>
       <div id="transcriptFeed" class="transcript-feed">
-        <div style="font-size: 10px; color: #94A3B8; text-align: center; margin: auto;">
+        <div style="font-size: 10px; color: #9f8f99; text-align: center; margin: auto;">
           Click ▶ Start to begin live audio recording.
         </div>
+      </div>
+      <div class="manual-input-row" style="display: flex; gap: 6px; margin-top: 8px; flex-shrink: 0;">
+        <input id="manualInput" class="manual-input" placeholder="Type or speak a line..." style="flex: 1; background: #12172A; border: 1px solid #232B45; color: #f8fafc; font-size: 10.5px; padding: 5px 8px; border-radius: 6px; outline: none; font-family: inherit;" />
+        <button id="manualSendBtn" class="manual-send-btn" style="background: linear-gradient(135deg, #6366F1, #06B6D4); border: none; color: #fff; font-size: 10.5px; font-weight: 700; padding: 5px 12px; border-radius: 6px; cursor: pointer;">Send</button>
       </div>
     </div>
 
@@ -509,13 +514,13 @@
         </div>
       </div>
       <div id="insightList" class="insight-list">
-        <div style="font-size: 10px; color: #94A3B8; text-align: center; margin: auto;">
+        <div style="font-size: 10px; color: #9f8f99; text-align: center; margin: auto;">
           Listening for key decisions & tasks...
         </div>
       </div>
       <div id="chatPanel" class="chat-panel">
         <div id="chatMessages" class="chat-messages">
-          <div style="font-size: 10px; color: #94A3B8; text-align: center; margin: auto;">
+          <div style="font-size: 10px; color: #9f8f99; text-align: center; margin: auto;">
             Ask about decisions, tasks, risks, or anything said so far.
           </div>
         </div>
@@ -528,6 +533,7 @@
 
     <!-- Export & Workflow Toolbar -->
     <div class="export-toolbar">
+      <button id="clearSessionBtn" class="export-btn" title="Clear all transcript, insights and chat data" style="border-color:#ff6b6b; color:#ff6b6b;">🗑️ Clear</button>
       <button id="expEmailBtn" class="export-btn" title="Copy Executive Email Digest">📧 Email Brief</button>
       <button id="expSlackBtn" class="export-btn" title="Copy Slack Formatting">💬 Slack Digest</button>
       <button id="expJiraBtn" class="export-btn" title="Copy Jira/GitHub Tasks">🎟️ Jira/Tasks</button>
@@ -565,6 +571,25 @@
   const chatInput = shadow.getElementById('chatInput');
   const chatSendBtn = shadow.getElementById('chatSendBtn');
 
+  const manualInput = shadow.getElementById('manualInput');
+  const manualSendBtn = shadow.getElementById('manualSendBtn');
+
+  function handleManualSend() {
+    const text = manualInput ? manualInput.value.trim() : '';
+    if (!text) return;
+    const speaker = (speakerNameInput ? speakerNameInput.value.trim() : '') || 'You';
+    appendTranscriptLine(speaker, text, false);
+    pushTranscriptToBackend(speaker, text);
+    if (manualInput) manualInput.value = '';
+  }
+
+  if (manualSendBtn) manualSendBtn.addEventListener('click', handleManualSend);
+  if (manualInput) {
+    manualInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleManualSend();
+    });
+  }
+
   let selectedAudioSource = 'mic'; // 'mic' | 'comp' | 'both'
 
   function updateAudioSourceUI(source) {
@@ -594,7 +619,9 @@
     const rect = host.getBoundingClientRect();
     initialLeft = rect.left;
     initialTop = rect.top;
-    host.style.right = 'auto'; // release right constraint
+    host.style.left = `${initialLeft}px`;
+    host.style.top = `${initialTop}px`;
+    host.style.right = 'auto'; // release right constraint cleanly without jumping to left
   });
 
   window.addEventListener('mousemove', (e) => {
@@ -769,13 +796,12 @@
 
     if (interimEl) interimEl.remove();
 
-    // Prevent duplicate transcript entries (e.g. speech-recognition restarts
-    // occasionally re-emitting the same final result).
+    // Deduplicate rapid duplicate utterances (within 1.5 seconds)
     const dedupeKey = `${speaker}::${text.toLowerCase()}`;
-    if (dedupeKey === lastFinalKey) return;
+    const now = Date.now();
+    if (dedupeKey === lastFinalKey && (now - lastBlockTime) < 1500) return;
     lastFinalKey = dedupeKey;
 
-    const now = Date.now();
     const canGroup = lastBlockEl && lastBlockSpeaker === speaker && (now - lastBlockTime) < GROUP_WINDOW_MS;
 
     const utteranceHtml = `<div class="transcript-utterance"><span class="utterance-time">${nowClock()}</span><span class="utterance-text">${escapeHtml(text)}</span></div>`;
@@ -836,10 +862,19 @@
   // structured decisions/actions/risks/summary the moment the response lands.
   function pushTranscriptToBackend(speaker, text) {
     enqueue(async () => {
-      const id = await ensureLiveMeeting();
+      let id = await ensureLiveMeeting();
       if (!id) return;
-      const res = await callApi(`/api/live-meetings/${id}`, 'POST', { text, speaker, timestamp: nowClock() });
-      if (res.ok && res.data && res.data.meeting) {
+      let res = await callApi(`/api/live-meetings/${id}`, 'POST', { text, speaker, timestamp: nowClock() });
+      if (!res.ok && res.error && (res.error.includes('not found') || res.status === 404)) {
+        // Stale meeting session ID — clear and re-create meeting ID for active recording
+        meetingId = null;
+        meetingCreationPromise = null;
+        id = await ensureLiveMeeting();
+        if (id) {
+          res = await callApi(`/api/live-meetings/${id}`, 'POST', { text, speaker, timestamp: nowClock() });
+        }
+      }
+      if (res && res.ok && res.data && res.data.meeting) {
         renderInsights(res.data.meeting.insights);
       }
     });
@@ -887,7 +922,7 @@
     });
 
     if (!insights.summary && (!insights.decisions || !insights.decisions.length) && (!insights.actionItems || !insights.actionItems.length) && (!insights.risks || !insights.risks.length)) {
-      insightList.innerHTML = `<div style="font-size: 10px; color: #94A3B8; text-align: center; margin: auto;">Listening for key decisions & tasks...</div>`;
+      insightList.innerHTML = `<div style="font-size: 10px; color: #9f8f99; text-align: center; margin: auto;">Listening for key decisions & tasks...</div>`;
     }
   }
 
@@ -1169,28 +1204,92 @@
   let chunkAudioCtx = null;
   let chunkActive = false;
   let micChunkActive = false;
+  let consecutiveSilentTabChunks = 0;
+  let sameTabWarningShown = false;
   const CHUNK_DURATION_MS = 5000;
   const SILENCE_RMS_THRESHOLD = 0.005;
+  // If picked-tab audio is silent for this many chunks in a row (~25s), it's
+  // very likely the known Chrome limitation below rather than genuine silence.
+  const SILENT_STREAK_WARNING_THRESHOLD = 5;
+
+  // Chrome has a well-known limitation where a tab capturing its OWN audio via
+  // getDisplayMedia's "Share this tab" option can come back with zero audio
+  // tracks, or a track that exists but only ever produces silence — this is a
+  // browser-level self-capture restriction (to avoid audio feedback loops),
+  // not something this code can force around. Capturing a DIFFERENT tab from
+  // the picker works reliably; so does the extension's side panel, which
+  // uses chrome.tabCapture (a privileged API not available to content
+  // scripts) instead of getDisplayMedia and doesn't hit this restriction.
+  const SAME_TAB_HINT = 'Chrome can be unreliable when a tab tries to capture its OWN audio this way. Two options: (1) open the Weave side panel instead (toolbar icon → side panel) — it captures this tab directly without this limitation, or (2) keep the floating widget, but when the picker opens choose a DIFFERENT tab that has the audio playing.';
 
   async function startTabAudioTranscription() {
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      let stream = null;
+
+      // 1. Try privileged chrome.tabCapture API first via background service worker
+      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+        const res = await new Promise((resolve) => {
+          try {
+            chrome.runtime.sendMessage({ type: 'GET_TAB_AUDIO_STREAM_ID' }, (r) => {
+              if (chrome.runtime.lastError) resolve(null);
+              else resolve(r);
+            });
+          } catch (_) {
+            resolve(null);
+          }
+        });
+
+        if (res && res.ok && res.streamId) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                mandatory: {
+                  chromeMediaSource: 'tab',
+                  chromeMediaSourceId: res.streamId
+                }
+              },
+              video: false
+            });
+          } catch (e) {
+            console.log('[Weave Extension] tabCapture getUserMedia notice:', e?.message || e);
+          }
+        }
+      }
+
+      // 2. Fallback to getDisplayMedia — show instructions BEFORE the picker opens
+      if (!stream) {
+        appendTranscriptLine('System', '📋 A screen-share picker is about to open. Select the tab with audio and make sure to tick ✅ "Share tab audio" (or "Share system audio" for a window/screen). Without that checkbox, no audio will be captured.', false);
+        // Small delay so the instruction is visible before Chrome steals focus
+        await new Promise((r) => setTimeout(r, 400));
+        stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      }
+
       const audioTracks = stream.getAudioTracks();
       stream.getVideoTracks().forEach((t) => t.stop());
 
       if (audioTracks.length === 0) {
-        appendTranscriptLine('System', '⚠️ No tab/system audio was shared. Re-select "Computer" and check "Share tab audio" in the picker.', false);
         stream.getTracks().forEach((t) => t.stop());
+        appendTranscriptLine('System', '⚠️ No audio track was shared. You must tick ✅ "Share tab audio" in the picker. Click ▶ Start again → choose the tab → check the audio box.', false);
         return;
       }
 
       tabAudioStream = new MediaStream(audioTracks);
+      // Notify the user if they close the share picker or stop sharing
+      audioTracks.forEach((t) => {
+        t.onended = () => {
+          chunkActive = false;
+          tabAudioStream = null;
+          appendTranscriptLine('System', '⚠️ Tab audio share stopped. Click ▶ Start again and share the tab audio to resume.', false);
+        };
+      });
       if (!chunkAudioCtx) chunkAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
       chunkActive = true;
+      consecutiveSilentTabChunks = 0;
+      sameTabWarningShown = false;
       runChunkLoop();
     } catch (err) {
       console.log('[Weave Extension] getDisplayMedia notice:', err?.message || err);
-      appendTranscriptLine('System', 'Computer audio capture was not started (permission dismissed or unsupported).', false);
+      appendTranscriptLine('System', 'Computer audio capture notice: ' + (err?.message || err), false);
     }
   }
 
@@ -1298,7 +1397,20 @@
       const mono16k = downsampleTo16kMono(decoded);
       if (mono16k.length < 1200) return;
 
-      if (computeRms(mono16k) < SILENCE_RMS_THRESHOLD) return;
+      if (computeRms(mono16k) < SILENCE_RMS_THRESHOLD) {
+        if (speaker === 'Computer Audio') {
+          consecutiveSilentTabChunks++;
+          // Several silent chunks in a row on the tab-audio source, while the
+          // page is presumably making sound, points at the same-tab
+          // self-capture limitation rather than genuine silence.
+          if (consecutiveSilentTabChunks === SILENT_STREAK_WARNING_THRESHOLD && !sameTabWarningShown) {
+            sameTabWarningShown = true;
+            appendTranscriptLine('System', `⚠️ Computer audio has been silent for a while. ${SAME_TAB_HINT}`, false);
+          }
+        }
+        return;
+      }
+      if (speaker === 'Computer Audio') consecutiveSilentTabChunks = 0;
 
       const wavBuffer = encodeWavPcm16(mono16k, 16000);
       const extLang = window.activeExtLanguage || 'auto';
@@ -1318,9 +1430,19 @@
         await new Promise((r) => setTimeout(r, 500));
         continue;
       }
-      const blob = await recordOneChunk(CHUNK_DURATION_MS);
+      // If the stream track died (user closed picker, tab lost focus) — stop loop cleanly
+      const tracks = tabAudioStream ? tabAudioStream.getAudioTracks() : [];
+      if (tracks.length === 0 || tracks.every((t) => t.readyState === 'ended')) {
+        appendTranscriptLine('System', '⚠️ Tab audio stream ended. Select Computer audio source and click Start again to resume.', false);
+        chunkActive = false;
+        break;
+      }
+      let blob = null;
+      try {
+        blob = await recordOneChunk(CHUNK_DURATION_MS);
+      } catch (_) {}
       if (!chunkActive) break;
-      await transcribeChunkAndAppend(blob, 'Computer Audio');
+      if (blob) await transcribeChunkAndAppend(blob, 'Computer Audio');
     }
   }
 
@@ -1330,10 +1452,18 @@
         await new Promise((r) => setTimeout(r, 500));
         continue;
       }
-      const blob = await recordOneStreamChunk(micAudioStream, CHUNK_DURATION_MS);
+      const tracks = micAudioStream ? micAudioStream.getAudioTracks() : [];
+      if (tracks.length === 0 || tracks.every((t) => t.readyState === 'ended')) {
+        micChunkActive = false;
+        break;
+      }
+      let blob = null;
+      try {
+        blob = await recordOneStreamChunk(micAudioStream, CHUNK_DURATION_MS);
+      } catch (_) {}
       if (!micChunkActive) break;
       const speakerName = (speakerNameInput.value || 'You').trim() || 'You';
-      await transcribeChunkAndAppend(blob, speakerName);
+      if (blob) await transcribeChunkAndAppend(blob, speakerName);
     }
   }
 
@@ -1362,7 +1492,14 @@
   }
 
   // ─── Start / Pause / Stop ──────────────────────────────────────────────────
+  // ─── Start / Pause / Stop ──────────────────────────────────────────────────
   startBtn.addEventListener('click', async () => {
+    // If previous meeting session ended, force a fresh meeting ID creation
+    if (statusText.textContent === 'DONE') {
+      meetingId = null;
+      meetingCreationPromise = null;
+    }
+
     statusBadge.className = 'status-badge recording';
     statusText.textContent = 'REC';
     startBtn.style.display = 'none';
@@ -1374,7 +1511,9 @@
     lastBlockEl = null;
     lastBlockSpeaker = null;
     lastFinalKey = '';
-    insightList.innerHTML = `<div style="font-size: 10px; color: #94A3B8; text-align: center; margin: auto;">Listening for key decisions & tasks...</div>`;
+    isPaused = false;
+    pauseBtn.textContent = '⏸';
+    insightList.innerHTML = `<div style="font-size: 10px; color: #9f8f99; text-align: center; margin: auto;">Listening for key decisions & tasks...</div>`;
     latestInsights = { summary: '', decisions: [], actionItems: [], risks: [] };
 
     seconds = 0;
@@ -1383,12 +1522,26 @@
     const sourceName = selectedAudioSource === 'mic' ? '🎙️ Microphone' : selectedAudioSource === 'comp' ? '💻 Computer Audio' : '🎙️+💻 Both (Mic & Computer)';
     appendTranscriptLine('System', `Recording active [Source: ${sourceName}]`, false);
 
-    ensureLiveMeeting();
+    await ensureLiveMeeting();
 
     // 1. Microphone Audio Capture (Mic or Both)
     if (selectedAudioSource === 'mic' || selectedAudioSource === 'both') {
-      recognitionInstance = startRealSpeechRecognition();
-      startMicAudioChunking();
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then((stream) => {
+            micAudioStream = stream;
+            recognitionInstance = startRealSpeechRecognition();
+            startMicAudioChunking();
+          })
+          .catch((err) => {
+            console.log('[Weave Extension] getUserMedia notice:', err?.message || err);
+            recognitionInstance = startRealSpeechRecognition();
+            startMicAudioChunking();
+          });
+      } else {
+        recognitionInstance = startRealSpeechRecognition();
+        startMicAudioChunking();
+      }
     }
 
     // 2. Computer / Video Audio Capture (Comp or Both)
@@ -1397,6 +1550,7 @@
       startTabAudioTranscription();
     }
 
+    if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {
       if (!isPaused) {
         seconds++;
@@ -1437,6 +1591,8 @@
 
   stopBtn.addEventListener('click', async () => {
     clearInterval(timerInterval);
+    timerInterval = null;
+
     if (recognitionWatchdog) {
       clearInterval(recognitionWatchdog);
       recognitionWatchdog = null;
@@ -1459,14 +1615,19 @@
     statusBadge.className = 'status-badge';
     statusText.textContent = 'PROCESSING...';
 
-    const id = await ensureLiveMeeting();
-    if (id) {
-      const res = await callApi(`/api/live-meetings/${id}`, 'PATCH', { action: 'end' });
+    const currentId = meetingId;
+    if (currentId) {
+      const res = await callApi(`/api/live-meetings/${currentId}`, 'PATCH', { action: 'end' });
       if (res.ok && res.data && res.data.meeting) {
         renderInsights(res.data.meeting.insights);
         renderFinalSummaries(res.data.meeting.finalSummaries);
       }
     }
+
+    // Officially end current session so subsequent Start click creates a new meeting
+    meetingId = null;
+    meetingCreationPromise = null;
+    isPaused = false;
 
     statusText.textContent = 'DONE';
     startBtn.style.display = 'inline-block';
@@ -1477,13 +1638,43 @@
     livePulse.style.display = 'none';
   });
 
-  // 9. Export & Workflow Toolbar Handlers (driven by structured backend state,
-  // not DOM scraping, so exports stay accurate regardless of how the panel is
-  // currently rendered).
+  // 9. Export & Workflow Toolbar Handlers
+  const clearSessionBtn = shadow.getElementById('clearSessionBtn');
   const expEmailBtn = shadow.getElementById('expEmailBtn');
   const expSlackBtn = shadow.getElementById('expSlackBtn');
   const expJiraBtn = shadow.getElementById('expJiraBtn');
   const expStatsBtn = shadow.getElementById('expStatsBtn');
+
+  clearSessionBtn.addEventListener('click', () => {
+    if (!confirm('Clear all transcript, insights and chat data for this session?')) return;
+
+    // Reset transcript feed
+    transcriptFeed.innerHTML = '<div style="font-size: 10px; color: #9f8f99; text-align: center; margin: auto;">Click ▶ Start to begin live audio recording.</div>';
+
+    // Reset insight list
+    insightList.innerHTML = '<div style="font-size: 10px; color: #9f8f99; text-align: center; margin: auto;">Listening for key decisions & tasks...</div>';
+
+    // Reset chat messages
+    chatMessages.innerHTML = '<div style="font-size: 10px; color: #9f8f99; text-align: center; margin: auto;">Ask about decisions, tasks, risks, or anything said so far.</div>';
+
+    // Reset all internal state
+    lastBlockEl = null;
+    lastBlockSpeaker = null;
+    lastBlockTime = 0;
+    lastFinalKey = '';
+    latestInsights = { summary: '', decisions: [], actionItems: [], risks: [] };
+    meetingId = null;
+    meetingCreationPromise = null;
+    seenCaptions.clear();
+
+    // Clear stored meeting ID
+    try {
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.remove('activeLiveMeetingId');
+      }
+      localStorage.removeItem('active_live_meeting_id');
+    } catch (_) {}
+  });
 
   function getTranscriptLines() {
     return Array.from(transcriptFeed.querySelectorAll('.transcript-block:not(.interim-line)'))
@@ -1579,7 +1770,7 @@ ${risks.map((r) => `> • ${r.title}`).join('\n') || '> _None_'}`;
     const statsCard = document.createElement('div');
     statsCard.className = 'insight-item';
     statsCard.style.background = 'rgba(99, 102, 241, 0.15)';
-    statsCard.style.borderLeft = '3px solid #6366F1';
+    statsCard.style.borderLeft = '3px solid #6a2153';
     statsCard.style.color = '#e0e7ff';
     const breakdownHtml = stats.map((s) => `<div>${escapeHtml(s.name)}: ${s.pct}% talk time</div>`).join('');
     statsCard.innerHTML = `<strong>📊 SPEAKER TALK-TIME & EFFICIENCY SCORE (${score}/100)</strong><br/>${breakdownHtml}`;

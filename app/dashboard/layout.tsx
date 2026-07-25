@@ -65,7 +65,7 @@ export default function DashboardLayout({
       .toUpperCase();
   };
 
-  // Sidebar Items: "Meetings" directly navigates to /dashboard/live (Start/Join LiveKit Meeting Room)
+  // Sidebar Items
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', exact: true, icon: 'dashboard' },
     { name: 'Weave AI Chat', href: '/dashboard/chat', exact: true, icon: 'chat' },
@@ -98,27 +98,27 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="min-h-screen bg-[#0f131c] text-[#dfe2ef] flex relative overflow-hidden bg-grid-pattern antialiased">
+    <div className="min-h-screen bg-[#162939] text-[#eaeaea] flex relative overflow-hidden bg-grid-pattern antialiased">
       {/* Ambient glow */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#c0c1ff]/5 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#5de6ff]/3 rounded-full blur-[100px] pointer-events-none -z-10" />
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#6a2153]/5 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#9f8f99]/3 rounded-full blur-[100px] pointer-events-none -z-10" />
 
       {/* Sidebar */}
-      <nav className="h-screen w-64 fixed left-0 top-0 bg-[#0a0e17] border-r border-[#232B45] shadow-xl flex flex-col py-6 z-50">
+      <nav className="h-screen w-64 fixed left-0 top-0 bg-[#0f1f2d] border-r border-[#2a4a5e] shadow-xl flex flex-col py-6 z-50">
         {/* Brand / Header */}
         <Link href="/dashboard" className="px-6 mb-6 flex items-center space-x-3 group">
-          <div className="w-8 h-8 rounded-lg bg-[#6366F1] flex items-center justify-center text-white shadow-[0_0_15px_rgba(99,102,241,0.4)] group-hover:scale-105 transition-transform">
+          <div className="w-8 h-8 rounded-lg bg-[#6a2153] flex items-center justify-center text-[#f5e2de] shadow-[0_0_15px_rgba(106,33,83,0.4)] group-hover:scale-105 transition-transform">
             <span className="material-symbols-outlined font-bold text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>hub</span>
           </div>
           <div>
-            <h1 className="font-display text-[18px] font-bold text-[#F8FAFC] tracking-tighter leading-tight group-hover:text-[#6366F1] transition-colors">Weave</h1>
-            <p className="text-[10px] text-[#94A3B8] uppercase tracking-widest font-mono mt-0.5">Intelligence Platform</p>
+            <h1 className="font-display text-[18px] font-bold text-[#f5e2de] tracking-tighter leading-tight group-hover:text-[#6a2153] transition-colors">Weave</h1>
+            <p className="text-[10px] text-[#9f8f99] uppercase tracking-widest font-mono mt-0.5">Intelligence Platform</p>
           </div>
         </Link>
 
         {/* System Status */}
         <div className="px-6 mb-4">
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-mono text-[#94A3B8] bg-[#181b25] px-3 py-1.5 rounded border border-[#232B45]">
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-mono text-[#9f8f99] bg-[#1a3345] px-3 py-1.5 rounded border border-[#2a4a5e]">
             <span className="w-2 h-2 rounded-full bg-[#34D399] animate-live-pulse"></span>
             System Status: Live
           </div>
@@ -137,12 +137,12 @@ export default function DashboardLayout({
                   href={item.href}
                   className={`flex items-center px-4 py-3 rounded-lg text-[14px] font-medium transition-all duration-200 ${
                     isActive
-                      ? 'nav-active-item text-[#6366F1] font-bold border-l-4 border-[#6366F1] bg-[#6366F1]/10 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
-                      : 'text-[#c7c4d7] hover:text-[#F8FAFC] hover:bg-[#181b25] active:scale-95'
+                      ? 'nav-active-item text-[#6a2153] font-bold border-l-4 border-[#6a2153] bg-[#6a2153]/10 shadow-[0_0_15px_rgba(106,33,83,0.15)]'
+                      : 'text-[#dfccc5] hover:text-[#f5e2de] hover:bg-[#1a3345] active:scale-95'
                   }`}
                 >
                   <span
-                    className={`material-symbols-outlined text-[20px] mr-3 ${isActive ? 'text-[#6366F1]' : 'text-[#94A3B8] group-hover:text-[#F8FAFC]'}`}
+                    className={`material-symbols-outlined text-[20px] mr-3 ${isActive ? 'text-[#6a2153]' : 'text-[#9f8f99] group-hover:text-[#f5e2de]'}`}
                     style={isActive ? { fontVariationSettings: "'FILL' 1" } : undefined}
                   >
                     {item.icon}
@@ -160,8 +160,8 @@ export default function DashboardLayout({
             href="/dashboard/settings"
             className={`flex items-center px-4 py-2.5 rounded-lg text-[14px] font-medium transition-colors ${
               pathname === '/dashboard/settings'
-                ? 'text-[#6366F1] bg-[#6366F1]/10 font-bold border-l-4 border-[#6366F1]'
-                : 'text-[#c7c4d7] hover:text-[#F8FAFC] hover:bg-[#181b25]'
+                ? 'text-[#6a2153] bg-[#6a2153]/10 font-bold border-l-4 border-[#6a2153]'
+                : 'text-[#dfccc5] hover:text-[#f5e2de] hover:bg-[#1a3345]'
             }`}
           >
             <span className="material-symbols-outlined text-[20px] mr-3">settings</span>
@@ -177,13 +177,13 @@ export default function DashboardLayout({
           </Link>
 
           {/* User Badge */}
-          <div className="flex items-center gap-3 px-3 py-3 mt-2 border-t border-[#232B45]">
-            <div className="w-8 h-8 rounded-full bg-[#c0c1ff] text-[#1000a9] flex items-center justify-center text-[12px] font-bold shadow-md">
+          <div className="flex items-center gap-3 px-3 py-3 mt-2 border-t border-[#2a4a5e]">
+            <div className="w-8 h-8 rounded-full bg-[#b4a7af] text-[#3f122f] flex items-center justify-center text-[12px] font-bold shadow-md">
               {user ? getInitials(user.name) : 'SC'}
             </div>
             <div className="overflow-hidden flex-1">
-              <p className="text-[13px] font-bold text-[#dfe2ef] truncate">{user ? user.name : 'Sarah Chen'}</p>
-              <p className="text-[11px] text-[#94A3B8] truncate">{user ? user.email : 'sarah@company.com'}</p>
+              <p className="text-[13px] font-bold text-[#eaeaea] truncate">{user ? user.name : 'Sarah Chen'}</p>
+              <p className="text-[11px] text-[#9f8f99] truncate">{user ? user.email : 'sarah@company.com'}</p>
             </div>
           </div>
         </div>
@@ -192,42 +192,42 @@ export default function DashboardLayout({
       {/* Main Content Area */}
       <div className="flex-1 ml-64 flex flex-col min-h-screen">
         {/* Top Navbar */}
-        <header className="bg-[#0f131c]/80 backdrop-blur-md fixed top-0 right-0 left-64 h-16 border-b border-[#232B45] flex items-center justify-between px-6 z-40">
+        <header className="bg-[#162939]/80 backdrop-blur-md fixed top-0 right-0 left-64 h-16 border-b border-[#2a4a5e] flex items-center justify-between px-6 z-40">
           {/* Breadcrumbs */}
           <div className="flex items-center gap-2.5 text-[13px] font-medium">
-            {/* Single Home Icon Button (without Home text) */}
+            {/* Single Home Icon Button */}
             <Link 
               href="/" 
               title="Return to Home Page" 
-              className="p-1.5 rounded-lg bg-[#181b25] border border-[#232B45] hover:bg-[#262a34] text-[#94A3B8] hover:text-[#5de6ff] transition flex items-center justify-center"
+              className="p-1.5 rounded-lg bg-[#1a3345] border border-[#2a4a5e] hover:bg-[#254558] text-[#9f8f99] hover:text-[#b4a7af] transition flex items-center justify-center"
             >
               <span className="material-symbols-outlined text-[18px]">home</span>
             </Link>
 
             {activeProjectName && (
               <>
-                <span className="text-[#232B45] mx-0.5">/</span>
-                <span className="uppercase tracking-wider text-[11px] bg-[#262a34] px-2.5 py-1 rounded border border-[#232B45] text-[#c0c1ff] font-mono font-semibold">
+                <span className="text-[#2a4a5e] mx-0.5">/</span>
+                <span className="uppercase tracking-wider text-[11px] bg-[#254558] px-2.5 py-1 rounded border border-[#2a4a5e] text-[#b4a7af] font-mono font-semibold">
                   Project: {activeProjectName}
                 </span>
               </>
             )}
-            <span className="text-[#232B45] mx-0.5">/</span>
-            <span className="text-[#94A3B8] font-mono text-[12px]">{getPageTitle()}</span>
+            <span className="text-[#2a4a5e] mx-0.5">/</span>
+            <span className="text-[#9f8f99] font-mono text-[12px]">{getPageTitle()}</span>
           </div>
 
           {/* Search + Controls */}
           <div className="flex items-center space-x-4">
             <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-[#94A3B8]">search</span>
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-[#9f8f99]">search</span>
               <input
-                className="bg-[#1c1f29] text-[#dfe2ef] pl-9 pr-4 py-1.5 w-64 text-[13px] rounded-lg border border-[#232B45] focus:outline-none focus:border-[#5de6ff]/50 placeholder-[#94A3B8]/60 transition"
+                className="bg-[#1d3a4d] text-[#eaeaea] pl-9 pr-4 py-1.5 w-64 text-[13px] rounded-lg border border-[#2a4a5e] focus:outline-none focus:border-[#6a2153]/50 placeholder-[#9f8f99]/60 transition"
                 placeholder="Search knowledge graph..."
                 type="text"
               />
             </div>
 
-            <div className="flex items-center space-x-2 text-[#94A3B8] relative">
+            <div className="flex items-center space-x-2 text-[#9f8f99] relative">
               {/* Dropdown Overlay Backdrop */}
               {isDropdownOpen && (
                 <div 
@@ -236,29 +236,29 @@ export default function DashboardLayout({
                 />
               )}
 
-              <button className="hover:text-[#5de6ff] transition relative p-2 rounded-lg hover:bg-[#1c1f29]">
+              <button className="hover:text-[#b4a7af] transition relative p-2 rounded-lg hover:bg-[#1d3a4d]">
                 <span className="material-symbols-outlined text-[20px]">notifications</span>
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#f751a1] rounded-full"></span>
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#6a2153] rounded-full"></span>
               </button>
-              <button className="hover:text-[#5de6ff] transition p-2 rounded-lg hover:bg-[#1c1f29]">
+              <button className="hover:text-[#b4a7af] transition p-2 rounded-lg hover:bg-[#1d3a4d]">
                 <span className="material-symbols-outlined text-[20px]">help</span>
               </button>
               
               <div 
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="w-8 h-8 rounded-full bg-[#1c1f29] border border-[#232B45] flex items-center justify-center hover:border-[#5de6ff]/50 transition cursor-pointer text-[#c0c1ff] relative z-50"
+                className="w-8 h-8 rounded-full bg-[#1d3a4d] border border-[#2a4a5e] flex items-center justify-center hover:border-[#6a2153]/50 transition cursor-pointer text-[#b4a7af] relative z-50"
               >
                 <span className="material-symbols-outlined text-[18px]">person</span>
               </div>
 
               {/* Dropdown Menu */}
               {isDropdownOpen && (
-                <div className="absolute right-0 top-11 w-56 rounded-xl bg-[#0a0e17] border border-[#232B45] shadow-2xl backdrop-blur-md p-2.5 z-50">
+                <div className="absolute right-0 top-11 w-56 rounded-xl bg-[#0f1f2d] border border-[#2a4a5e] shadow-2xl backdrop-blur-md p-2.5 z-50">
                   {user ? (
                     <>
-                      <div className="px-3 py-2 border-b border-[#232B45] mb-2">
-                        <p className="text-xs font-bold text-[#F8FAFC] truncate">{user.name}</p>
-                        <p className="text-[10px] text-[#94A3B8] truncate">{user.email}</p>
+                      <div className="px-3 py-2 border-b border-[#2a4a5e] mb-2">
+                        <p className="text-xs font-bold text-[#f5e2de] truncate">{user.name}</p>
+                        <p className="text-[10px] text-[#9f8f99] truncate">{user.email}</p>
                       </div>
                       <button 
                         onClick={handleLogout}
@@ -273,7 +273,7 @@ export default function DashboardLayout({
                       <Link 
                         href="/login"
                         onClick={() => setIsDropdownOpen(false)}
-                        className="w-full block text-center py-2 text-xs font-bold bg-[#c0c1ff] hover:bg-[#e1e0ff] text-[#1000a9] rounded-lg transition shadow-md shadow-[#c0c1ff]/20 cursor-pointer"
+                        className="w-full block text-center py-2 text-xs font-bold bg-[#6a2153] hover:bg-[#7d2d66] text-[#f5e2de] rounded-lg transition shadow-md shadow-[#6a2153]/20 cursor-pointer"
                       >
                         Sign In / Sign Up
                       </Link>

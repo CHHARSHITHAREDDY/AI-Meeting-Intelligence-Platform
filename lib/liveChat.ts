@@ -1,12 +1,21 @@
-import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { LiveMeetingRecord } from './liveMeetingStore';
+import { runLlamaCloudExtraction } from './llamaCloud';
+
+const QA_SCHEMA = {
+  type: 'object',
+  properties: { answer: { type: 'string' } },
+  required: ['answer'],
+};
 
 /**
  * Answers a user's question grounded strictly in the live meeting's processed
- * transcript + extracted insights (decisions/action items/risks). Mirrors the
- * fallback chain used by the recorded-meeting chat route: Llama -> Anthropic
- * -> local keyword/heuristic answer, so it degrades gracefully with no API keys.
+ * transcript + extracted insights (decisions/action items/risks). Tries
+ * LlamaCloud first (the only backend that actually works with the configured
+ * LLAMA_API_KEY — see lib/llamaCloud.ts; this used to call api.llama-api.com,
+ * an unrelated service that rejects this key on every request), then
+ * Anthropic, then a local keyword/heuristic answer so it always degrades
+ * gracefully.
  */
 export async function answerLiveMeetingQuestion(meeting: LiveMeetingRecord, question: string): Promise<string> {
   const transcript = meeting.transcriptText?.trim() || '';
@@ -34,38 +43,23 @@ Full Transcript:
 ${transcript}
 """`;
 
-  const systemPrompt = `You are the AI assistant embedded in a live meeting intelligence tool. Answer the user's question using ONLY the meeting context and transcript provided below. Be concise and specific. If the transcript doesn't contain the answer, say so plainly instead of guessing.
+  const systemPrompt = `You are the AI assistant embedded in a live meeting intelligence tool. Answer the user's question using ONLY the meeting context and transcript provided below. Be concise and specific. If the transcript doesn't contain the answer, say so plainly instead of guessing. Respond with ONLY a valid JSON object matching: { "answer": "your answer" }
 
 ${contextBlock}`;
 
-  const llamaApiKey = process.env.LLAMA_API_KEY;
-  const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
-
-  if (llamaApiKey && llamaApiKey !== 'YOUR_LLAMA_API_KEY' && llamaApiKey.trim() !== '') {
-    try {
-      const client = new OpenAI({ apiKey: llamaApiKey, baseURL: 'https://api.llama-api.com' });
-      const completion = await client.chat.completions.create({
-        model: 'llama3.1-70b',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: question },
-        ],
-        max_tokens: 700,
-      });
-      const reply = completion.choices[0]?.message?.content;
-      if (reply) return reply;
-    } catch (err: any) {
-      console.error('[Live Chat] Llama API failed:', err.message);
-    }
+  const llamaResult = await runLlamaCloudExtraction(`${systemPrompt}\n\nQuestion: ${question}`, QA_SCHEMA);
+  if (llamaResult && typeof llamaResult.answer === 'string' && llamaResult.answer.trim()) {
+    return llamaResult.answer;
   }
 
+  const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
   if (anthropicApiKey && anthropicApiKey !== 'YOUR_ANTHROPIC_API_KEY' && anthropicApiKey.trim() !== '') {
     try {
       const anthropic = new Anthropic({ apiKey: anthropicApiKey });
       const response = await anthropic.messages.create({
         model: 'claude-3-5-sonnet-20240620',
         max_tokens: 700,
-        system: systemPrompt,
+        system: `You are the AI assistant embedded in a live meeting intelligence tool. Answer the user's question using ONLY the meeting context and transcript provided below. Be concise and specific. If the transcript doesn't contain the answer, say so plainly instead of guessing.\n\n${contextBlock}`,
         messages: [{ role: 'user', content: question }],
       });
       const reply = response.content[0].type === 'text' ? response.content[0].text : '';

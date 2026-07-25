@@ -21,7 +21,18 @@ export interface LiveMeetingRecord {
   finalSummaries?: FinalMeetingSummaries;
 }
 
-const liveMeetingStore = new Map<string, LiveMeetingRecord>();
+// Force a true cross-route singleton via globalThis. Next.js/Turbopack's dev
+// bundler can compile sibling route files (e.g. live-meetings/[id]/route.ts
+// and live-meetings/[id]/chat/route.ts) into separate module graphs, each
+// re-evaluating this file and getting its OWN `new Map()` — so a meeting
+// created/updated through one route silently didn't exist from the other
+// route's point of view (getLiveMeeting() would auto-vivify a blank record,
+// which read back as "no transcript captured yet" even though the real
+// meeting had a full transcript). Stashing the Map on globalThis guarantees
+// every route sees the exact same store within this process.
+const globalForLiveMeetings = globalThis as unknown as { __liveMeetingStore?: Map<string, LiveMeetingRecord> };
+const liveMeetingStore = globalForLiveMeetings.__liveMeetingStore ?? new Map<string, LiveMeetingRecord>();
+globalForLiveMeetings.__liveMeetingStore = liveMeetingStore;
 
 function makeMeetingId() {
   return `live-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -63,8 +74,34 @@ export function createLiveMeeting(title: string, hostName: string): LiveMeetingR
   return meeting;
 }
 
-export function getLiveMeeting(meetingId: string): LiveMeetingRecord | undefined {
-  return liveMeetingStore.get(meetingId);
+export function getLiveMeeting(meetingId: string): LiveMeetingRecord {
+  let meeting = liveMeetingStore.get(meetingId);
+  if (!meeting) {
+    const now = new Date().toISOString();
+    meeting = {
+      id: meetingId,
+      title: 'Live AI Meeting',
+      hostName: 'Host',
+      joinLink: makeJoinLink(meetingId),
+      zoomLink: makeZoomLink(meetingId),
+      status: 'live',
+      createdAt: now,
+      startedAt: now,
+      participants: ['Host'],
+      transcriptEntries: [],
+      transcriptText: '',
+      insights: {
+        summary: 'Live meeting session active.',
+        decisions: [],
+        actionItems: [],
+        risks: [],
+      },
+      memory: [],
+      aiActivity: [{ id: `ai-${meetingId}`, text: 'Live meeting initialized and listening for speech.', timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) }],
+    };
+    liveMeetingStore.set(meetingId, meeting);
+  }
+  return meeting;
 }
 
 export function getLiveMeetingPublicInfo(meetingId: string) {
@@ -122,7 +159,11 @@ export function appendTranscriptAndInsights(meetingId: string, entry: LiveTransc
 
   const updatedEntries = [...meeting.transcriptEntries, entry];
   meeting.transcriptEntries = updatedEntries;
-  meeting.transcriptText = updatedEntries.map((item) => item.text).join(' ');
+  // Keep speaker + timestamp labels in the flattened transcript text (not
+  // just the raw words) — this is what gets sent to the chat AI and the
+  // end-of-meeting summarizer, and without speaker attribution neither can
+  // answer "who said/owns X" questions or credit the right person in minutes.
+  meeting.transcriptText = updatedEntries.map((item) => `[${item.timestamp}] ${item.speaker}: ${item.text}`).join('\n');
   meeting.insights = insights;
 
   if (meeting.memory.length === 0) {

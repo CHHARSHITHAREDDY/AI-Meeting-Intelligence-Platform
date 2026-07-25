@@ -73,7 +73,7 @@ async function runStructuredExtraction(transcript: string, systemPrompt: string,
       });
 
       const response = await nvidiaClient.chat.completions.create({
-        model: 'meta/llama-3.1-70b-instruct',
+        model: 'nvidia/nemotron-3-ultra-550b-a55b',
         temperature: 0.2,
         max_tokens: 3000,
         messages: [
@@ -521,7 +521,7 @@ function localHeuristicParser(transcript: string): MeetingAnalysis {
   // Decisions
   const decisions: { id: string; decision: string; decider: string; context: string }[] = [];
   const decisionKeywords = ['decid', 'agree', 'choose', 'select', 'favor', 'prefer', 'standard', 'policy', 'favorite', 'like'];
-  
+
   lines.forEach((line, idx) => {
     const textClean = cleanLine(line);
     const hasKeyword = decisionKeywords.some(kw => textClean.toLowerCase().includes(kw));
@@ -548,7 +548,7 @@ function localHeuristicParser(transcript: string): MeetingAnalysis {
   // Action Items
   const actionItems: { id: string; task: string; assignee: string; dueDate: string; status: 'pending' | 'completed' }[] = [];
   const actionKeywords = ['will', 'need to', 'should', 'must', 'action', 'task', 'todo', 'assign', 'schedule', 'own', 'work on', 'follow up', 'implement'];
-  
+
   lines.forEach((line, idx) => {
     const textClean = cleanLine(line);
     const hasKeyword = actionKeywords.some(kw => textClean.toLowerCase().includes(kw));
@@ -577,7 +577,7 @@ function localHeuristicParser(transcript: string): MeetingAnalysis {
   // Risks
   const risks: { id: string; risk: string; impact: 'low' | 'medium' | 'high'; mitigation: string }[] = [];
   const riskKeywords = ['risk', 'issue', 'problem', 'fail', 'delay', 'danger', 'concern', 'worry', 'threat', 'lag', 'vulnerability', 'bottleneck'];
-  
+
   lines.forEach((line, idx) => {
     const textClean = cleanLine(line);
     const hasKeyword = riskKeywords.some(kw => textClean.toLowerCase().includes(kw));

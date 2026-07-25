@@ -1,7 +1,7 @@
-// Enable side panel on extension icon click
+// Disable auto-opening side panel on extension icon click so action opens popup/widget (Image 2)
 if (typeof chrome !== 'undefined' && chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
   chrome.sidePanel
-    .setPanelBehavior({ openPanelOnActionClick: true })
+    .setPanelBehavior({ openPanelOnActionClick: false })
     .catch((error) => console.log('[Weave Extension] Side panel setup notice:', error?.message || error));
 }
 
@@ -20,7 +20,29 @@ chrome.runtime.onInstalled.addListener(() => {
 // calls to our own backend are relayed through this single message handler.
 const CUE_BACKEND_URL = 'http://localhost:3000';
 
-chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request && request.type === 'GET_TAB_AUDIO_STREAM_ID') {
+    const targetTabId = sender?.tab?.id || request.tabId;
+    if (chrome.tabCapture && typeof chrome.tabCapture.getMediaStreamId === 'function') {
+      try {
+        // consumerTabId must equal the tab that will call getUserMedia with this streamId
+        const options = targetTabId ? { targetTabId, consumerTabId: targetTabId } : {};
+        chrome.tabCapture.getMediaStreamId(options, (streamId) => {
+          if (chrome.runtime.lastError || !streamId) {
+            sendResponse({ ok: false, error: chrome.runtime.lastError?.message || 'No stream ID' });
+          } else {
+            sendResponse({ ok: true, streamId });
+          }
+        });
+      } catch (err) {
+        sendResponse({ ok: false, error: err?.message || String(err) });
+      }
+    } else {
+      sendResponse({ ok: false, error: 'tabCapture API not available' });
+    }
+    return true;
+  }
+
   if (!request || (request.type !== 'CUE_API' && request.type !== 'CUE_API_BINARY')) {
     return undefined;
   }
@@ -51,11 +73,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     return true; // Keep the message channel open for the async sendResponse above.
   }
 
-  // CUE_API_BINARY: used for the audio-chunk transcription pipeline. The
-  // content script decodes/resamples audio to a 16kHz mono WAV ArrayBuffer
-  // client-side (browsers can decode their own MediaRecorder output; the
-  // server has no ffmpeg/webm decoder), base64-encodes it for message-passing,
-  // and we forward the raw bytes to the backend as application/octet-stream.
+  // CUE_API_BINARY: used for the audio-chunk transcription pipeline.
   const { path, base64 } = request;
   (async () => {
     try {

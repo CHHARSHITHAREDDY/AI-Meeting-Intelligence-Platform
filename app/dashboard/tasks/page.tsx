@@ -110,16 +110,16 @@ export default function TasksPage() {
   return (
     <div className="w-full flex flex-col space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 border-b border-[#232B45] pb-6">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 border-b border-[#2a4a5e] pb-6">
         <div>
           <h2 className="text-3xl font-extrabold font-display text-white mb-1">Tasks Register</h2>
-          <p className="text-sm text-[#94A3B8]">Assign, track, and complete action items from all meetings.</p>
+          <p className="text-sm text-[#9f8f99]">Assign, track, and complete action items from all meetings.</p>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 text-[#94A3B8]">
-          <div className="w-8 h-8 rounded-full border-2 border-[#8083ff]/20 border-t-[#8083ff] animate-spin" />
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-[#9f8f99]">
+          <div className="w-8 h-8 rounded-full border-2 border-[#6a2153]/20 border-t-[#6a2153] animate-spin" />
           <p className="text-sm font-medium font-mono">Loading tasks register...</p>
         </div>
       ) : (

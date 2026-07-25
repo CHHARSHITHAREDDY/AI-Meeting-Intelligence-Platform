@@ -45,7 +45,7 @@ export default function DecisionsPage() {
           const extracted: DecisionItem[] = [];
 
           meetings.forEach(meeting => {
-            if (meeting.status === 'completed' && meeting.analysis?.decisions) {
+            if ((meeting.status === 'completed' || meeting.status === 'live') && meeting.analysis?.decisions) {
               const formattedDate = new Date(meeting.date).toLocaleDateString('en-US', {
                 month: 'short',
                 day: 'numeric',
@@ -53,6 +53,7 @@ export default function DecisionsPage() {
               });
 
               meeting.analysis.decisions.forEach(d => {
+                const decisionText = d.decision || (d as any).detail || (d as any).title || 'Live Decision';
                 const owner = d.decider || 'Team';
                 
                 // Get initials
@@ -66,7 +67,7 @@ export default function DecisionsPage() {
 
                 // Decide status based on keywords
                 let status: 'Approved' | 'Pending' | 'Rejected' = 'Approved';
-                const lowerDecision = d.decision.toLowerCase();
+                const lowerDecision = decisionText.toLowerCase();
                 if (
                   lowerDecision.includes('delay') || 
                   lowerDecision.includes('postpone') || 
@@ -85,24 +86,24 @@ export default function DecisionsPage() {
 
                 // Highlight decision keyword inside context
                 let contextHtml = d.context || 'Aligned during meeting sync.';
-                const dText = d.decision.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // escape regex
+                const dText = decisionText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // escape regex
                 const regex = new RegExp(`(${dText})`, 'gi');
                 if (regex.test(contextHtml)) {
-                  contextHtml = contextHtml.replace(regex, '<span class="highlight-text font-semibold text-[#5de6ff]">$1</span>');
+                  contextHtml = contextHtml.replace(regex, '<span class="highlight-text font-semibold text-[#9f8f99]">$1</span>');
                 } else {
-                  contextHtml = `<span class="highlight-text font-semibold text-[#5de6ff]">${d.decision}</span>. ${contextHtml}`;
+                  contextHtml = `<span class="highlight-text font-semibold text-[#9f8f99]">${decisionText}</span>. ${contextHtml}`;
                 }
 
                 extracted.push({
                   id: `${meeting.id}-${d.id}`,
                   meetingId: meeting.id,
-                  decision: d.decision,
+                  decision: decisionText,
                   meetingName: meeting.title,
                   date: formattedDate,
                   owner: owner,
                   avatarText: avatarText,
                   status: status,
-                  quote: `${owner}: "${d.decision}"`,
+                  quote: `${owner}: "${decisionText}"`,
                   contextHtml: contextHtml
                 });
               });
@@ -171,8 +172,8 @@ export default function DecisionsPage() {
       </header>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 text-[#94A3B8]">
-          <div className="w-8 h-8 rounded-full border-2 border-[#8083ff]/20 border-t-[#8083ff] animate-spin" />
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-[#9f8f99]">
+          <div className="w-8 h-8 rounded-full border-2 border-[#6a2153]/20 border-t-[#6a2153] animate-spin" />
           <p className="text-sm font-medium font-mono">Loading decisions...</p>
         </div>
       ) : activeTab === 'table' ? (

@@ -614,20 +614,20 @@ export default function MeetingIntelligenceSaaSPage() {
       {/* ========================================================================= */}
       {/* TOP DASHBOARD CONTROL BAR                                                 */}
       {/* ========================================================================= */}
-      <div className="bg-[#0A0E17]/90 border-b border-[#232B45] px-6 py-3 flex items-center justify-between backdrop-blur-md shrink-0">
+      <div className="bg-[#0A0E17]/90 border-b border-[#2a4a5e] px-6 py-3 flex items-center justify-between backdrop-blur-md shrink-0">
 
         {/* Global Search Bar */}
         <div className="relative w-72 md:w-80">
-          <Search className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-[#9f8f99] absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             id="global-search-input"
             type="text"
             placeholder="Ask or search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#181B25] text-xs text-[#F8FAFC] pl-10 pr-12 py-2 rounded-xl border border-[#232B45] focus:border-[#6366F1] focus:bg-[#1C1F29] transition-all outline-none"
+            className="w-full bg-[#181B25] text-xs text-[#f5e2de] pl-10 pr-12 py-2 rounded-xl border border-[#2a4a5e] focus:border-[#6a2153] focus:bg-[#1C1F29] transition-all outline-none"
           />
-          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono font-semibold text-[#94A3B8] bg-[#0A0E17] border border-[#232B45] px-1.5 py-0.5 rounded">
+          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono font-semibold text-[#9f8f99] bg-[#0A0E17] border border-[#2a4a5e] px-1.5 py-0.5 rounded">
             CtrlK
           </kbd>
         </div>
@@ -638,7 +638,7 @@ export default function MeetingIntelligenceSaaSPage() {
 
           <button
             onClick={() => setShowUploadModal(true)}
-            className="flex items-center gap-2 text-xs font-semibold text-[#DFE2EF] bg-[#181B25] hover:bg-[#232B45] border border-[#232B45] px-3.5 py-2 rounded-xl transition cursor-pointer"
+            className="flex items-center gap-2 text-xs font-semibold text-[#DFE2EF] bg-[#181B25] hover:bg-[#2a4a5e] border border-[#2a4a5e] px-3.5 py-2 rounded-xl transition cursor-pointer"
           >
             <UploadCloud className="w-4 h-4 text-[#5DE6FF]" />
             <span>Import</span>
@@ -648,7 +648,7 @@ export default function MeetingIntelligenceSaaSPage() {
             onClick={isRecording ? stopRecording : startRecording}
             className={`flex items-center gap-2 text-xs font-bold text-white px-4 py-2 rounded-full transition shadow-lg cursor-pointer ${isRecording
               ? 'bg-rose-600 hover:bg-rose-700 animate-pulse shadow-rose-600/30'
-              : 'bg-[#6366F1] hover:bg-[#4F46E5] shadow-[#6366F1]/30'
+              : 'bg-[#6a2153] hover:bg-[#4F46E5] shadow-[#6a2153]/30'
               }`}
           >
             {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
@@ -661,7 +661,7 @@ export default function MeetingIntelligenceSaaSPage() {
       {/* REALTIME LIVE AUDIO RECORDING BANNER                                      */}
       {/* ========================================================================= */}
       {isRecording && (
-        <div className="bg-gradient-to-r from-[#6366F1] via-indigo-600 to-[#5DE6FF] text-white px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl border-b border-[#232B45] shrink-0">
+        <div className="bg-gradient-to-r from-[#6a2153] via-indigo-600 to-[#5DE6FF] text-white px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl border-b border-[#2a4a5e] shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-3.5 h-3.5 rounded-full bg-rose-400 animate-ping" />
             <div>
@@ -703,10 +703,10 @@ export default function MeetingIntelligenceSaaSPage() {
           {/* Date Group Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <span className="text-sm font-bold text-[#F8FAFC]">Today, {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-              <ChevronDown className="w-4 h-4 text-[#94A3B8]" />
+              <span className="text-sm font-bold text-[#f5e2de]">Today, {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+              <ChevronDown className="w-4 h-4 text-[#9f8f99]" />
             </div>
-            <button className="text-xs text-[#94A3B8] hover:text-white font-medium flex items-center gap-1 cursor-pointer">
+            <button className="text-xs text-[#9f8f99] hover:text-white font-medium flex items-center gap-1 cursor-pointer">
               <span>For you</span>
               <ChevronDown className="w-3.5 h-3.5" />
             </button>
@@ -720,11 +720,11 @@ export default function MeetingIntelligenceSaaSPage() {
                   key={m.id}
                   onClick={() => handleSelectMeeting(m)}
                   className={`bg-[#121624]/90 border rounded-2xl p-4 transition-all duration-200 cursor-pointer backdrop-blur-md flex items-start space-x-4 ${activeMeeting?.id === m.id
-                    ? 'border-[#6366F1] bg-[#181B25] ring-2 ring-[#6366F1]/20 shadow-[0_0_20px_rgba(99,102,241,0.15)]'
-                    : 'border-[#232B45] hover:border-[#6366F1]/40 hover:bg-[#181B25]/80'
+                    ? 'border-[#6a2153] bg-[#181B25] ring-2 ring-[#6a2153]/20 shadow-[0_0_20px_rgba(99,102,241,0.15)]'
+                    : 'border-[#2a4a5e] hover:border-[#6a2153]/40 hover:bg-[#181B25]/80'
                     }`}
                 >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#6366F1] to-[#5DE6FF] text-white font-bold flex items-center justify-center text-sm shrink-0 shadow-md">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#6a2153] to-[#5DE6FF] text-white font-bold flex items-center justify-center text-sm shrink-0 shadow-md">
                     S
                   </div>
                   <div className="flex-1 min-w-0 space-y-1">
@@ -739,14 +739,14 @@ export default function MeetingIntelligenceSaaSPage() {
                         <span className="text-[11px] font-mono text-[#5DE6FF] font-bold">{m.duration || '1 min'}</span>
                         <button
                           onClick={(e) => handleDeleteMeeting(m.id, e)}
-                          className="p-1 text-[#94A3B8] hover:text-rose-400 hover:bg-rose-500/10 rounded transition"
+                          className="p-1 text-[#9f8f99] hover:text-rose-400 hover:bg-rose-500/10 rounded transition"
                           title="Delete recording"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
-                    <p className="text-xs text-[#94A3B8] font-mono">
+                    <p className="text-xs text-[#9f8f99] font-mono">
                       {new Date(m.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · {m.duration || '1 min'} · Sandeep B
                     </p>
                     {m.analysis?.summary && (
@@ -758,10 +758,10 @@ export default function MeetingIntelligenceSaaSPage() {
                 </div>
               ))
             ) : (
-              <div className="bg-[#121624]/80 border border-dashed border-[#232B45] rounded-2xl p-8 text-center space-y-3">
-                <FileText className="w-8 h-8 text-[#6366F1] mx-auto" />
+              <div className="bg-[#121624]/80 border border-dashed border-[#2a4a5e] rounded-2xl p-8 text-center space-y-3">
+                <FileText className="w-8 h-8 text-[#6a2153] mx-auto" />
                 <h4 className="text-sm font-bold text-white">No meeting generations yet today</h4>
-                <p className="text-xs text-[#94A3B8]">Click "Import" or "+ Record" to record audio and generate AI transcript notes.</p>
+                <p className="text-xs text-[#9f8f99]">Click "Import" or "+ Record" to record audio and generate AI transcript notes.</p>
               </div>
             )}
           </div>
@@ -771,18 +771,18 @@ export default function MeetingIntelligenceSaaSPage() {
             <div className="space-y-3 pt-4">
               <div className="flex items-center space-x-2 text-sm font-bold text-white">
                 <span>Yesterday</span>
-                <ChevronDown className="w-4 h-4 text-[#94A3B8]" />
+                <ChevronDown className="w-4 h-4 text-[#9f8f99]" />
               </div>
               {yesterdayMeetings.map((m) => (
                 <div
                   key={m.id}
                   onClick={() => handleSelectMeeting(m)}
                   className={`bg-[#121624]/90 border rounded-2xl p-4 transition-all duration-200 cursor-pointer flex items-start space-x-4 ${activeMeeting?.id === m.id
-                    ? 'border-[#6366F1] bg-[#181B25] ring-2 ring-[#6366F1]/20 shadow-[0_0_20px_rgba(99,102,241,0.15)]'
-                    : 'border-[#232B45] hover:border-[#6366F1]/40 hover:bg-[#181B25]/80'
+                    ? 'border-[#6a2153] bg-[#181B25] ring-2 ring-[#6a2153]/20 shadow-[0_0_20px_rgba(99,102,241,0.15)]'
+                    : 'border-[#2a4a5e] hover:border-[#6a2153]/40 hover:bg-[#181B25]/80'
                     }`}
                 >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#6366F1] to-[#5DE6FF] text-white font-bold flex items-center justify-center text-sm shrink-0 shadow-md">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#6a2153] to-[#5DE6FF] text-white font-bold flex items-center justify-center text-sm shrink-0 shadow-md">
                     S
                   </div>
                   <div className="flex-1 min-w-0 space-y-1">
@@ -797,14 +797,14 @@ export default function MeetingIntelligenceSaaSPage() {
                         <span className="text-[11px] font-mono text-[#5DE6FF] font-bold">{m.duration || '1 min'}</span>
                         <button
                           onClick={(e) => handleDeleteMeeting(m.id, e)}
-                          className="p-1 text-[#94A3B8] hover:text-rose-400 hover:bg-rose-500/10 rounded transition"
+                          className="p-1 text-[#9f8f99] hover:text-rose-400 hover:bg-rose-500/10 rounded transition"
                           title="Delete recording"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
-                    <p className="text-xs text-[#94A3B8] font-mono">
+                    <p className="text-xs text-[#9f8f99] font-mono">
                       {new Date(m.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · Sandeep B
                     </p>
                   </div>
@@ -818,27 +818,27 @@ export default function MeetingIntelligenceSaaSPage() {
         {/* ----------------------------------------------------------------------- */}
         {/* RIGHT SIDE PANEL: AI CHAT | MEETINGS | ACTION ITEMS                    */}
         {/* ----------------------------------------------------------------------- */}
-        <aside className="w-full lg:w-80 xl:w-96 bg-[#0A0E17] border-l border-[#232B45] flex flex-col h-full shrink-0 shadow-2xl">
+        <aside className="w-full lg:w-80 xl:w-96 bg-[#0A0E17] border-l border-[#2a4a5e] flex flex-col h-full shrink-0 shadow-2xl">
 
           {/* Sub-Navigation Tabs Header */}
-          <div className="border-b border-[#232B45] px-4 flex items-center space-x-6 shrink-0">
+          <div className="border-b border-[#2a4a5e] px-4 flex items-center space-x-6 shrink-0">
             <button
               onClick={() => setRightPanelTab('chat')}
-              className={`py-3.5 text-xs font-bold border-b-2 transition cursor-pointer ${rightPanelTab === 'chat' ? 'border-[#6366F1] text-[#6366F1]' : 'border-transparent text-[#94A3B8] hover:text-white'
+              className={`py-3.5 text-xs font-bold border-b-2 transition cursor-pointer ${rightPanelTab === 'chat' ? 'border-[#6a2153] text-[#6a2153]' : 'border-transparent text-[#9f8f99] hover:text-white'
                 }`}
             >
               AI Chat
             </button>
             <button
               onClick={() => setRightPanelTab('meetings')}
-              className={`py-3.5 text-xs font-bold border-b-2 transition cursor-pointer ${rightPanelTab === 'meetings' ? 'border-[#6366F1] text-[#6366F1]' : 'border-transparent text-[#94A3B8] hover:text-white'
+              className={`py-3.5 text-xs font-bold border-b-2 transition cursor-pointer ${rightPanelTab === 'meetings' ? 'border-[#6a2153] text-[#6a2153]' : 'border-transparent text-[#9f8f99] hover:text-white'
                 }`}
             >
               Meetings
             </button>
             <button
               onClick={() => setRightPanelTab('actions')}
-              className={`py-3.5 text-xs font-bold border-b-2 transition cursor-pointer ${rightPanelTab === 'actions' ? 'border-[#6366F1] text-[#6366F1]' : 'border-transparent text-[#94A3B8] hover:text-white'
+              className={`py-3.5 text-xs font-bold border-b-2 transition cursor-pointer ${rightPanelTab === 'actions' ? 'border-[#6a2153] text-[#6a2153]' : 'border-transparent text-[#9f8f99] hover:text-white'
                 }`}
             >
               Action Items
@@ -856,18 +856,18 @@ export default function MeetingIntelligenceSaaSPage() {
                   >
                     <div
                       className={`p-3 rounded-2xl text-xs max-w-[90%] leading-relaxed ${msg.sender === 'user'
-                        ? 'bg-[#6366F1] text-white rounded-br-none shadow-md'
-                        : 'bg-[#181B25] text-[#DFE2EF] rounded-bl-none border border-[#232B45]'
+                        ? 'bg-[#6a2153] text-white rounded-br-none shadow-md'
+                        : 'bg-[#181B25] text-[#DFE2EF] rounded-bl-none border border-[#2a4a5e]'
                         }`}
                     >
                       <p className="whitespace-pre-line">{msg.text}</p>
                     </div>
-                    <span className="text-[9px] text-[#94A3B8] font-mono px-1">{msg.timestamp}</span>
+                    <span className="text-[9px] text-[#9f8f99] font-mono px-1">{msg.timestamp}</span>
                   </div>
                 ))}
                 {isChatLoading && (
-                  <div className="flex items-center space-x-2 text-xs text-[#5DE6FF] font-medium bg-[#181B25] p-3 rounded-xl border border-[#232B45] w-fit animate-pulse">
-                    <Sparkles className="w-3.5 h-3.5 text-[#6366F1]" />
+                  <div className="flex items-center space-x-2 text-xs text-[#5DE6FF] font-medium bg-[#181B25] p-3 rounded-xl border border-[#2a4a5e] w-fit animate-pulse">
+                    <Sparkles className="w-3.5 h-3.5 text-[#6a2153]" />
                     <span>Searching transcript context...</span>
                   </div>
                 )}
@@ -881,12 +881,12 @@ export default function MeetingIntelligenceSaaSPage() {
                   placeholder="Ask anything about the meeting..."
                   value={inputQuery}
                   onChange={(e) => setInputQuery(e.target.value)}
-                  className="w-full bg-[#181B25] text-xs text-[#F8FAFC] pl-3.5 pr-10 py-2.5 rounded-xl border border-[#232B45] focus:border-[#6366F1] outline-none"
+                  className="w-full bg-[#181B25] text-xs text-[#f5e2de] pl-3.5 pr-10 py-2.5 rounded-xl border border-[#2a4a5e] focus:border-[#6a2153] outline-none"
                 />
                 <button
                   type="submit"
                   disabled={!inputQuery.trim() || isChatLoading}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-[#6366F1] hover:bg-[#232B45] rounded-lg transition disabled:opacity-40 cursor-pointer"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-[#6a2153] hover:bg-[#2a4a5e] rounded-lg transition disabled:opacity-40 cursor-pointer"
                 >
                   <Send className="w-3.5 h-3.5" />
                 </button>
@@ -899,44 +899,44 @@ export default function MeetingIntelligenceSaaSPage() {
             <div className="flex-1 overflow-y-auto p-4 space-y-6 text-xs">
               <div className="space-y-2">
                 <h4 className="font-bold text-white text-sm">Record a live meeting</h4>
-                <p className="text-[#94A3B8]">Works with Zoom, Google Meet, or Microsoft Teams</p>
+                <p className="text-[#9f8f99]">Works with Zoom, Google Meet, or Microsoft Teams</p>
 
                 <div className="relative mt-2">
-                  <Video className="w-4 h-4 text-[#94A3B8] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Video className="w-4 h-4 text-[#9f8f99] absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     placeholder="Paste meeting URL to add Notetaker"
                     value={meetingUrlInput}
                     onChange={(e) => setMeetingUrlInput(e.target.value)}
-                    className="w-full bg-[#181B25] text-xs text-[#F8FAFC] pl-9 pr-3 py-2.5 rounded-xl border border-[#232B45] outline-none focus:border-[#6366F1]"
+                    className="w-full bg-[#181B25] text-xs text-[#f5e2de] pl-9 pr-3 py-2.5 rounded-xl border border-[#2a4a5e] outline-none focus:border-[#6a2153]"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2 border-t border-[#232B45] pt-4">
+              <div className="space-y-2 border-t border-[#2a4a5e] pt-4">
                 <h4 className="font-bold text-white">Record upcoming meetings</h4>
-                <button className="w-full bg-[#181B25] border border-[#232B45] hover:bg-[#232B45] p-3 rounded-xl flex items-center justify-between text-left cursor-pointer transition">
+                <button className="w-full bg-[#181B25] border border-[#2a4a5e] hover:bg-[#2a4a5e] p-3 rounded-xl flex items-center justify-between text-left cursor-pointer transition">
                   <span className="font-medium text-[#DFE2EF]">AI Notetaker settings</span>
-                  <ChevronRight className="w-4 h-4 text-[#94A3B8]" />
+                  <ChevronRight className="w-4 h-4 text-[#9f8f99]" />
                 </button>
               </div>
 
-              <div className="space-y-3 border-t border-[#232B45] pt-4">
+              <div className="space-y-3 border-t border-[#2a4a5e] pt-4">
                 <div className="flex items-center space-x-2">
                   <Calendar className="w-4 h-4 text-[#5DE6FF]" />
                   <span className="font-bold text-white">Calendar</span>
                 </div>
-                <p className="text-[#94A3B8] leading-relaxed">
+                <p className="text-[#9f8f99] leading-relaxed">
                   Connect your calendar to automatically record and summarize upcoming Zoom, Meet, or Teams calls.
                 </p>
 
                 <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button className="bg-[#181B25] border border-[#232B45] hover:bg-[#232B45] p-2.5 rounded-xl flex items-center justify-center space-x-2 font-bold text-[#DFE2EF] transition cursor-pointer">
+                  <button className="bg-[#181B25] border border-[#2a4a5e] hover:bg-[#2a4a5e] p-2.5 rounded-xl flex items-center justify-center space-x-2 font-bold text-[#DFE2EF] transition cursor-pointer">
                     <Globe className="w-3.5 h-3.5 text-[#5DE6FF]" />
                     <span>Google</span>
                   </button>
-                  <button className="bg-[#181B25] border border-[#232B45] hover:bg-[#232B45] p-2.5 rounded-xl flex items-center justify-center space-x-2 font-bold text-[#DFE2EF] transition cursor-pointer">
-                    <Globe className="w-3.5 h-3.5 text-[#6366F1]" />
+                  <button className="bg-[#181B25] border border-[#2a4a5e] hover:bg-[#2a4a5e] p-2.5 rounded-xl flex items-center justify-center space-x-2 font-bold text-[#DFE2EF] transition cursor-pointer">
+                    <Globe className="w-3.5 h-3.5 text-[#6a2153]" />
                     <span>Outlook</span>
                   </button>
                 </div>
@@ -953,27 +953,27 @@ export default function MeetingIntelligenceSaaSPage() {
                   <div
                     key={item.id}
                     onClick={() => handleToggleActionItem(item.id)}
-                    className="bg-[#181B25] border border-[#232B45] hover:border-[#6366F1]/50 p-3 rounded-xl space-y-1 cursor-pointer transition"
+                    className="bg-[#181B25] border border-[#2a4a5e] hover:border-[#6a2153]/50 p-3 rounded-xl space-y-1 cursor-pointer transition"
                   >
                     <div className="flex items-start space-x-2">
                       <input
                         type="checkbox"
                         checked={item.status === 'completed'}
                         onChange={() => { }}
-                        className="w-3.5 h-3.5 accent-[#6366F1] mt-0.5"
+                        className="w-3.5 h-3.5 accent-[#6a2153] mt-0.5"
                       />
-                      <span className={`text-xs ${item.status === 'completed' ? 'line-through text-[#94A3B8]' : 'font-medium text-[#DFE2EF]'}`}>
+                      <span className={`text-xs ${item.status === 'completed' ? 'line-through text-[#9f8f99]' : 'font-medium text-[#DFE2EF]'}`}>
                         {item.task}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-[10px] text-[#94A3B8] font-mono pl-5">
+                    <div className="flex items-center justify-between text-[10px] text-[#9f8f99] font-mono pl-5">
                       <span>Assignee: {item.assignee}</span>
                       <span>{meetingTitle}</span>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="text-xs text-[#94A3B8] text-center pt-8">No action items recorded yet.</p>
+                <p className="text-xs text-[#9f8f99] text-center pt-8">No action items recorded yet.</p>
               )}
             </div>
           )}
@@ -987,15 +987,15 @@ export default function MeetingIntelligenceSaaSPage() {
       {/* ========================================================================= */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-[#121624] border border-[#232B45] rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-[#232B45] pb-3">
+          <div className="bg-[#121624] border border-[#2a4a5e] rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-[#2a4a5e] pb-3">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <UploadCloud className="w-5 h-5 text-[#5DE6FF]" />
                 Import Meeting Recording
               </h3>
               <button
                 onClick={() => setShowUploadModal(false)}
-                className="text-[#94A3B8] hover:text-white p-1 rounded-lg transition cursor-pointer"
+                className="text-[#9f8f99] hover:text-white p-1 rounded-lg transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1009,7 +1009,7 @@ export default function MeetingIntelligenceSaaSPage() {
                   placeholder="e.g. Weekly Product Sync"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full bg-[#181B25] text-xs text-[#F8FAFC] px-3.5 py-2.5 rounded-xl border border-[#232B45] focus:border-[#6366F1] outline-none"
+                  className="w-full bg-[#181B25] text-xs text-[#f5e2de] px-3.5 py-2.5 rounded-xl border border-[#2a4a5e] focus:border-[#6a2153] outline-none"
                 />
               </div>
 
@@ -1020,7 +1020,7 @@ export default function MeetingIntelligenceSaaSPage() {
                 onDragLeave={handleDrag}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-2xl p-8 transition cursor-pointer flex flex-col items-center justify-center space-y-3 ${dragActive ? 'border-[#5DE6FF] bg-[#5DE6FF]/10' : 'border-[#232B45] hover:border-[#6366F1] bg-[#0A0E17]'
+                className={`border-2 border-dashed rounded-2xl p-8 transition cursor-pointer flex flex-col items-center justify-center space-y-3 ${dragActive ? 'border-[#5DE6FF] bg-[#5DE6FF]/10' : 'border-[#2a4a5e] hover:border-[#6a2153] bg-[#0A0E17]'
                   }`}
               >
                 <input
@@ -1036,19 +1036,19 @@ export default function MeetingIntelligenceSaaSPage() {
                   <p className="text-xs font-bold text-white">
                     {file ? file.name : 'Click to upload or drag & drop'}
                   </p>
-                  <p className="text-[11px] text-[#94A3B8] mt-0.5">MP4, MOV, MP3, WAV or M4A</p>
+                  <p className="text-[11px] text-[#9f8f99] mt-0.5">MP4, MOV, MP3, WAV or M4A</p>
                 </div>
               </div>
 
               {/* Pipeline Progress Indicator */}
               {uploadStatus !== 'idle' && (
-                <div className="space-y-2 bg-[#181B25] p-3.5 rounded-xl border border-[#232B45]">
+                <div className="space-y-2 bg-[#181B25] p-3.5 rounded-xl border border-[#2a4a5e]">
                   <div className="flex items-center justify-between text-xs font-bold text-[#5DE6FF]">
                     <span>Processing Pipeline...</span>
                     <span className="capitalize">{uploadStatus}</span>
                   </div>
                   <div className="w-full bg-[#0A0E17] h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-gradient-to-r from-[#6366F1] to-[#5DE6FF] h-full transition-all duration-500 w-3/4 animate-pulse" />
+                    <div className="bg-gradient-to-r from-[#6a2153] to-[#5DE6FF] h-full transition-all duration-500 w-3/4 animate-pulse" />
                   </div>
                 </div>
               )}
@@ -1063,14 +1063,14 @@ export default function MeetingIntelligenceSaaSPage() {
                 <button
                   type="button"
                   onClick={() => setShowUploadModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-[#94A3B8] hover:text-white hover:bg-[#181B25] transition cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-[#9f8f99] hover:text-white hover:bg-[#181B25] transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!file || uploadStatus !== 'idle'}
-                  className="px-5 py-2 rounded-xl text-xs font-bold bg-[#6366F1] hover:bg-[#4F46E5] text-white transition disabled:opacity-40 shadow-lg shadow-[#6366F1]/20 cursor-pointer"
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-[#6a2153] hover:bg-[#4F46E5] text-white transition disabled:opacity-40 shadow-lg shadow-[#6a2153]/20 cursor-pointer"
                 >
                   Start Processing
                 </button>

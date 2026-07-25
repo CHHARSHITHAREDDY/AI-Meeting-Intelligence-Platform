@@ -44,31 +44,31 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-zinc-950 flex flex-col justify-center items-center relative overflow-hidden px-4">
+    <main className="min-h-screen bg-[#0f1f2d] flex flex-col justify-center items-center relative overflow-hidden px-4">
       {/* Background Glowing Gradients */}
-      <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-violet-600/10 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-fuchsia-600/10 blur-[120px] pointer-events-none" />
+      <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-[#6a2153]/10 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-[#3f122f]/10 blur-[120px] pointer-events-none" />
 
       {/* Floating UI Elements for premium aesthetic */}
       <div className="w-full max-w-md z-10">
         <div className="flex justify-center mb-8">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#6366F1] flex items-center justify-center text-white shadow-[0_0_20px_rgba(99,102,241,0.4)]">
+            <div className="w-10 h-10 rounded-xl bg-[#6a2153] flex items-center justify-center text-[#f5e2de] shadow-[0_0_20px_rgba(106,33,83,0.4)]">
               <span className="material-symbols-outlined font-bold text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>hub</span>
             </div>
-            <span className="text-xl font-bold tracking-tight text-white font-display">
-              Cue Intelligence
+            <span className="text-xl font-bold tracking-tight text-[#f5e2de] font-display">
+              Weave Intelligence
             </span>
           </div>
         </div>
 
         {/* Card Panel */}
-        <div className="bg-[#12172A] border border-[#232B45] rounded-2xl p-8 backdrop-blur-xl shadow-2xl">
+        <div className="bg-[#1d3a4d] border border-[#2a4a5e] rounded-2xl p-8 backdrop-blur-xl shadow-2xl">
           <div className="mb-6">
-            <h2 className="text-2xl font-semibold text-zinc-100">
+            <h2 className="text-2xl font-semibold text-[#f5e2de]">
               {isSignUp ? 'Create your account' : 'Welcome back'}
             </h2>
-            <p className="text-sm text-zinc-400 mt-1.5">
+            <p className="text-sm text-[#9f8f99] mt-1.5">
               {isSignUp ? 'Start transcribing and analyzing your meetings.' : 'Sign in to access your dashboard.'}
             </p>
           </div>
@@ -85,7 +85,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {isSignUp && (
               <div>
-                <label className="block text-xs font-medium text-zinc-300 mb-1.5" htmlFor="name">
+                <label className="block text-xs font-medium text-[#dfccc5] mb-1.5" htmlFor="name">
                   Full Name
                 </label>
                 <input
@@ -95,13 +95,13 @@ export default function LoginPage() {
                   placeholder="Alex Rivers"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-[#0a0e17] border border-[#232B45] rounded-xl text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-[#6366F1] transition-colors"
+                  className="w-full px-4 py-2.5 bg-[#0f1f2d] border border-[#2a4a5e] rounded-xl text-sm text-[#eaeaea] placeholder-[#9f8f99]/50 focus:outline-none focus:border-[#6a2153] transition-colors"
                 />
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-medium text-zinc-300 mb-1.5" htmlFor="email">
+              <label className="block text-xs font-medium text-[#dfccc5] mb-1.5" htmlFor="email">
                 Email Address
               </label>
               <input
@@ -111,12 +111,12 @@ export default function LoginPage() {
                 placeholder="alex@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2.5 bg-[#0a0e17] border border-[#232B45] rounded-xl text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-[#6366F1] transition-colors"
+                className="w-full px-4 py-2.5 bg-[#0f1f2d] border border-[#2a4a5e] rounded-xl text-sm text-[#eaeaea] placeholder-[#9f8f99]/50 focus:outline-none focus:border-[#6a2153] transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-zinc-300 mb-1.5" htmlFor="password">
+              <label className="block text-xs font-medium text-[#dfccc5] mb-1.5" htmlFor="password">
                 Password
               </label>
               <input
@@ -126,18 +126,18 @@ export default function LoginPage() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2.5 bg-[#0a0e17] border border-[#232B45] rounded-xl text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-[#6366F1] transition-colors"
+                className="w-full px-4 py-2.5 bg-[#0f1f2d] border border-[#2a4a5e] rounded-xl text-sm text-[#eaeaea] placeholder-[#9f8f99]/50 focus:outline-none focus:border-[#6a2153] transition-colors"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3 px-4 btn-primary-cta disabled:opacity-50 text-white font-bold text-sm rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+              className="w-full mt-2 py-3 px-4 btn-primary-cta disabled:opacity-50 text-[#f5e2de] font-bold text-sm rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-[#f5e2de]" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
@@ -151,7 +151,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 text-center text-xs text-zinc-400">
+          <div className="mt-6 text-center text-xs text-[#9f8f99]">
             {isSignUp ? (
               <>
                 Already have an account?{' '}
@@ -161,7 +161,7 @@ export default function LoginPage() {
                     setIsSignUp(false);
                     setError('');
                   }}
-                  className="text-violet-400 hover:text-violet-300 font-medium transition-colors ml-0.5"
+                  className="text-[#b4a7af] hover:text-[#f5e2de] font-medium transition-colors ml-0.5"
                 >
                   Sign in
                 </button>
@@ -175,7 +175,7 @@ export default function LoginPage() {
                     setIsSignUp(true);
                     setError('');
                   }}
-                  className="text-violet-400 hover:text-violet-300 font-medium transition-colors ml-0.5"
+                  className="text-[#b4a7af] hover:text-[#f5e2de] font-medium transition-colors ml-0.5"
                 >
                   Sign up
                 </button>

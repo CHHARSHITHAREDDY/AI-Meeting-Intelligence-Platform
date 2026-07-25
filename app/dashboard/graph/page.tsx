@@ -87,7 +87,7 @@ export default function KnowledgeGraphPage() {
             x,
             y,
             radius: 16,
-            color: '#5de6ff', // cyan accent
+            color: '#9f8f99', // cyan accent
             description: `Active stakeholder participating in decisions and taking ownership of actions.`,
             meta: `Stakeholder • Active`
           });
@@ -108,7 +108,7 @@ export default function KnowledgeGraphPage() {
             x: mx,
             y: my,
             radius: 28,
-            color: '#8083ff', // primary violet
+            color: '#6a2153', // primary violet
             description: meeting.analysis?.summary || 'No summary available.',
             meta: `${meeting.duration} sync • ${new Date(meeting.date).toLocaleDateString()}`,
             meetingId: meeting.id
@@ -160,7 +160,7 @@ export default function KnowledgeGraphPage() {
 
             const colors = {
               decision: '#34d399', // emerald
-              task: '#ffb0cd', // pink tertiary
+              task: '#f5e2de', // pink tertiary
               risk: '#ffb4ab' // coral warning
             };
 
@@ -241,13 +241,13 @@ export default function KnowledgeGraphPage() {
   const renderTypeIcon = (type: string) => {
     switch (type) {
       case 'meeting':
-        return <Network className="w-5 h-5 text-[#8083ff]" />;
+        return <Network className="w-5 h-5 text-[#6a2153]" />;
       case 'person':
-        return <User className="w-5 h-5 text-[#5de6ff]" />;
+        return <User className="w-5 h-5 text-[#9f8f99]" />;
       case 'decision':
         return <Award className="w-5 h-5 text-[#34d399]" />;
       case 'task':
-        return <ClipboardList className="w-5 h-5 text-[#ffb0cd]" />;
+        return <ClipboardList className="w-5 h-5 text-[#f5e2de]" />;
       case 'risk':
         return <AlertTriangle className="w-5 h-5 text-[#ffb4ab]" />;
       default:
@@ -266,8 +266,8 @@ export default function KnowledgeGraphPage() {
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 text-[#94A3B8]">
-          <div className="w-8 h-8 rounded-full border-2 border-[#232B45] border-t-[#8083ff] animate-spin" />
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-[#9f8f99]">
+          <div className="w-8 h-8 rounded-full border-2 border-[#2a4a5e] border-t-[#6a2153] animate-spin" />
           <p className="text-sm font-medium font-mono">Computing knowledge graph geometry...</p>
         </div>
       ) : nodes.length === 0 ? (
@@ -285,8 +285,8 @@ export default function KnowledgeGraphPage() {
                 onClick={() => setActiveFilter(filter as any)}
                 className={`px-4 py-2 rounded-full font-semibold text-xs transition capitalize ${
                   activeFilter === filter 
-                    ? 'bg-[#8083ff] text-white shadow-md shadow-[#8083ff]/20' 
-                    : 'bg-[#0a0e17] border border-[#232B45] text-[#94A3B8] hover:text-[#F8FAFC]'
+                    ? 'bg-[#6a2153] text-white shadow-md shadow-[#6a2153]/20' 
+                    : 'bg-[#0f1f2d] border border-[#2a4a5e] text-[#9f8f99] hover:text-[#f5e2de]'
                 }`}
               >
                 {filter === 'all' ? 'All Nodes' : `${filter}s`}
@@ -397,7 +397,7 @@ export default function KnowledgeGraphPage() {
                         x={node.x}
                         y={node.y + 4}
                         textAnchor="middle"
-                        fill="#F8FAFC"
+                        fill="#f5e2de"
                         fontSize={node.type === 'meeting' ? '7px' : '6px'}
                         fontWeight="bold"
                         className="pointer-events-none select-none"

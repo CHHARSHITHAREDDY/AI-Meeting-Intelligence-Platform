@@ -2,15 +2,22 @@
 
 import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { UploadCloud, ArrowRight, Sparkles, Check, FileText, AlertTriangle, Play, FolderKanban, Plus } from 'lucide-react';
-import { Project } from '@/lib/db';
-import { TranscriptionLanguage } from '@/lib/whisper';
+import { 
+  Sparkles, UploadCloud, FileText, CheckCircle2, AlertTriangle, 
+  ArrowRight, FolderPlus, Check, ChevronDown 
+} from 'lucide-react';
 import LanguageSelect from '@/app/components/LanguageSelect';
+import { TranscriptionLanguage } from '@/lib/whisper';
 
-function YouTubeIcon({ className = "w-4 h-4 text-rose-500" }: { className?: string }) {
+interface Project {
+  id: string;
+  name: string;
+}
+
+function YouTubeIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
     </svg>
   );
 }
@@ -24,97 +31,125 @@ function ProjectPicker({
   projects: Project[];
   selectedProjectId: string;
   setSelectedProjectId: (id: string) => void;
-  onProjectCreated: (project: Project) => void;
+  onProjectCreated: (p: Project) => void;
 }) {
-  const [showCreate, setShowCreate] = useState(projects.length === 0);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [newName, setNewName] = useState('');
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState('');
+  const [newDesc, setNewDesc] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (projects.length === 0) setShowCreate(true);
-  }, [projects.length]);
+  const selectedProject = projects.find((p) => p.id === selectedProjectId);
 
-  const handleCreate = async () => {
-    if (!newName.trim()) return;
-    setCreating(true);
-    setCreateError('');
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim() || submitting) return;
+    setSubmitting(true);
     try {
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName.trim() }),
+        body: JSON.stringify({ name: newName.trim(), description: newDesc.trim() }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to create project');
-      onProjectCreated(data);
-      setSelectedProjectId(data.id);
-      setNewName('');
-      setShowCreate(false);
-    } catch (err: any) {
-      setCreateError(err.message || 'Failed to create project');
+      if (res.ok) {
+        const p = await res.json();
+        onProjectCreated(p);
+        setSelectedProjectId(p.id);
+        setNewName('');
+        setNewDesc('');
+        setIsCreating(false);
+        setIsOpen(false);
+      }
+    } catch (err) {
+      console.error('Failed to create project:', err);
     } finally {
-      setCreating(false);
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="max-w-xl mx-auto bg-[#121624]/90 border border-[#232B45] rounded-2xl p-4 text-left space-y-3">
-      <label className="text-[10px] font-mono uppercase tracking-wider text-[#94A3B8] flex items-center gap-1.5">
-        <FolderKanban className="w-3.5 h-3.5 text-[#6366F1]" />
-        Project (required — every meeting belongs to a project)
+    <div className="relative max-w-md mx-auto w-full text-left">
+      <label className="block text-xs font-mono uppercase tracking-wider text-[#94A3B8] mb-1.5 font-bold">
+        Target Workspace Project <span className="text-rose-400">*</span>
       </label>
 
-      {!showCreate ? (
-        <div className="flex items-center gap-2">
-          <select
-            value={selectedProjectId}
-            onChange={(e) => setSelectedProjectId(e.target.value)}
-            className="flex-1 bg-[#0a0e17] border border-[#232B45] rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#6366F1] cursor-pointer"
-          >
-            <option value="" disabled>Select a project...</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={() => setShowCreate(true)}
-            className="px-3 py-2.5 rounded-xl bg-[#181b25] border border-[#232B45] hover:border-[#6366F1] text-xs font-semibold text-[#c0c1ff] hover:text-white transition flex items-center gap-1.5 cursor-pointer shrink-0"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            New
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="New project name..."
-              className="flex-1 bg-[#0a0e17] border border-[#232B45] rounded-xl px-3 py-2.5 text-xs text-white placeholder-[#94A3B8] focus:outline-none focus:border-[#6366F1]"
-            />
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between bg-[#121624]/90 border border-[#232B45] hover:border-[#6366F1] px-4 py-3 rounded-2xl text-xs md:text-sm text-white transition cursor-pointer shadow-lg backdrop-blur-md"
+      >
+        <span className="truncate">
+          {selectedProject ? selectedProject.name : 'Select or Create a Project...'}
+        </span>
+        <ChevronDown className={`w-4 h-4 text-[#94A3B8] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-full mt-2 bg-[#121624] border border-[#232B45] rounded-2xl p-2 shadow-2xl z-50 max-h-64 overflow-y-auto space-y-1">
+          {projects.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => {
+                setSelectedProjectId(p.id);
+                setIsOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs text-left transition cursor-pointer ${
+                selectedProjectId === p.id
+                  ? 'bg-[#6366F1] text-white font-bold'
+                  : 'text-[#dfe2ef] hover:bg-[#181b25]'
+              }`}
+            >
+              <span className="truncate">{p.name}</span>
+              {selectedProjectId === p.id && <Check className="w-4 h-4 shrink-0" />}
+            </button>
+          ))}
+
+          {!isCreating ? (
             <button
               type="button"
-              onClick={handleCreate}
-              disabled={creating || !newName.trim()}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold btn-primary-cta disabled:opacity-50 cursor-pointer shrink-0"
+              onClick={() => setIsCreating(true)}
+              className="w-full flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-[#5de6ff] hover:bg-[#5de6ff]/10 transition cursor-pointer border-t border-[#232B45] mt-1"
             >
-              {creating ? 'Creating...' : 'Create'}
+              <FolderPlus className="w-4 h-4" />
+              <span>Create New Project...</span>
             </button>
-            {projects.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowCreate(false)}
-                className="px-3 py-2.5 rounded-xl bg-[#181b25] border border-[#232B45] text-xs text-[#94A3B8] hover:text-white transition cursor-pointer shrink-0"
-              >
-                Cancel
-              </button>
-            )}
-          </div>
-          {createError && <p className="text-[11px] text-rose-400">{createError}</p>}
+          ) : (
+            <form onSubmit={handleCreate} className="p-3 bg-[#0a0e17] rounded-xl border border-[#232B45] space-y-2 mt-1">
+              <p className="text-[11px] font-bold text-white uppercase tracking-wider">New Project</p>
+              <input
+                type="text"
+                required
+                placeholder="Project Name..."
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                className="w-full bg-[#181b25] text-xs text-white border border-[#232B45] px-3 py-1.5 rounded-lg outline-none focus:border-[#6366F1]"
+              />
+              <input
+                type="text"
+                placeholder="Description (optional)..."
+                value={newDesc}
+                onChange={(e) => setNewDesc(e.target.value)}
+                className="w-full bg-[#181b25] text-xs text-white border border-[#232B45] px-3 py-1.5 rounded-lg outline-none focus:border-[#6366F1]"
+              />
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsCreating(false)}
+                  className="px-3 py-1 rounded-lg text-xs text-[#94A3B8] hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting || !newName.trim()}
+                  className="px-3 py-1 bg-[#6366F1] hover:bg-[#5254cc] text-white rounded-lg text-xs font-bold transition disabled:opacity-40"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       )}
     </div>
@@ -124,147 +159,113 @@ function ProjectPicker({
 function UploadPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const meetingIdParam = searchParams?.get('meetingId') || '';
+  const projectIdParam = searchParams?.get('projectId') || '';
 
-  // Mode: 'youtube' | 'file'
   const [activeTab, setActiveTab] = useState<'youtube' | 'file'>('youtube');
-
-  // Language state
-  const [language, setLanguage] = useState<TranscriptionLanguage>('auto');
-
-  // Project assignment state
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState('');
-  const [projectsLoaded, setProjectsLoaded] = useState(false);
-
-  const attachToMeetingId = searchParams?.get('meetingId') || '';
-
-  // YouTube Input State
   const [youtubeUrl, setYoutubeUrl] = useState('');
-  const [videoTitle, setVideoTitle] = useState('');
-
-  // File Upload State
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Status & Error handling
-  const [status, setStatus] = useState<'idle' | 'downloading' | 'transcribing' | 'summarizing' | 'done' | 'failed'>('idle');
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectsLoaded, setProjectsLoaded] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(projectIdParam);
+  const [language, setLanguage] = useState<TranscriptionLanguage>('auto');
+
+  const [status, setStatus] = useState<'idle' | 'uploading' | 'processing' | 'completed' | 'failed'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch('/api/projects')
-      .then((res) => res.json())
+      .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
         setProjects(list);
-        const preselect = searchParams?.get('projectId');
-        if (preselect && list.some((p: Project) => p.id === preselect)) {
-          setSelectedProjectId(preselect);
-        } else if (list.length === 1) {
+        setProjectsLoaded(true);
+
+        if (!selectedProjectId && list.length > 0) {
           setSelectedProjectId(list[0].id);
         }
-        setProjectsLoaded(true);
       })
       .catch(() => setProjectsLoaded(true));
-  }, [searchParams]);
+  }, []);
 
-  // Handle YouTube URL Submit
   const handleYouTubeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!youtubeUrl.trim() || !selectedProjectId) return;
 
-    setStatus('downloading');
+    setStatus('processing');
     setErrorMessage('');
 
     try {
-      const statusSequence: ('downloading' | 'transcribing' | 'summarizing')[] = [
-        'downloading',
-        'transcribing',
-        'summarizing'
-      ];
-      let stepIdx = 0;
-      const interval = setInterval(() => {
-        if (stepIdx < statusSequence.length) {
-          setStatus(statusSequence[stepIdx]);
-          stepIdx++;
-        }
-      }, 2500);
-
       const res = await fetch('/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           link: youtubeUrl.trim(),
-          title: videoTitle.trim() || undefined,
           projectId: selectedProjectId,
-          meetingId: attachToMeetingId || undefined,
+          meetingId: meetingIdParam || undefined,
           language,
-        })
+        }),
       });
 
-      clearInterval(interval);
-
-      if (res.ok) {
-        const meeting = await res.json();
-        setStatus('done');
-        setTimeout(() => {
-          router.push(`/dashboard/meeting/${meeting.id}`);
-        }, 800);
+      const data = await res.json();
+      if (res.ok && data.id) {
+        setStatus('completed');
+        router.push(`/dashboard/meeting/${data.id}`);
       } else {
-        const errData = await res.json();
-        setStatus('failed');
-        setErrorMessage(errData.error || 'Failed to extract transcript from YouTube URL.');
+        throw new Error(data.error || 'Failed to process YouTube link');
       }
     } catch (err: any) {
+      console.error('YouTube submit error:', err);
       setStatus('failed');
-      setErrorMessage(err.message || 'Network error occurred while fetching YouTube transcript.');
+      setErrorMessage(err.message || 'Processing failed.');
     }
   };
 
-  // Handle Local File Submit
   const handleFileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file || !selectedProjectId) return;
 
-    setStatus('transcribing');
+    setStatus('uploading');
     setErrorMessage('');
 
-    const formData = new FormData();
-    formData.append('file', file);
-    if (videoTitle) formData.append('title', videoTitle);
-    formData.append('projectId', selectedProjectId);
-    if (attachToMeetingId) formData.append('meetingId', attachToMeetingId);
-    formData.append('language', language);
-
     try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('projectId', selectedProjectId);
+      if (meetingIdParam) formData.append('meetingId', meetingIdParam);
+      formData.append('language', language);
+
       const res = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
 
-      if (res.ok) {
-        const meeting = await res.json();
-        setStatus('done');
-        setTimeout(() => {
-          router.push(`/dashboard/meeting/${meeting.id}`);
-        }, 800);
+      const data = await res.json();
+      if (res.ok && data.id) {
+        setStatus('completed');
+        router.push(`/dashboard/meeting/${data.id}`);
       } else {
-        const errData = await res.json();
-        setStatus('failed');
-        setErrorMessage(errData.error || 'Failed to process audio file.');
+        throw new Error(data.error || 'Failed to process file upload');
       }
     } catch (err: any) {
+      console.error('File submit error:', err);
       setStatus('failed');
-      setErrorMessage(err.message || 'Network error occurred while uploading file.');
+      setErrorMessage(err.message || 'Upload failed.');
     }
   };
 
-  // Drag & Drop handlers
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') setDragActive(true);
-    else if (e.type === 'dragleave') setDragActive(false);
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -278,8 +279,6 @@ function UploadPageInner() {
 
   return (
     <div className="w-full min-h-[85vh] flex flex-col items-center justify-center p-6 text-center font-sans antialiased">
-
-      {/* Container Card */}
       <div className="w-full max-w-3xl space-y-8 animate-fade-in">
 
         {/* Tab Switcher & Language Selector Header */}
@@ -312,7 +311,7 @@ function UploadPageInner() {
           <LanguageSelect value={language} onChange={setLanguage} />
         </div>
 
-        {/* Header Section (Matching User Screenshot) */}
+        {/* Header Section */}
         {activeTab === 'youtube' ? (
           <div className="space-y-3">
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white">
@@ -343,10 +342,9 @@ function UploadPageInner() {
           />
         )}
 
-        {/* Main Interactive Form Card */}
+        {/* Form Card */}
         {activeTab === 'youtube' ? (
           <form onSubmit={handleYouTubeSubmit} className="space-y-6">
-
             <div className="flex flex-col sm:flex-row items-center gap-3 bg-[#121624]/90 p-2 border border-[#232B45] rounded-full shadow-2xl focus-within:border-[#6366F1] transition-all max-w-2xl mx-auto backdrop-blur-md">
               <div className="relative flex-1 w-full pl-4">
                 <input
@@ -372,11 +370,9 @@ function UploadPageInner() {
             <p className="text-xs text-[#94A3B8] font-mono">
               {selectedProjectId ? 'Quick and simple. No catch.' : 'Select or create a project above to continue.'}
             </p>
-
           </form>
         ) : (
           <form onSubmit={handleFileSubmit} className="space-y-6 max-w-xl mx-auto">
-
             <div
               onDragEnter={handleDrag}
               onDragOver={handleDrag}
@@ -412,11 +408,10 @@ function UploadPageInner() {
             <button
               type="submit"
               disabled={!file || !selectedProjectId || status !== 'idle'}
-              className="w-full py-3.5 rounded-2xl text-xs font-bold text-white bg-[#6366F1] hover:bg-[#4F46E5] transition shadow-lg shadow-[#6366F1]/30 disabled:opacity-40 cursor-pointer"
+              className="w-full py-3.5 rounded-2xl text-xs font-bold text-white bg-[#6366F1] hover:bg-[#5254cc] transition shadow-lg shadow-[#6366F1]/30 disabled:opacity-40 cursor-pointer"
             >
               {selectedProjectId ? 'Start Processing Audio File' : 'Select or create a project above to continue'}
             </button>
-
           </form>
         )}
 
@@ -448,7 +443,6 @@ function UploadPageInner() {
         )}
 
       </div>
-
     </div>
   );
 }
