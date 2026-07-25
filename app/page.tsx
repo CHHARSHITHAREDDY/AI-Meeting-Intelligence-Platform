@@ -301,7 +301,7 @@ void main() {
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
                 <Link
-                  href={user ? "/dashboard/live" : "/login"}
+                  href={user ? "/dashboard" : "/login"}
                   onMouseEnter={handleCtaMouseEnter}
                   onMouseLeave={handleCtaMouseLeave}
                   className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide btn-primary-cta text-center flex items-center justify-center gap-2 group cursor-pointer"
@@ -310,7 +310,7 @@ void main() {
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </Link>
                 <Link
-                  href={user ? "/dashboard/live" : "/login"}
+                  href={user ? "/dashboard" : "/login"}
                   className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide text-[#F8FAFC] bg-[#181b25] border border-[#232B45] hover:bg-[#262a34] transition-all text-center flex items-center justify-center gap-2 backdrop-blur-md"
                 >
                   <Play className="w-4 h-4 text-[#5de6ff] fill-[#5de6ff]" />
@@ -518,11 +518,11 @@ void main() {
             Ready to upgrade your organization&apos;s memory?
           </h2>
           <p className="text-[#94A3B8] text-base max-w-xl mx-auto leading-relaxed">
-            Join forward-thinking teams using Cue to turn conversations into actionable intelligence.
+            Join forward-thinking teams using Weave to turn conversations into actionable intelligence.
           </p>
           <div className="pt-2">
             <Link
-              href={user ? "/dashboard/live" : "/login"}
+              href={user ? "/dashboard" : "/login"}
               onMouseEnter={handleCtaMouseEnter}
               onMouseLeave={handleCtaMouseLeave}
               className="px-8 py-4 rounded-xl text-sm font-bold tracking-wide btn-primary-cta inline-flex items-center gap-2"
