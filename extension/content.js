@@ -21,7 +21,12 @@
   host.style.resize = 'both';
   host.style.overflow = 'hidden';
   host.style.borderRadius = '16px';
-  host.style.display = 'block'; // VISIBLE UPON EXPLICIT USER INJECTION FROM POPUP
+  // Hidden by default: manifest.json auto-injects this script on every page
+  // load (content_scripts, matches: <all_urls>), so if this were 'block' the
+  // widget would appear uninvited on every site the user visits. It only
+  // becomes visible when the user clicks the toolbar icon, which sends a
+  // TOGGLE_WIDGET message to the listener registered below.
+  host.style.display = 'none';
   host.style.boxShadow = '0 16px 48px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(99, 102, 241, 0.3)';
 
   document.body.appendChild(host);
@@ -1408,8 +1413,16 @@
 
     // 1. Microphone Audio Capture (Mic or Both)
     if (selectedAudioSource === 'mic' || selectedAudioSource === 'both') {
+      const hasSpeechRecognition = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
       recognitionInstance = startRealSpeechRecognition();
-      startMicAudioChunking();
+      // Only fall back to the Whisper-chunk pipeline for mic audio when this
+      // browser has no Web Speech API at all (e.g. Firefox). Running both on
+      // the SAME mic stream would transcribe every utterance twice — once
+      // instantly via Web Speech API, once again ~5s later via Whisper —
+      // producing duplicate transcript lines and double the AI processing.
+      if (!hasSpeechRecognition) {
+        startMicAudioChunking();
+      }
     }
 
     // 2. Computer / Video Audio Capture (Comp or Both)
