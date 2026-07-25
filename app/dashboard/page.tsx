@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  UploadCloud, 
-  Search, 
-  Trash2, 
-  Calendar, 
-  Clock, 
-  AlertTriangle, 
-  CheckSquare, 
+import {
+  UploadCloud,
+  Search,
+  Trash2,
+  Calendar,
+  Clock,
+  AlertTriangle,
+  CheckSquare,
   FileText,
   Copy,
   Check,
@@ -48,6 +48,7 @@ export default function MeetingIntelligenceSaaSPage() {
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'transcribing' | 'summarizing' | 'decisions' | 'actions' | 'done' | 'failed'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const statsContainerRef = useRef<HTMLDivElement>(null);
 
   // Active Main Content View Tabs ('transcript' | 'summary')
   const [activeTab, setActiveTab] = useState<'summary' | 'transcript'>('summary');
@@ -98,9 +99,9 @@ export default function MeetingIntelligenceSaaSPage() {
   const validateAndSetFile = (selectedFile: File) => {
     const validExtensions = ['.mp3', '.wav', '.m4a', '.mp4', '.mov'];
     const fileName = selectedFile.name.toLowerCase();
-    const isValid = validExtensions.some(ext => fileName.endsWith(ext)) || 
-                    selectedFile.type.startsWith('audio/') || 
-                    selectedFile.type.startsWith('video/');
+    const isValid = validExtensions.some(ext => fileName.endsWith(ext)) ||
+      selectedFile.type.startsWith('audio/') ||
+      selectedFile.type.startsWith('video/');
 
     if (isValid) {
       setFile(selectedFile);
@@ -162,7 +163,7 @@ export default function MeetingIntelligenceSaaSPage() {
         setFile(null);
         setTitle('');
         setActiveMeeting(processedMeeting);
-        
+
         // Initialize default AI Copilot greeting for the newly processed meeting
         setChatMessages([
           {
@@ -192,9 +193,9 @@ export default function MeetingIntelligenceSaaSPage() {
 
     const updatedActions = activeMeeting.analysis.actionItems.map(item => {
       if (item.id === itemId) {
-        return { 
-          ...item, 
-          status: (item.status === 'completed' ? 'pending' : 'completed') as 'pending' | 'completed' 
+        return {
+          ...item,
+          status: (item.status === 'completed' ? 'pending' : 'completed') as 'pending' | 'completed'
         };
       }
       return item;
@@ -299,7 +300,7 @@ export default function MeetingIntelligenceSaaSPage() {
   // Parse Dialogue lines for Speaker and Timestamp display
   const getParsedTranscriptLines = () => {
     if (!activeMeeting?.transcript) return [];
-    
+
     const lines = activeMeeting.transcript.split('\n').filter(l => l.trim().length > 0);
     return lines.map((line, idx) => {
       const timeSpeakerMatch = line.match(/^\[(\d{2}:\d{2})\]\s*([^:]+):\s*(.*)/i);
@@ -321,7 +322,7 @@ export default function MeetingIntelligenceSaaSPage() {
   };
 
   const parsedTranscript = getParsedTranscriptLines();
-  
+
   // Extract unique speaker list for speaker filter dropdown
   const uniqueSpeakers = Array.from(new Set(parsedTranscript.map(t => t.speaker)));
 
@@ -334,7 +335,7 @@ export default function MeetingIntelligenceSaaSPage() {
 
   return (
     <div className="w-full min-h-[calc(100vh-5rem)] flex flex-col xl:flex-row gap-6 antialiased">
-      
+
       {/* ========================================================================= */}
       {/* CENTER MAIN CONTENT AREA (Flex-1)                                          */}
       {/* ========================================================================= */}
@@ -360,11 +361,11 @@ export default function MeetingIntelligenceSaaSPage() {
                 </h1>
                 <div className="flex items-center space-x-4 text-xs text-[#94A3B8] font-mono mt-1">
                   <span className="flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-[#6366F1]" /> 
+                    <Calendar className="w-3.5 h-3.5 text-[#6366F1]" />
                     {new Date(activeMeeting.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-[#5de6ff]" /> 
+                    <Clock className="w-3.5 h-3.5 text-[#5de6ff]" />
                     {activeMeeting.duration || '2m 30s'}
                   </span>
                 </div>
@@ -388,7 +389,7 @@ export default function MeetingIntelligenceSaaSPage() {
         {/* ----------------------------------------------------------------------- */}
         {!activeMeeting && (
           <div className="space-y-6">
-            
+
             {/* Upload Area */}
             <div className="bg-[#121624]/90 border border-[#232B45] rounded-3xl p-8 shadow-2xl backdrop-blur-md relative overflow-hidden">
               <div className="absolute top-0 right-0 w-80 h-80 bg-[#6366F1]/5 rounded-full blur-3xl pointer-events-none -z-10" />
@@ -408,7 +409,7 @@ export default function MeetingIntelligenceSaaSPage() {
                 </p>
 
                 {/* Drag and Drop Container */}
-                <form 
+                <form
                   onSubmit={handleUploadSubmit}
                   onDragEnter={handleDrag}
                   className="mt-6"
@@ -418,18 +419,17 @@ export default function MeetingIntelligenceSaaSPage() {
                     onDragLeave={handleDrag}
                     onDrop={handleDrop}
                     onClick={() => fileInputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-2xl p-10 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center space-y-4 ${
-                      dragActive 
-                        ? 'border-[#5de6ff] bg-[#5de6ff]/5 scale-[1.01]' 
-                        : 'border-[#232B45] hover:border-[#6366F1]/60 bg-[#0a0e17]/60 hover:bg-[#181b25]/80'
-                    }`}
+                    className={`border-2 border-dashed rounded-2xl p-10 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center space-y-4 ${dragActive
+                      ? 'border-[#5de6ff] bg-[#5de6ff]/5 scale-[1.01]'
+                      : 'border-[#232B45] hover:border-[#6366F1]/60 bg-[#0a0e17]/60 hover:bg-[#181b25]/80'
+                      }`}
                   >
-                    <input 
+                    <input
                       ref={fileInputRef}
-                      type="file" 
+                      type="file"
                       accept=".mp3,.wav,.m4a,.mp4,.mov,audio/*,video/*"
                       onChange={handleFileChange}
-                      className="hidden" 
+                      className="hidden"
                     />
 
                     <div className="w-16 h-16 rounded-2xl bg-[#1c1f29] border border-[#232B45] flex items-center justify-center text-[#6366F1] shadow-xl group-hover:scale-110 transition-transform">
@@ -487,11 +487,11 @@ export default function MeetingIntelligenceSaaSPage() {
                     </div>
 
                     <div className="grid grid-cols-5 gap-1.5 pt-1">
-                      <div className={`h-1.5 rounded-full transition-all ${['uploading','transcribing','summarizing','decisions','actions','done'].includes(uploadStatus) ? 'bg-[#5de6ff]' : 'bg-[#232B45]'}`} />
-                      <div className={`h-1.5 rounded-full transition-all ${['transcribing','summarizing','decisions','actions','done'].includes(uploadStatus) ? 'bg-[#5de6ff]' : 'bg-[#232B45]'}`} />
-                      <div className={`h-1.5 rounded-full transition-all ${['summarizing','decisions','actions','done'].includes(uploadStatus) ? 'bg-[#5de6ff]' : 'bg-[#232B45]'}`} />
-                      <div className={`h-1.5 rounded-full transition-all ${['decisions','actions','done'].includes(uploadStatus) ? 'bg-[#5de6ff]' : 'bg-[#232B45]'}`} />
-                      <div className={`h-1.5 rounded-full transition-all ${['actions','done'].includes(uploadStatus) ? 'bg-[#5de6ff]' : 'bg-[#232B45]'}`} />
+                      <div className={`h-1.5 rounded-full transition-all ${['uploading', 'transcribing', 'summarizing', 'decisions', 'actions', 'done'].includes(uploadStatus) ? 'bg-[#5de6ff]' : 'bg-[#232B45]'}`} />
+                      <div className={`h-1.5 rounded-full transition-all ${['transcribing', 'summarizing', 'decisions', 'actions', 'done'].includes(uploadStatus) ? 'bg-[#5de6ff]' : 'bg-[#232B45]'}`} />
+                      <div className={`h-1.5 rounded-full transition-all ${['summarizing', 'decisions', 'actions', 'done'].includes(uploadStatus) ? 'bg-[#5de6ff]' : 'bg-[#232B45]'}`} />
+                      <div className={`h-1.5 rounded-full transition-all ${['decisions', 'actions', 'done'].includes(uploadStatus) ? 'bg-[#5de6ff]' : 'bg-[#232B45]'}`} />
+                      <div className={`h-1.5 rounded-full transition-all ${['actions', 'done'].includes(uploadStatus) ? 'bg-[#5de6ff]' : 'bg-[#232B45]'}`} />
                     </div>
 
                     <p className="text-[11px] text-[#94A3B8] font-mono">
@@ -576,28 +576,26 @@ export default function MeetingIntelligenceSaaSPage() {
         {/* ----------------------------------------------------------------------- */}
         {activeMeeting && (
           <div className="bg-[#121624]/90 border border-[#232B45] rounded-3xl p-6 shadow-2xl backdrop-blur-md flex-1 flex flex-col min-h-0 space-y-6">
-            
+
             {/* Tab Controls */}
             <div className="flex items-center justify-between border-b border-[#232B45] pb-4">
               <div className="flex items-center space-x-2 bg-[#0a0e17] p-1.5 rounded-xl border border-[#232B45]">
                 <button
                   onClick={() => setActiveTab('summary')}
-                  className={`px-5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                    activeTab === 'summary'
-                      ? 'bg-[#6366F1] text-white shadow-lg shadow-[#6366F1]/30'
-                      : 'text-[#94A3B8] hover:text-white hover:bg-[#181b25]'
-                  }`}
+                  className={`px-5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${activeTab === 'summary'
+                    ? 'bg-[#6366F1] text-white shadow-lg shadow-[#6366F1]/30'
+                    : 'text-[#94A3B8] hover:text-white hover:bg-[#181b25]'
+                    }`}
                 >
                   <FileText className="w-4 h-4" />
                   Summary & Insights
                 </button>
                 <button
                   onClick={() => setActiveTab('transcript')}
-                  className={`px-5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                    activeTab === 'transcript'
-                      ? 'bg-[#6366F1] text-white shadow-lg shadow-[#6366F1]/30'
-                      : 'text-[#94A3B8] hover:text-white hover:bg-[#181b25]'
-                  }`}
+                  className={`px-5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${activeTab === 'transcript'
+                    ? 'bg-[#6366F1] text-white shadow-lg shadow-[#6366F1]/30'
+                    : 'text-[#94A3B8] hover:text-white hover:bg-[#181b25]'
+                    }`}
                 >
                   <MessageSquare className="w-4 h-4" />
                   Full Transcript
@@ -657,7 +655,7 @@ export default function MeetingIntelligenceSaaSPage() {
                 <div className="flex-1 overflow-y-auto space-y-3 pr-2 max-h-[550px] scrollbar-thin scrollbar-thumb-[#232B45]">
                   {filteredTranscript.length > 0 ? (
                     filteredTranscript.map((item) => (
-                      <div 
+                      <div
                         key={item.id}
                         className="p-4 rounded-2xl bg-[#0a0e17]/80 border border-[#232B45] hover:border-[#6366F1]/40 transition space-y-1.5"
                       >
@@ -687,7 +685,7 @@ export default function MeetingIntelligenceSaaSPage() {
             {/* TAB 2: SUMMARY & DYNAMIC AI SECTIONS VIEW */}
             {activeTab === 'summary' && (
               <div className="space-y-6 overflow-y-auto pr-2 max-h-[600px] scrollbar-thin scrollbar-thumb-[#232B45]">
-                
+
                 {/* 1. Executive Summary */}
                 <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-2">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center gap-2">
@@ -755,20 +753,19 @@ export default function MeetingIntelligenceSaaSPage() {
                   <div className="space-y-2.5">
                     {activeMeeting.analysis?.actionItems && activeMeeting.analysis.actionItems.length > 0 ? (
                       activeMeeting.analysis.actionItems.map((item) => (
-                        <div 
+                        <div
                           key={item.id}
                           onClick={() => handleToggleActionItem(item.id)}
-                          className={`p-3.5 rounded-xl border transition cursor-pointer flex items-center justify-between ${
-                            item.status === 'completed'
-                              ? 'bg-emerald-500/5 border-emerald-500/30 text-[#94A3B8]'
-                              : 'bg-[#181b25] border-[#232B45] hover:border-[#6366F1] text-[#dfe2ef]'
-                          }`}
+                          className={`p-3.5 rounded-xl border transition cursor-pointer flex items-center justify-between ${item.status === 'completed'
+                            ? 'bg-emerald-500/5 border-emerald-500/30 text-[#94A3B8]'
+                            : 'bg-[#181b25] border-[#232B45] hover:border-[#6366F1] text-[#dfe2ef]'
+                            }`}
                         >
                           <div className="flex items-center space-x-3">
-                            <input 
+                            <input
                               type="checkbox"
                               checked={item.status === 'completed'}
-                              onChange={() => {}}
+                              onChange={() => { }}
                               className="w-4 h-4 accent-[#6366F1] cursor-pointer"
                             />
                             <span className={`text-xs ${item.status === 'completed' ? 'line-through text-[#94A3B8]' : 'font-medium'}`}>
@@ -803,9 +800,8 @@ export default function MeetingIntelligenceSaaSPage() {
                         <div key={r.id} className="p-3.5 rounded-xl bg-[#181b25] border border-[#232B45] space-y-1">
                           <div className="flex items-center justify-between text-xs">
                             <span className="font-bold text-white">{r.risk}</span>
-                            <span className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded ${
-                              r.impact === 'high' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                            }`}>
+                            <span className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded ${r.impact === 'high' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                              }`}>
                               {r.impact} Impact
                             </span>
                           </div>
@@ -848,7 +844,7 @@ export default function MeetingIntelligenceSaaSPage() {
       {/* RIGHT AI COPILOT PANEL (w-96)                                             */}
       {/* ========================================================================= */}
       <div className="w-full xl:w-96 bg-[#121624]/90 border border-[#232B45] rounded-3xl p-5 shadow-2xl backdrop-blur-md flex flex-col h-[750px] xl:h-auto shrink-0">
-        
+
         {/* Panel Header */}
         <div className="border-b border-[#232B45] pb-4 mb-4 flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
@@ -902,16 +898,14 @@ export default function MeetingIntelligenceSaaSPage() {
             chatMessages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex flex-col space-y-1 ${
-                  msg.sender === 'user' ? 'items-end' : 'items-start'
-                }`}
+                className={`flex flex-col space-y-1 ${msg.sender === 'user' ? 'items-end' : 'items-start'
+                  }`}
               >
                 <div
-                  className={`p-3.5 rounded-2xl text-xs max-w-[90%] leading-relaxed ${
-                    msg.sender === 'user'
-                      ? 'bg-[#6366F1] text-white rounded-br-none shadow-md shadow-[#6366F1]/20'
-                      : 'bg-[#0a0e17] text-[#dfe2ef] border border-[#232B45] rounded-bl-none'
-                  }`}
+                  className={`p-3.5 rounded-2xl text-xs max-w-[90%] leading-relaxed ${msg.sender === 'user'
+                    ? 'bg-[#6366F1] text-white rounded-br-none shadow-md shadow-[#6366F1]/20'
+                    : 'bg-[#0a0e17] text-[#dfe2ef] border border-[#232B45] rounded-bl-none'
+                    }`}
                 >
                   <p className="whitespace-pre-line">{msg.text}</p>
                 </div>

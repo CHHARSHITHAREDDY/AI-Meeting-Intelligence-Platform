@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -10,6 +10,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const navContainerRef = useRef<HTMLUListElement>(null);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
@@ -100,7 +101,7 @@ export default function DashboardLayout({
         </div>
 
         {/* Navigation Links */}
-        <ul className="flex-1 space-y-1.5 px-3">
+        <ul ref={navContainerRef} className="flex-1 space-y-1.5 px-3">
           {navItems.map((item) => {
             const isActive = item.href === '/dashboard'
               ? pathname === '/dashboard'
@@ -111,7 +112,7 @@ export default function DashboardLayout({
                   href={item.href}
                   className={`flex items-center px-4 py-3 rounded-lg text-[14px] font-medium transition-all duration-200 ${
                     isActive
-                      ? 'text-[#6366F1] font-bold border-l-4 border-[#6366F1] bg-[#6366F1]/10 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
+                      ? 'nav-active-item text-[#6366F1] font-bold border-l-4 border-[#6366F1] bg-[#6366F1]/10 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
                       : 'text-[#c7c4d7] hover:text-[#F8FAFC] hover:bg-[#181b25] active:scale-95'
                   }`}
                 >

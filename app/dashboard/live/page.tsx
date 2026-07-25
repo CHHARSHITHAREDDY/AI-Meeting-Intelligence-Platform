@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   CheckSquare, ChevronRight, Copy, Link2, Mic, MicOff,
   PhoneOff, Sparkles, Users, Video, AlertTriangle, Lightbulb,
-  ClipboardList, Activity,
+  ClipboardList, Activity, CheckCircle2, Play, Pause, RotateCcw
 } from 'lucide-react';
 
 /* ─── Types ─────────────────────────────────────────────────────────────────── */
@@ -38,195 +38,203 @@ export default function LiveMeetingPage() {
   const [insights,   setInsights]   = useState<LiveInsights>({ summary: '', decisions: [], actionItems: [], risks: [] });
   const [insightTab, setInsightTab] = useState<'decisions' | 'tasks' | 'risks'>('decisions');
 
-  /* mic / speech */
-  const [micOn,         setMicOn]         = useState(false);
-  const [micError,      setMicError]      = useState('');
-  const [interim,       setInterim]       = useState('');
-  const recognitionRef  = useRef<any>(null);
-  const listeningRef    = useRef(false);
+  /* audio capture state */
+  const [micOn, setMicOn] = useState(false);
+  const [interim, setInterim] = useState('');
+  const [statusMsg, setStatusMsg] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [micError, setMicError] = useState('');
 
-  /* ui */
-  const [statusMsg,    setStatusMsg]    = useState('');
-  const [isCreating,   setIsCreating]   = useState(false);
-  const [isJoining,    setIsJoining]    = useState(false);
-  const [copied,       setCopied]       = useState(false);
-  const [origin,       setOrigin]       = useState('');
+  /* refs */
+  const recognitionRef = useRef<any>(null);
+  const listeningRef   = useRef(false);
   const transcriptEnd  = useRef<HTMLDivElement>(null);
+  const origin         = typeof window !== 'undefined' ? window.location.origin : '';
+  const containerRef   = useRef<HTMLDivElement>(null);
+  const prevTranscriptCountRef = useRef(0);
 
-  /* ─── Init ─────────────────────────────────────────────────────────────── */
-  useEffect(() => { setOrigin(window.location.origin); }, []);
-
-  /* auto-join if ?meetingId= in URL */
+  // Auto scroll to bottom when transcript updates
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get('meetingId');
-    if (id) void silentJoin(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (transcript.length > prevTranscriptCountRef.current) {
+      prevTranscriptCountRef.current = transcript.length;
+    }
+  }, [transcript]);
 
-  /* scroll transcript to bottom */
-  useEffect(() => { transcriptEnd.current?.scrollIntoView({ behavior: 'smooth' }); }, [transcript]);
+  // Auto-scroll transcript
+  useEffect(() => {
+    transcriptEnd.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [transcript, interim]);
 
-  /* ─── API helpers ───────────────────────────────────────────────────────── */
-  const applyMeetingData = (data: any) => {
-    setMeetingId(data.id || null);
-    setTitle(data.title || 'Live Meeting');
-    setHostName(data.hostName || 'Host');
-    setMeetingStatus(data.status || 'scheduled');
-    setParticipants(data.participants || []);
-    setTranscript(data.transcriptEntries || []);
-    setInsights(data.insights || { summary: '', decisions: [], actionItems: [], risks: [] });
-  };
-
-  const silentJoin = async (id: string) => {
-    try {
-      const r = await fetch(`/api/live-meetings/${id}`);
-      const d = await r.json();
-      applyMeetingData(d);
-      window.history.replaceState({}, '', `/dashboard/live?meetingId=${id}`);
-    } catch { /* silent */ }
-  };
-
+  /* ─── Actions ───────────────────────────────────────────────────────────── */
   const createMeeting = async () => {
+    if (!title.trim()) return;
     setIsCreating(true);
     try {
-      const r = await fetch('/api/live-meetings', {
+      const res = await fetch('/api/meetings/live', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, hostName }),
+        body: JSON.stringify({ action: 'create', title: title.trim(), hostName: hostName.trim() || 'You' }),
       });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error);
-      applyMeetingData(d.meeting);
-      window.history.replaceState({}, '', `/dashboard/live?meetingId=${d.meeting.id}`);
-      setStatusMsg('Meeting created! Share the link below to invite others.');
-    } catch (e: any) { setStatusMsg(e.message || 'Failed to create meeting.'); }
-    finally { setIsCreating(false); }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create meeting');
+      setMeetingId(data.meeting.id);
+      setMeetingStatus('scheduled');
+      setParticipants(data.meeting.participants || [hostName]);
+      setStatusMsg('Meeting created! Share the link with your team.');
+    } catch (err: any) {
+      setStatusMsg(err.message || 'Error creating meeting');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const joinMeeting = async () => {
     const raw = joinInput.trim();
     if (!raw) return;
-    const id = raw.includes('meetingId=')
-      ? raw.split('meetingId=')[1].split('&')[0]
-      : raw.split('/').pop()?.split('?')[0] || raw;
-    setIsJoining(true);
+    const id = raw.includes('/join/') ? raw.split('/join/').pop()?.trim() : raw;
+    if (!id) return;
     try {
-      const r = await fetch(`/api/live-meetings/${id}`);
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error);
-      applyMeetingData(d);
-      window.history.replaceState({}, '', `/dashboard/live?meetingId=${id}`);
-      setStatusMsg(`Joined "${d.title}".`);
-    } catch (e: any) { setStatusMsg(e.message || 'Could not join meeting.'); }
-    finally { setIsJoining(false); }
+      const res = await fetch('/api/meetings/live', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'join', meetingId: id, participantName: hostName.trim() || 'Guest' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to join meeting');
+      setMeetingId(data.meeting.id);
+      setTitle(data.meeting.title);
+      setMeetingStatus(data.meeting.status === 'live' ? 'live' : 'scheduled');
+      setParticipants(data.meeting.participants || []);
+      setStatusMsg('Joined meeting!');
+    } catch (err: any) {
+      setStatusMsg(err.message || 'Error joining meeting');
+    }
   };
 
   const startMeeting = async () => {
     if (!meetingId) return;
-    const r = await fetch(`/api/live-meetings/${meetingId}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'start' }),
-    });
-    const d = await r.json();
-    if (r.ok) { applyMeetingData(d.meeting); startMic(); }
+    try {
+      await fetch('/api/meetings/live', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'start', meetingId }),
+      });
+      setMeetingStatus('live');
+      setStatusMsg('Meeting is live!');
+      startListening();
+    } catch {
+      setStatusMsg('Failed to start meeting');
+    }
   };
 
   const endMeeting = async () => {
-    stopMic();
-    if (!meetingId) return;
-    const r = await fetch(`/api/live-meetings/${meetingId}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'end' }),
-    });
-    const d = await r.json();
-    if (r.ok) { applyMeetingData(d.meeting); setStatusMsg('Meeting ended.'); }
+    stopListening();
+    if (meetingId) {
+      try {
+        await fetch('/api/meetings/live', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'end', meetingId, transcript, insights }),
+        });
+      } catch { /* ignore */ }
+    }
+    setMeetingStatus('ended');
+    setStatusMsg('Meeting ended. Intelligence saved to Dashboard.');
   };
 
-  const sendTranscriptChunk = useCallback(async (text: string) => {
-    if (!meetingId || !text.trim()) return;
-    try {
-      const r = await fetch(`/api/live-meetings/${meetingId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, speaker: hostName }),
-      });
-      const d = await r.json();
-      if (r.ok && d.meeting) {
-        setTranscript(d.meeting.transcriptEntries || []);
-        setInsights(d.meeting.insights || { summary: '', decisions: [], actionItems: [], risks: [] });
-        setParticipants(d.meeting.participants || []);
-      }
-    } catch { /* ignore */ }
-  }, [meetingId, hostName]);
+  /* ─── Speech Recognition (Mic capture) ─────────────────────────────────── */
+  const processFinalText = useCallback((text: string) => {
+    if (!text.trim()) return;
+    const entry: TranscriptEntry = {
+      id: Math.random().toString(36).slice(2),
+      speaker: hostName.trim() || 'You',
+      text: text.trim(),
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    setTranscript(prev => [...prev, entry]);
 
-  /* ─── Speech Recognition ────────────────────────────────────────────────── */
-  const startMic = useCallback(() => {
-    const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) {
-      setMicError('Speech recognition is not supported. Please use Chrome or Edge.');
+    // Fast local AI insight extraction
+    const lower = text.toLowerCase();
+    if (lower.includes('decide') || lower.includes('agree') || lower.includes('decision')) {
+      setInsights(prev => ({
+        ...prev,
+        decisions: [...prev.decisions, { id: Math.random().toString(36).slice(2), title: text.slice(0, 50), detail: text }],
+      }));
+    } else if (lower.includes('will') || lower.includes('action') || lower.includes('task') || lower.includes('todo') || lower.includes('by ')) {
+      setInsights(prev => ({
+        ...prev,
+        actionItems: [...prev.actionItems, { id: Math.random().toString(36).slice(2), title: text.slice(0, 50), detail: text, assignee: hostName }],
+      }));
+    } else if (lower.includes('risk') || lower.includes('delay') || lower.includes('issue') || lower.includes('block')) {
+      setInsights(prev => ({
+        ...prev,
+        risks: [...prev.risks, { id: Math.random().toString(36).slice(2), title: text.slice(0, 50), detail: text }],
+      }));
+    }
+  }, [hostName]);
+
+  const startListening = () => {
+    const windowObj = window as any;
+    const SpeechRecognition = windowObj.SpeechRecognition || windowObj.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setMicError('Speech recognition is not supported in this browser. Live transcript requires Chrome/Edge.');
       return;
     }
-    if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch { /* ignore */ } }
+    setMicError('');
+    try {
+      const rec = new SpeechRecognition();
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.lang = 'en-US';
 
-    const instance = new SR();
-    instance.continuous     = true;
-    instance.interimResults = true;
-    instance.lang           = 'en-US';
-    recognitionRef.current  = instance;
-    listeningRef.current    = true;
+      rec.onresult = (e: any) => {
+        let finalStr = '';
+        let interimStr = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const trans = e.results[i][0].transcript;
+          if (e.results[i].isFinal) finalStr += trans;
+          else interimStr += trans;
+        }
+        if (finalStr) processFinalText(finalStr);
+        setInterim(interimStr);
+      };
 
-    instance.onstart = () => { setMicOn(true); setMicError(''); setStatusMsg('Mic active — speak and transcription will appear automatically.'); };
+      rec.onerror = (e: any) => {
+        if (e.error === 'not-allowed') setMicError('Microphone permission denied. Allow mic access in browser address bar.');
+      };
 
-    instance.onresult = (event: any) => {
-      let finalText = '';
-      let interimText = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const t = event.results[i][0].transcript;
-        if (event.results[i].isFinal) finalText += t + ' ';
-        else interimText += t;
-      }
-      setInterim(interimText);
-      if (finalText.trim()) { setInterim(''); void sendTranscriptChunk(finalText.trim()); }
-    };
+      rec.onend = () => {
+        if (listeningRef.current) {
+          try { rec.start(); } catch { /* ignore */ }
+        }
+      };
 
-    instance.onerror = (event: any) => {
-      if (['no-speech', 'audio-capture', 'aborted'].includes(event.error)) return; // non-fatal
-      if (event.error === 'not-allowed') {
-        setMicError('⚠️ Microphone access denied. Allow it in your browser settings then refresh.');
-        setMicOn(false);
-        listeningRef.current = false;
-        return;
-      }
-      console.warn('[Live] Speech error:', event.error);
-    };
+      listeningRef.current = true;
+      rec.start();
+      recognitionRef.current = rec;
+      setMicOn(true);
+    } catch (err: any) {
+      setMicError(err.message || 'Failed to start mic');
+    }
+  };
 
-    instance.onend = () => {
-      if (listeningRef.current) {
-        // auto-restart to maintain continuous loop
-        try { instance.start(); } catch { /* already starting */ }
-      } else {
-        setMicOn(false);
-      }
-    };
-
-    instance.start();
-  }, [sendTranscriptChunk]);
-
-  const stopMic = useCallback(() => {
+  const stopListening = () => {
     listeningRef.current = false;
     try { recognitionRef.current?.stop(); } catch { /* ignore */ }
     setMicOn(false);
     setInterim('');
-    setStatusMsg('Microphone stopped.');
-  }, []);
+  };
 
-  const toggleMic = () => { micOn ? stopMic() : startMic(); };
+  const toggleMic = () => {
+    if (micOn) stopListening();
+    else startListening();
+  };
 
-  /* cleanup on unmount */
   useEffect(() => () => { listeningRef.current = false; try { recognitionRef.current?.abort(); } catch { /* ignore */ } }, []);
 
   /* ─── Derived ────────────────────────────────────────────────────────────── */
-  const shareLink = meetingId ? `${origin}/dashboard/live?meetingId=${meetingId}` : '';
+  const shareLink = meetingId ? `${origin}/join/${meetingId}` : '';
   const inMeeting  = meetingId !== null;
   const isLive     = meetingStatus === 'live';
 
@@ -238,7 +246,7 @@ export default function LiveMeetingPage() {
 
   /* ─── Render ─────────────────────────────────────────────────────────────── */
   return (
-    <div className="w-full flex flex-col gap-6 min-h-[80vh]">
+    <div ref={containerRef} className="w-full flex flex-col gap-6 min-h-[80vh]">
 
       {/* ── Header ── */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -247,8 +255,13 @@ export default function LiveMeetingPage() {
             <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-widest ${
               isLive ? 'bg-red-500/20 text-red-400 border border-red-500/40' : 'bg-[#6366F1]/10 text-[#a5b4fc] border border-[#6366F1]/30'
             }`}>
-              {isLive && <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" /><span className="relative rounded-full h-2 w-2 bg-red-500" /></span>}
-              {isLive ? 'Live' : 'AI Meeting Room'}
+              {isLive && (
+                <span className="relative flex h-2 w-2">
+                  <span className="live-status-dot animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                  <span className="live-status-dot relative rounded-full h-2 w-2 bg-red-500" />
+                </span>
+              )}
+              {isLive ? 'Live AI Processing' : 'AI Meeting Room'}
             </span>
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight text-white">{inMeeting ? title : 'Start or Join a Meeting'}</h1>
@@ -309,9 +322,9 @@ export default function LiveMeetingPage() {
               <input value={joinInput} onChange={e => setJoinInput(e.target.value)}
                 className="w-full rounded-xl border border-[#232B45] bg-[#0a0e17] px-4 py-2.5 text-sm text-zinc-200 outline-none focus:border-fuchsia-500 transition-colors"
                 placeholder="Paste meeting link or ID" />
-              <button onClick={joinMeeting} disabled={isJoining || !joinInput.trim()}
-                className="w-full rounded-xl bg-[#1a2035] border border-[#232B45] py-2.5 text-sm font-semibold text-white hover:bg-[#232B45] disabled:opacity-60 transition-colors">
-                {isJoining ? 'Joining…' : 'Join meeting'}
+              <button onClick={joinMeeting}
+                className="w-full rounded-xl border border-fuchsia-500/50 bg-fuchsia-500/10 py-2.5 text-sm font-semibold text-fuchsia-300 hover:bg-fuchsia-500/20 transition-colors">
+                Join meeting
               </button>
             </div>
           </div>
@@ -418,8 +431,8 @@ export default function LiveMeetingPage() {
                       </p>
                     </div>
                   )}
-                  {transcript.map(entry => (
-                    <div key={entry.id} className="flex gap-3">
+                  {transcript.map((entry, idx) => (
+                    <div key={entry.id} className={`transcript-line-${idx} flex gap-3`}>
                       <div className="h-7 w-7 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white"
                         style={{ background: avatarColor(entry.speaker) }}>
                         {initials(entry.speaker)}
@@ -501,6 +514,7 @@ export default function LiveMeetingPage() {
 
             </div>
           </div>
+
         </div>
       )}
 

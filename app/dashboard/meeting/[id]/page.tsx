@@ -14,6 +14,7 @@ import {
   Sparkles,
   Bot,
   User as UserIcon,
+  User,
   RefreshCw,
   ShieldAlert,
   ListChecks,
@@ -22,7 +23,16 @@ import {
   ChevronRight,
   UploadCloud,
   AlertTriangle,
-  Search
+  Search,
+  CheckSquare2,
+  Square,
+  Info,
+  Play,
+  Pause,
+  RotateCcw,
+  Film,
+  Radio,
+  Volume2
 } from 'lucide-react';
 import { Meeting } from '@/lib/db';
 
@@ -43,6 +53,7 @@ export default function SingleMeetingSaaSPage({ params }: MeetingPageProps) {
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
 
   // Active Main Content View Tabs ('summary' | 'transcript')
   const [activeTab, setActiveTab] = useState<'summary' | 'transcript'>('summary');
@@ -398,7 +409,6 @@ export default function SingleMeetingSaaSPage({ params }: MeetingPageProps) {
           {/* TAB 2: SUMMARY VIEW */}
           {activeTab === 'summary' && (
             <div className="space-y-6 overflow-y-auto pr-2 max-h-[600px] scrollbar-thin scrollbar-thumb-[#232B45]">
-              
               {/* Executive Summary */}
               <div className="p-5 rounded-2xl bg-[#0a0e17] border border-[#232B45] space-y-2">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-[#5de6ff] font-mono flex items-center gap-2">

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import Providers from './providers';
 
 export const metadata: Metadata = {
   title: 'Cue Intelligence | AI Meeting Intelligence Platform',
@@ -21,9 +22,11 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" />
       </head>
       <body className="min-h-screen bg-[#0f131c] text-[#dfe2ef] font-sans antialiased selection:bg-[#8083ff]/30 selection:text-[#c0c1ff]">
-        <main className="flex-1 flex flex-col">
-          {children}
-        </main>
+        <Providers>
+          <main className="flex-1 flex flex-col">
+            {children}
+          </main>
+        </Providers>
       </body>
     </html>
   );
